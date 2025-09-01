@@ -249,8 +249,8 @@ const getCurrentRoleDisplayName = () => {
     // Existing backend role names
     'superadmin': 'Super Admin',
     'super_admin': 'Super Admin',
-    'templeadmin': 'Temple Admin',
-    'tenant': 'Temple Admin',
+    'templeadmin': 'Tenant',
+    'tenant': 'templeadmin',
     'devotee': 'Devotee',
     'volunteer': 'Volunteer',
     

@@ -1,5 +1,6 @@
 <template>
   <div class="assign-tenants-view">
+    <!-- Header -->
     <div class="mb-4">
       <div class="flex items-center">
         <a @click="goBack" class="cursor-pointer text-indigo-600 hover:text-indigo-800 mr-2">
@@ -9,33 +10,28 @@
         </a>
         <div>
           <h2 class="text-xl font-bold">Assign Tenants to User</h2>
-          <!-- <div class="text-sm text-gray-500">
-            <span>Dashboard</span>
-            <span class="mx-2">/</span>
-            <span>User Management</span>
-            <span class="mx-2">/</span>
-            <span>Assign Tenants</span>
-          </div> -->
         </div>
       </div>
     </div>
 
+    <!-- Card -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+      <!-- Card header -->
       <div class="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 class="text-lg font-semibold">Assign Tenants to User</h2>
-        <button 
-          @click="goBack" 
-          class="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-        >
+        <button @click="goBack" class="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
           Back
         </button>
       </div>
 
+      <!-- Card body -->
       <div class="p-6">
+        <!-- Loading -->
         <div v-if="loading" class="py-10 flex justify-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
         </div>
 
+        <!-- Error -->
         <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-4 mb-6">
           <p class="text-red-700">{{ error }}</p>
           <button @click="fetchUserDetails" class="text-red-600 mt-2 underline">
@@ -43,13 +39,15 @@
           </button>
         </div>
 
+        <!-- Content -->
         <div v-else>
+          <!-- User Info -->
           <div class="bg-indigo-50 border border-indigo-100 rounded p-4 mb-6">
             <h3 class="font-medium text-indigo-800 mb-2">User Details</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p class="text-gray-500 text-sm">Name</p>
-                <p class="font-medium">{{ user.fullName || user.full_name }}</p>
+                <p class="font-medium">{{ user.full_name || user.fullName }}</p>
               </div>
               <div>
                 <p class="text-gray-500 text-sm">Email</p>
@@ -64,9 +62,18 @@
             </div>
           </div>
 
+          <!-- Role Restriction -->
+          <div v-if="!canAssignTenants" class="bg-yellow-50 border border-yellow-200 rounded p-4 mb-6">
+            <p class="text-yellow-800">
+              Tenant assignment is only available for Standard User and Monitoring User roles.
+            </p>
+          </div>
+
+          <!-- Tenant Selection Table -->
           <tenant-selection-table 
-            :userId="userId" 
-            @assign="assignTenants" 
+            v-else
+            :user-id="userId" 
+            @assign="assignTenantHandler" 
             @cancel="goBack" 
           />
         </div>
@@ -83,33 +90,38 @@ import TenantSelectionTable from '@/components/superadmin/TenantSelectionTable.v
 
 export default {
   name: 'AssignTenantsView',
-  components: {
-    TenantSelectionTable
-  },
+  components: { TenantSelectionTable },
+
   setup() {
     const router = useRouter();
     const route = useRoute();
+
     const userId = ref(route.params.userId);
     const user = ref({});
     const loading = ref(true);
     const error = ref('');
 
+    const userRole = computed(() => {
+      if (!user.value) return '';
+      if (typeof user.value.role === 'string') return user.value.role;
+      if (typeof user.value.role === 'object') return user.value.role.roleName || user.value.role.role_name || '';
+      return '';
+    });
+
+    const canAssignTenants = computed(() => {
+      const role = userRole.value.toLowerCase().replace(/\s+/g, '');
+      return ['standarduser','monitoringuser'].includes(role);
+    });
+
     const fetchUserDetails = async () => {
       loading.value = true;
       error.value = '';
-      
       try {
         const response = await superAdminService.getUserById(userId.value);
         if (response.success) {
           user.value = response.data;
-          
-          // Validate user role
-          const role = userRole.value.toLowerCase();
-          if (!['standarduser', 'standard user', 'monitoringuser', 'monitoring user'].includes(role)) {
+          if (!canAssignTenants.value) {
             error.value = 'Tenant assignment is only available for Standard User and Monitoring User roles.';
-            setTimeout(() => {
-              router.push({ name: 'SuperadminUserManagement' });
-            }, 3000);
           }
         } else {
           error.value = response.message || 'Failed to load user details';
@@ -122,61 +134,35 @@ export default {
       }
     };
 
-    const assignTenants = async (selectedTenantIds) => {
+    const assignTenantHandler = async ({ tenantId }) => {
+      if (!tenantId) return alert('Invalid tenant selected');
+      if (!canAssignTenants.value) return alert('This user cannot be assigned tenants');
+
+      loading.value = true;
       try {
-        const response = await superAdminService.assignTenantsToUser(userId.value, selectedTenantIds);
+        const response = await superAdminService.assignUserToTenant(userId.value, tenantId);
         if (response.success) {
-          // Show success message using toast if available
-          if (window.$toast) {
-            window.$toast.success('Tenants assigned successfully');
-          } else {
-            alert('Tenants assigned successfully');
-          }
+          alert('Tenant assigned successfully');
+          loading.value = false; // Stop loading before navigating
           router.push({ name: 'SuperadminUserManagement' });
         } else {
-          if (window.$toast) {
-            window.$toast.error(response.message || 'Failed to assign tenants');
-          } else {
-            alert(response.message || 'Failed to assign tenants');
-          }
+          loading.value = false; // Stop loading if failed
+          alert(response.message || 'Failed to assign tenant');
         }
       } catch (err) {
-        if (window.$toast) {
-          window.$toast.error('An error occurred while assigning tenants');
-        } else {
-          alert('An error occurred while assigning tenants');
-        }
         console.error(err);
+        loading.value = false;
+        alert('An error occurred while assigning tenant');
       }
     };
 
-    const goBack = () => {
-      router.push({ name: 'SuperadminUserManagement' });
-    };
-
-    const userRole = computed(() => {
-      if (!user.value) return '';
-      
-      if (typeof user.value.role === 'string') {
-        return user.value.role;
-      } else if (typeof user.value.role === 'object') {
-        return user.value.role.role_name || user.value.role.roleName || '';
-      }
-      return '';
-    });
+    const goBack = () => router.push({ name: 'SuperadminUserManagement' });
 
     onMounted(fetchUserDetails);
 
-    return {
-      userId,
-      user,
-      loading,
-      error,
-      assignTenants,
-      goBack,
-      fetchUserDetails,
-      userRole
+    return { 
+      userId, user, loading, error, fetchUserDetails, goBack, userRole, canAssignTenants, assignTenantHandler 
     };
   }
-}
+};
 </script>

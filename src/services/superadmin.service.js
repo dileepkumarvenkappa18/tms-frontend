@@ -1,8 +1,10 @@
 import api, { endpoints } from './api.js'
 
+
 class SuperAdminService {
   constructor() {
-    this.baseURL = '/api/v1/superadmin'
+    this.baseURL = '/api/v1/superadmin';
+    this.pendingRequests = new Map(); // Track pending requests to prevent duplicates
   }
 
    // ==========================================
@@ -1023,170 +1025,137 @@ class SuperAdminService {
       }
     }
   }
-
-  // ==========================================
-  // USER-TENANT ASSIGNMENT - NEW
-  // ==========================================
-
- /**
- * Fetch available tenants for assignment to a user
- * @param {string|number} userId - The user ID
- * @returns {Promise} - API response with tenants data
+/**
+ * Fetch tenants available for assignment - showing only first temple per tenant
+ * @returns {Promise<{success: boolean, data: Array, message: string}>}
  */
-async getAvailableTenants(userId) {
+async getAssignableTenants() {
   try {
-    console.log(`Service: Fetching available tenants${userId ? ' for user ' + userId : ''}...`)
-    let response;
+    console.log('Service: Fetching assignable tenants...');
+    const response = await api.get(`${this.baseURL}/tenants/assignable`);
+    console.log('Service: Assignable tenants response:', response);
     
-    if (userId) {
-      response = await api.get(`${this.baseURL}/users/${userId}/available-tenants`)
-    } else {
-      // For reports section, fetch all tenants with temple info
-      response = await api.get(`${this.baseURL}/tenants?include=temple`)
+    let tenants = [];
+    // Handle different possible response data shapes
+    if (Array.isArray(response.data)) {
+      tenants = response.data;
+    } else if (response.data && Array.isArray(response.data.tenants)) {
+      tenants = response.data.tenants;
+    } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      tenants = response.data.data;
     }
     
-    console.log('Service: Available tenants response:', response)
+    console.log('Service: Raw tenants data:', tenants);
+    console.log('Service: First tenant sample:', tenants[0]);
     
-    // Process the response to ensure consistent data structure
-    let tenantsData = [];
-    
-    if (response && response.data && Array.isArray(response.data)) {
-      tenantsData = response.data;
-    } else if (Array.isArray(response)) {
-      tenantsData = response;
-    } else if (response && Array.isArray(response.tenants)) {
-      tenantsData = response.tenants;
+    // Debug: Log all possible ID fields for first tenant
+    if (tenants.length > 0) {
+      const firstTenant = tenants[0];
+      console.log('Service: Available ID fields:', {
+        id: firstTenant.id,
+        tenant_id: firstTenant.tenant_id,
+        tenantId: firstTenant.tenantId,
+        userId: firstTenant.userId,
+        user_id: firstTenant.user_id,
+        userID: firstTenant.userID
+      });
     }
     
-    // Ensure each tenant has the expected structure with temple data
-    const processedTenants = tenantsData.map(tenant => {
-      // Normalize the tenant object structure
-      const normalizedTenant = {
-        id: tenant.id || tenant.ID || tenant.Id,
-        name: tenant.name || tenant.Name || tenant.fullName || tenant.FullName,
-        status: tenant.status || tenant.Status || 'active',
-        // Ensure temple data is properly structured
-        temple: {
-          name: '',
-          address: '',
-          city: '',
-          state: ''
-        }
-      };
+    // Group by tenant ID and keep only the first temple for each tenant
+    const tenantMap = new Map();
+    
+    tenants.forEach((tenant, index) => {
+      // Try multiple ID field names
+      let id = tenant.id ?? tenant.tenant_id ?? tenant.tenantId ?? tenant.userId ?? tenant.user_id ?? tenant.userID;
       
-      // Extract temple data from tenant object
-      if (tenant.temple) {
-        normalizedTenant.temple.name = tenant.temple.name || tenant.temple.Name || '';
-        normalizedTenant.temple.address = tenant.temple.address || tenant.temple.Address || '';
-        normalizedTenant.temple.city = tenant.temple.city || tenant.temple.City || '';
-        normalizedTenant.temple.state = tenant.temple.state || tenant.temple.State || '';
-      } else if (tenant.Temple) {
-        normalizedTenant.temple.name = tenant.Temple.name || tenant.Temple.Name || '';
-        normalizedTenant.temple.address = tenant.Temple.address || tenant.Temple.Address || '';
-        normalizedTenant.temple.city = tenant.Temple.city || tenant.Temple.City || '';
-        normalizedTenant.temple.state = tenant.Temple.state || tenant.Temple.State || '';
+      console.log(`Service: Processing tenant ${index}:`, {
+        originalId: id,
+        tenantName: tenant.tenantName || tenant.name,
+        templeName: tenant.templeName || tenant.temple_name
+      });
+      
+      // Convert to number if it's a string
+      if (typeof id === 'string' && id.trim() !== '') {
+        id = Number(id);
       }
       
-      // If temple name is empty but entity name exists, use that
-      if (!normalizedTenant.temple.name) {
-        normalizedTenant.temple.name = tenant.entityName || tenant.EntityName || '';
+      // If still no valid ID, use index as fallback
+      if (id === null || id === undefined || isNaN(id)) {
+        console.log(`Service: No valid ID found for tenant ${index}, using index as ID`);
+        id = index + 1;
       }
       
-      // Extract location from address if city/state aren't set
-      if (normalizedTenant.temple.address && (!normalizedTenant.temple.city || !normalizedTenant.temple.state)) {
-        const parts = normalizedTenant.temple.address.split(',');
-        if (parts.length >= 2) {
-          normalizedTenant.temple.city = normalizedTenant.temple.city || parts[0].trim();
-          normalizedTenant.temple.state = normalizedTenant.temple.state || parts[1].trim();
-        }
+      // Only keep the first temple for each tenant ID
+      if (!tenantMap.has(id)) {
+        tenantMap.set(id, {
+          ...tenant,
+          id: id
+        });
+        console.log(`Service: Added tenant with ID ${id} to map`);
+      } else {
+        console.log(`Service: Skipped duplicate tenant with ID ${id}`);
       }
-      
-      return normalizedTenant;
     });
+    
+    // Convert map back to array
+    const uniqueTenants = Array.from(tenantMap.values());
+    
+    console.log('Service: Final unique tenants count:', uniqueTenants.length);
+    console.log('Service: Final unique tenants:', uniqueTenants);
     
     return {
       success: true,
-      data: processedTenants,
-      message: 'Available tenants fetched successfully'
-    }
+      data: uniqueTenants,
+      message: `Assignable tenants fetched successfully (${uniqueTenants.length} unique tenants)`
+    };
   } catch (error) {
-    console.error('Service: Error fetching available tenants:', error)
-    
-    // Fallback to mock data for development
-    if (error.response?.status === 404) {
-      console.warn('Available tenants endpoint not found, using mock data')
-      const mockData = this.getMockAvailableTenants().map(tenant => ({
-        id: tenant.id,
-        name: tenant.name || tenant.userId,
-        status: 'active',
-        temple: {
-          name: tenant.temple.name,
-          address: tenant.temple.address,
-          city: tenant.temple.address.split(',')[0]?.trim() || '',
-          state: tenant.temple.address.split(',')[1]?.trim() || ''
-        }
-      }));
-      
-      return {
-        success: true,
-        data: mockData,
-        message: 'Mock available tenants loaded (API endpoint not available)'
-      }
-    }
-    
+    console.error('Service: Error fetching assignable tenants:', error);
     return {
       success: false,
       data: [],
-      message: error.message || 'Failed to fetch available tenants'
-    }
+      message: error.response?.data?.message || error.message || 'Failed to fetch assignable tenants'
+    };
   }
 }
 
 
+/**
+ * Assign a single user to a tenant
+ * @param {number} userId - User ID
+ * @param {number} tenantId - Tenant ID
+ * @returns {Promise<{success: boolean, data: any, message: string}>}
+ */
+async assignUserToTenant(userId, tenantId) {
+  try {
+    console.log(`Service: Assigning user ${userId} to tenant ${tenantId}...`);
 
-  /**
-   * Assign tenants to a user
-   * @param {string|number} userId - The user ID
-   * @param {Array} tenantIds - Array of tenant IDs to assign
-   * @returns {Promise} - API response
-   */
-  async assignTenantsToUser(userId, tenantIds) {
-    try {
-      console.log(`Service: Assigning tenants to user ${userId}...`, tenantIds)
-      const response = await api.post(`${this.baseURL}/users/${userId}/assign-tenants`, {
-        tenantIds: tenantIds
-      })
-      console.log('Service: Assign tenants response:', response)
-      
-      return {
-        success: true,
-        data: response,
-        message: 'Tenants assigned successfully'
-      }
-    } catch (error) {
-      console.error('Service: Error assigning tenants:', error)
-      
-      // Fallback for development/testing
-      if (error.response?.status === 404) {
-        console.warn('Assign tenants endpoint not found, simulating successful assignment')
-        return {
-          success: true,
-          data: { 
-            userId: userId,
-            tenantIds: tenantIds,
-            message: 'Tenants assigned successfully (mock)'
-          },
-          message: 'Tenants assigned successfully (mock)'
-        }
-      }
-      
-      return {
-        success: false,
-        data: null,
-        message: error.response?.data?.error || error.message || 'Failed to assign tenants'
-      }
-    }
+    const payload = {
+      tenantId: Number(tenantId),
+      userId: Number(userId) // single user
+    };
+
+    console.log('Assignment payload:', payload);
+
+    // Use the correct endpoint
+    const response = await api.post(`${this.baseURL}/users/assign`, payload);
+    console.log('Service: User assigned to tenant response:', response);
+
+    return {
+      success: true,
+      data: response.data,
+      message: response.data?.message || 'User assigned to tenant successfully'
+    };
+  } catch (error) {
+    console.error('Service: Error assigning user to tenant:', error);
+    return {
+      success: false,
+      data: null,
+      message: error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to assign user to tenant'
+    };
   }
+}
+
+
 
   // ==========================================
   // PASSWORD RESET - NEW

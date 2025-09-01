@@ -3,122 +3,169 @@
 import api from '@/plugins/axios'
 
 const templeService = {
-  async getTemples(searchParams = {}) {
-    try {
-      console.log('📡 Making API call to fetch available temples')
-      console.log('🔍 Search params:', searchParams)
+async getTemples(searchParams = {}) {
+  try {
+    console.log('📡 Making API call to fetch available temples')
+    console.log('🔍 Search params:', searchParams)
 
-      // DIRECT FIX: Check the current URL path directly
-      const currentPath = window.location.pathname
-      console.log('📍 Current path:', currentPath)
-      
-      let response
-      
-      // Handle SuperAdmin temple fetching with fallback strategy
-      if (searchParams.superAdmin) {
-        console.log(`🔍 Using SuperAdmin endpoint for tenant ${searchParams.tenantId}`)
+    // DIRECT FIX: Check the current URL path directly
+    const currentPath = window.location.pathname
+    console.log('📍 Current path:', currentPath)
+    
+    let response
+    
+    // Handle SuperAdmin temple fetching with fallback strategy
+    if (searchParams.superAdmin) {
+      console.log(`🔍 Using SuperAdmin endpoint for tenant ${searchParams.tenantId}`)
+      try {
+        // Add cache busting timestamp to ensure fresh data
+        const timestamp = Date.now()
+        
+        // First attempt with specific tenant parameter and cache busting
+        response = await api.get(`/v1/entities?tenant_id=${searchParams.tenantId}&_=${timestamp}`)
+        console.log('✅ First attempt successful with /v1/entities endpoint')
+      } catch (err) {
+        console.log('⚠️ First endpoint failed, trying fallback...', err.message)
         try {
-          // Add cache busting timestamp to ensure fresh data
           const timestamp = Date.now()
-          
-          // First attempt with specific tenant parameter and cache busting
-          response = await api.get(`/v1/entities?tenant_id=${searchParams.tenantId}&_=${timestamp}`)
-          console.log('✅ First attempt successful with /v1/entities endpoint')
-        } catch (err) {
-          console.log('⚠️ First endpoint failed, trying fallback...', err.message)
+          // Fallback to superadmin specific endpoint with cache busting
+          response = await api.get(`/v1/superadmin/entities?tenant_id=${searchParams.tenantId}&_=${timestamp}`)
+          console.log('✅ Second attempt successful with /v1/superadmin/entities endpoint')
+        } catch (err2) {
+          console.log('⚠️ Second endpoint failed, trying third endpoint...', err2.message)
           try {
             const timestamp = Date.now()
-            // Fallback to superadmin specific endpoint with cache busting
-            response = await api.get(`/v1/superadmin/entities?tenant_id=${searchParams.tenantId}&_=${timestamp}`)
-            console.log('✅ Second attempt successful with /v1/superadmin/entities endpoint')
-          } catch (err2) {
-            console.log('⚠️ Second endpoint failed, trying third endpoint...', err2.message)
-            try {
-              const timestamp = Date.now()
-              // Try a different superadmin endpoint format with cache busting
-              response = await api.get(`/v1/superadmin/tenants/${searchParams.tenantId}/entities?_=${timestamp}`)
-              console.log('✅ Third attempt successful with /v1/superadmin/tenants/[id]/entities endpoint')
-            } catch (err3) {
-              console.log('⚠️ All SuperAdmin tenant-specific endpoints failed, using generic endpoint', err3.message)
-              // Last resort, general entities endpoint
-              const timestamp = Date.now()
-              response = await api.get(`/v1/entities?_=${timestamp}`)
-            }
+            // Try a different superadmin endpoint format with cache busting
+            response = await api.get(`/v1/superadmin/tenants/${searchParams.tenantId}/entities?_=${timestamp}`)
+            console.log('✅ Third attempt successful with /v1/superadmin/tenants/[id]/entities endpoint')
+          } catch (err3) {
+            console.log('⚠️ All SuperAdmin tenant-specific endpoints failed, using generic endpoint', err3.message)
+            // Last resort, general entities endpoint
+            const timestamp = Date.now()
+            response = await api.get(`/v1/entities?_=${timestamp}`)
           }
         }
       }
-      // NEW LOGIC: Special case for temple admin dashboard
-      else if (currentPath.includes('/tenant/dashboard')) {
-        // Use the special endpoint for temple admins to see their created temples
-        const timestamp = Date.now()
-        console.log('🔑 Using temple admin special endpoint: /v1/entities/by-creator')
-        response = await api.get(`/v1/entities/by-creator?_=${timestamp}`)
-      }
-      // For other admin paths
-      else if (currentPath.includes('/tenant/') || 
-          currentPath.includes('/entity/') || 
-          currentPath.includes('/admin/') || 
-          currentPath.includes('/superadmin/')) {
-        const timestamp = Date.now()
-        console.log('🔒 Using admin endpoint: /v1/entities')
-        response = await api.get(`/v1/entities?_=${timestamp}`)
-      } else {
-        // Otherwise use devotee endpoint with search params
-        console.log('🔍 Using devotee endpoint: /v1/temples/search')
-        const queryString = new URLSearchParams()
-        if (searchParams.query) queryString.append('query', searchParams.query)
-        if (searchParams.state) queryString.append('state', searchParams.state)
-        if (searchParams.type) queryString.append('type', searchParams.type)
-        // Add cache busting
-        queryString.append('_', Date.now())
-        
-        response = await api.get(`/v1/temples/search${queryString.toString() ? '?' + queryString.toString() : ''}`)
-      }
+    }
+    // NEW LOGIC: Special case for temple admin dashboard
+    else if (currentPath.includes('/tenant/dashboard') || currentPath.match(/\/tenant\/\d+\/dashboard/)) {
+      // Use the special endpoint for temple admins to see their created temples
+      const timestamp = Date.now()
+      console.log('🔑 Using temple admin special endpoint with multi-fallback strategy')
       
-      console.log('📥 Temple API response received:', response)
-
-      // Extract data from response
-      let templeData = response.data || response
-      if (!Array.isArray(templeData)) {
-        if (templeData.data && Array.isArray(templeData.data)) {
-          templeData = templeData.data
-        } else if (templeData.temples && Array.isArray(templeData.temples)) {
-          templeData = templeData.temples
-        } else if (templeData.entities && Array.isArray(templeData.entities)) {
-          templeData = templeData.entities
-        } else if (templeData.items && Array.isArray(templeData.items)) {
-          templeData = templeData.items
+      try {
+        // First attempt with by-creator endpoint
+        console.log('🔍 Trying /v1/entities/by-creator endpoint...')
+        response = await api.get(`/v1/entities/by-creator?_=${timestamp}`)
+        console.log('✅ by-creator endpoint successful')
+      } catch (err) {
+        console.log('⚠️ by-creator endpoint failed, trying tenant-created endpoint...', err.message)
+        
+        try {
+          // Second attempt with tenant-created endpoint
+          const tenantId = searchParams.headers?.['X-Tenant-ID'] || 
+                          localStorage.getItem('current_tenant_id') ||
+                          currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
+          
+          console.log(`🔍 Trying /v1/entities/tenant/${tenantId}/created endpoint...`)
+          response = await api.get(`/v1/entities/tenant/${tenantId}/created?_=${timestamp}`)
+          console.log('✅ tenant-created endpoint successful')
+        } catch (err2) {
+          console.log('⚠️ tenant-created endpoint failed, trying general entities...', err2.message)
+          
+          try {
+            // Third attempt with general entities endpoint
+            console.log('🔍 Trying /v1/entities endpoint...')
+            response = await api.get(`/v1/entities?_=${timestamp}`)
+            console.log('✅ general entities endpoint successful')
+          } catch (err3) {
+            console.log('⚠️ All temple admin endpoints failed, creating empty response', err3.message)
+            // Last resort - return empty array wrapped in a response-like object
+            response = { data: [] }
+          }
         }
       }
-
-      if (!Array.isArray(templeData)) {
-        console.error('🚨 Could not extract array from response:', response)
-        return [] // Return empty array instead of throwing error for better UI handling
-      }
-
-      // IMPORTANT FIX: Filter temples by tenant ID for SuperAdmin flow
-      if (searchParams.superAdmin && searchParams.tenantId) {
-        console.log(`🔍 Filtering temples by tenant ID ${searchParams.tenantId}`)
-        templeData = templeData.filter(temple => 
-          // Check different possible property names for created_by or tenant_id
-          (temple.created_by && temple.created_by.toString() === searchParams.tenantId.toString()) ||
-          (temple.tenant_id && temple.tenant_id.toString() === searchParams.tenantId.toString()) ||
-          (temple.creator_id && temple.creator_id.toString() === searchParams.tenantId.toString())
-        )
-        console.log(`✅ After filtering: ${templeData.length} temples match tenant ID ${searchParams.tenantId}`)
-      }
-
-      const normalizedTemples = templeData.map(temple => this.normalizeTempleData(temple))
-      console.log('✅ Normalized temples:', normalizedTemples)
-
-      return normalizedTemples
-    } catch (error) {
-      console.error('❌ Error fetching temples:', error)
-      console.error('Error response:', error.response?.data)
-      // Return empty array instead of throwing error for better UI handling
-      return []
     }
-  },
+    // For other admin paths
+    else if (currentPath.includes('/tenant/') || 
+        currentPath.includes('/entity/') || 
+        currentPath.includes('/admin/') || 
+        currentPath.includes('/standarduser/') || 
+        currentPath.includes('/superadmin/')) {
+      const timestamp = Date.now()
+      console.log('🔒 Using admin endpoint: /v1/entities')
+      response = await api.get(`/v1/entities?_=${timestamp}`)
+    } else {
+      // Otherwise use devotee endpoint with search params
+      console.log('🔍 Using devotee endpoint: /v1/temples/search')
+      const queryString = new URLSearchParams()
+      if (searchParams.query) queryString.append('query', searchParams.query)
+      if (searchParams.state) queryString.append('state', searchParams.state)
+      if (searchParams.type) queryString.append('type', searchParams.type)
+      // Add cache busting
+      queryString.append('_', Date.now())
+      
+      response = await api.get(`/v1/temples/search${queryString.toString() ? '?' + queryString.toString() : ''}`)
+    }
+    
+    console.log('📥 Temple API response received:', response)
+
+    // Extract data from response
+    let templeData = response.data || response
+    if (!Array.isArray(templeData)) {
+      if (templeData.data && Array.isArray(templeData.data)) {
+        templeData = templeData.data
+      } else if (templeData.temples && Array.isArray(templeData.temples)) {
+        templeData = templeData.temples
+      } else if (templeData.entities && Array.isArray(templeData.entities)) {
+        templeData = templeData.entities
+      } else if (templeData.items && Array.isArray(templeData.items)) {
+        templeData = templeData.items
+      }
+    }
+
+    if (!Array.isArray(templeData)) {
+      console.error('🚨 Could not extract array from response:', response)
+      return [] // Return empty array instead of throwing error for better UI handling
+    }
+
+    // NEW FILTER: Always filter by tenant ID from headers or URL params if we're in a tenant context
+    const tenantIdFromHeader = searchParams.headers?.['X-Tenant-ID'] || searchParams.tenantId;
+    
+    // Apply filtering if in tenant context or if tenant ID is available
+    if (tenantIdFromHeader && (currentPath.includes('/tenant/') || searchParams.superAdmin)) {
+      console.log(`🔍 Filtering temples by tenant ID ${tenantIdFromHeader}`);
+      templeData = templeData.filter(temple => 
+        (temple.created_by && temple.created_by.toString() === tenantIdFromHeader.toString()) ||
+        (temple.tenant_id && temple.tenant_id.toString() === tenantIdFromHeader.toString()) ||
+        (temple.creator_id && temple.creator_id.toString() === tenantIdFromHeader.toString())
+      );
+      console.log(`✅ After filtering: ${templeData.length} temples match tenant ID ${tenantIdFromHeader}`);
+    }
+
+    // IMPORTANT FIX: Filter temples by tenant ID for SuperAdmin flow (original code)
+    if (searchParams.superAdmin && searchParams.tenantId) {
+      console.log(`🔍 Filtering temples by tenant ID ${searchParams.tenantId}`)
+      templeData = templeData.filter(temple => 
+        // Check different possible property names for created_by or tenant_id
+        (temple.created_by && temple.created_by.toString() === searchParams.tenantId.toString()) ||
+        (temple.tenant_id && temple.tenant_id.toString() === searchParams.tenantId.toString()) ||
+        (temple.creator_id && temple.creator_id.toString() === searchParams.tenantId.toString())
+      )
+      console.log(`✅ After filtering: ${templeData.length} temples match tenant ID ${searchParams.tenantId}`)
+    }
+
+    const normalizedTemples = templeData.map(temple => this.normalizeTempleData(temple))
+    console.log('✅ Normalized temples:', normalizedTemples)
+
+    return normalizedTemples
+  } catch (error) {
+    console.error('❌ Error fetching temples:', error)
+    console.error('Error response:', error.response?.data)
+    // Return empty array instead of throwing error for better UI handling
+    return []
+  }
+},
 
   /**
    * Get temples for a specific tenant when logged in as SuperAdmin
@@ -344,6 +391,7 @@ const templeService = {
       if (currentPath.includes('/tenant/') || 
           currentPath.includes('/entity/') || 
           currentPath.includes('/admin/') || 
+          currentPath.includes('/standarduser/') || 
           currentPath.includes('/superadmin/')) {
         console.log('🔒 Using admin search endpoint: /v1/entities')
         response = await api.get(`/v1/entities?search=${encodeURIComponent(query)}`)

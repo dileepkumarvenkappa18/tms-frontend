@@ -293,7 +293,17 @@ const filteredTemples = computed(() => {
 const loadTemples = async () => {
   loading.value = true
   try {
-    await templeStore.fetchTemples()
+    // Get the selected tenant ID from localStorage
+    const selectedTenantId = localStorage.getItem('selected_tenant_id')
+    
+    // Check if we're in the SuperAdmin flow with a selected tenant
+    if (selectedTenantId) {
+      console.log(`Loading temples for tenant ID: ${selectedTenantId}`)
+      await templeStore.fetchTemplesForSuperAdmin(Number(selectedTenantId))
+    } else {
+      // Normal flow - fetch all temples
+      await templeStore.fetchTemples()
+    }
   } catch (error) {
     error('Failed to load temples')
   } finally {

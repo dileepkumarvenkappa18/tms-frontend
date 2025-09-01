@@ -49,7 +49,7 @@
           <optgroup label="Authentication">
             <option value="REGISTRATION_SUCCESS">Registration Success</option>
             <option value="REGISTRATION_FAILED">Registration Failed</option>
-            <option value="TEMPLEADMIN_REGISTRATION_SUCCESS">Temple Admin Registration</option>
+            <option value="TENANT_REGISTRATION_SUCCESS">Temple Admin Registration</option>
             <option value="REGISTRATION_BLOCKED">Registration Blocked</option>
             <option value="LOGIN_SUCCESS">Login Success</option>
             <option value="LOGIN_FAILED">Login Failed</option>
@@ -316,7 +316,7 @@ const selectedFormat = ref('pdf')
 const previewData = ref([])
 const previewColumns = ref([])
 
-const adminName = 'Temple Admin'
+const adminName = 'Tenant'
 const adminRole = 'Administrator'
 const { showToast } = useToast()
 

@@ -180,15 +180,23 @@
                 </button>
 
                 <!-- Access or Manage Button - Always show for monitoring/standard users -->
-                <button
-                  @click="manageTemple(temple)"
-                  class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors duration-200"
-                >
-                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"/>
-                  </svg>
-                  {{ isTenantUser ? 'Manage' : 'Access Dashboard' }}
-                </button>
+                <!-- Access or Manage Button - Only enabled for approved temples when user is a tenant -->
+<button
+  @click="manageTemple(temple)"
+  :disabled="isTenantUser && !isTempleApproved(temple)"
+  :class="[
+    'inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200',
+    (isTenantUser && !isTempleApproved(temple))
+      ? 'bg-gray-400 text-gray-100 cursor-not-allowed'
+      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+  ]"
+  :title="(isTenantUser && !isTempleApproved(temple)) ? 'Temple needs approval before it can be managed' : ''"
+>
+  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"/>
+  </svg>
+  {{ isTenantUser ? 'Manage' : 'Access Dashboard' }}
+</button>
               </div>
             </div>
 

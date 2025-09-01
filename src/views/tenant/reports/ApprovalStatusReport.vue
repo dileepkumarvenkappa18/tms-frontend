@@ -1,3 +1,4 @@
+
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Back to SuperAdmin Reports button (when viewed from superadmin) -->
@@ -419,14 +420,14 @@ const buildReportParams = () => {
     dateRange: activeFilter.value,
     startDate: startDate.value,
     endDate: endDate.value,
+    // Explicitly restrict to Tenant + Temple only
+    role: "", 
   };
 
-  // Add status filter if not 'all'
   if (activeStatus.value !== 'all') {
     baseParams.status = activeStatus.value;
   }
 
-  // Handle multi-tenant vs single tenant
   if (fromSuperadmin.value && tenantIds.value.length > 1) {
     baseParams.entityIds = tenantIds.value;
     baseParams.isSuperAdmin = true;
@@ -496,3 +497,5 @@ onMounted(() => {
   reportsStore.clearReportData();
 });
 </script>
+
+
