@@ -125,17 +125,32 @@ const fetchTemplesForSuperAdmin = async (tenantId) => {
     
     console.log(`🔄 Starting fresh fetch for tenant ID ${tenantId}`);
     
-    // Use the existing getTemples method with superAdmin flag and tenantId
-    // Force a fresh fetch with cache busting
-    const response = await templeService.getTemples({
+    // Store the tenant ID in localStorage to ensure it's available for filtering
+    localStorage.setItem('current_tenant_id', tenantId);
+    
+    // Set headers for the API request to include tenant ID
+    const options = {
       tenantId: tenantId,
       superAdmin: true,
+      headers: {
+        'X-Tenant-ID': tenantId
+      },
       timestamp: Date.now() // Add timestamp for cache busting
-    });
+    };
+    
+    // Use the existing getTemples method with all necessary parameters
+    const response = await templeService.getTemples(options);
     
     if (response && Array.isArray(response)) {
-      temples.value = response;
-      console.log(`🏛️ Temple service response for SuperAdmin: ${response.length} temples for tenant ${tenantId}`);
+      // Double-check filtering on the client side to ensure only tenant-specific temples
+      const filteredResponse = response.filter(temple => 
+        (temple.created_by && temple.created_by.toString() === tenantId.toString()) ||
+        (temple.tenant_id && temple.tenant_id.toString() === tenantId.toString()) ||
+        (temple.creator_id && temple.creator_id.toString() === tenantId.toString())
+      );
+      
+      temples.value = filteredResponse;
+      console.log(`🏛️ Temple service response for SuperAdmin: ${filteredResponse.length} temples for tenant ${tenantId}`);
     } else {
       temples.value = [];
       console.warn(`No temples returned for tenant ID ${tenantId}`);
@@ -151,7 +166,59 @@ const fetchTemplesForSuperAdmin = async (tenantId) => {
   }
 }
 
-  const createTemple = async (templeData) => {
+// Add this as a new method to your temple.js store
+const fetchSuperAdminTemplesStrict = async (tenantId) => {
+  console.log(`🔒 STRICT STORE: Fetching temples for tenant ID ${tenantId}`);
+  temples.value = [];
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    if (!tenantId) {
+      console.warn('🚫 STRICT STORE: No tenant ID provided');
+      return [];
+    }
+    
+    const response = await templeService.getSuperAdminTemplesStrict(tenantId);
+    
+    // Set the temples directly
+    temples.value = response;
+    console.log(`🔒 STRICT STORE: Set ${temples.value.length} temples in store`);
+    
+    return temples.value;
+  } catch (err) {
+    console.error(`❌ STRICT STORE: Error:`, err);
+    error.value = `Failed to fetch temples: ${err.message || 'Unknown error'}`;
+    return [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+// Add to temple.js store
+const fetchDirectByTenant = async (tenantId) => {
+  console.log(`🔄 STORE DIRECT: Fetching temples for tenant ${tenantId}`);
+  
+  // Clear existing data
+  temples.value = [];
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const result = await templeService.getTemplesDirectByTenant(tenantId);
+    temples.value = result;
+    console.log(`🔄 STORE DIRECT: Set ${result.length} temples in store`);
+    return result;
+  } catch (err) {
+    console.error(`🔄 STORE DIRECT: Error:`, err);
+    error.value = err.message || 'Unknown error';
+    return [];
+  } finally {
+    loading.value = false;
+  }
+}
+
+ const createTemple = async (templeData) => {
     try {
       loading.value = true
       error.value = null
@@ -206,6 +273,19 @@ const fetchTemplesForSuperAdmin = async (tenantId) => {
       toast.success('Temple created successfully. It will be reviewed by the admin.')
       
       resetForm()
+      
+      // IMPORTANT: Force refresh temple list after creation
+      await fetchTemples()
+      
+      // Clear any cached data in localStorage that might be related to temples
+      try {
+        localStorage.removeItem('dashboard_local_data')
+        localStorage.removeItem('dashboard_counts')
+        localStorage.removeItem('dashboard_seva_names')
+      } catch (e) {
+        console.warn('Could not clear localStorage cache:', e)
+      }
+      
       return response
 
     } catch (err) {
@@ -217,7 +297,7 @@ const fetchTemplesForSuperAdmin = async (tenantId) => {
     } finally {
       loading.value = false
     }
-  }
+}
 
   const updateTemple = async (id, updates) => {
     try {
@@ -415,6 +495,7 @@ const fetchTemplesForSuperAdmin = async (tenantId) => {
     
     // Actions
     fetchTemples,
+    fetchDirectByTenant,
     createTemple,
     updateTemple,
     deleteTemple,

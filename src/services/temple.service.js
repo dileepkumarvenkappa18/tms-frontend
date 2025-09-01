@@ -8,14 +8,41 @@ async getTemples(searchParams = {}) {
     console.log('📡 Making API call to fetch available temples')
     console.log('🔍 Search params:', searchParams)
 
-    // DIRECT FIX: Check the current URL path directly
+    // Check the current URL path directly
     const currentPath = window.location.pathname
     console.log('📍 Current path:', currentPath)
     
+    // Improved detection for standard user dashboard paths
+    // This captures both /tenant/dashboard and /tenant/2/dashboard patterns
+    const isStandardUserPath = 
+      currentPath.includes('/standarduser') || 
+      currentPath.match(/\/tenant\/\d+\/dashboard/) !== null ||
+      currentPath === '/tenant/dashboard'  // Add this line to catch the redirect path
+    
+    // Get the tenant ID from headers, local storage, or URL
+    const tenantId = 
+      searchParams.headers?.['X-Tenant-ID'] || 
+      localStorage.getItem('current_tenant_id') || 
+      currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1] ||
+      localStorage.getItem('X-Tenant-ID')
+    
+    console.log(`👤 Is standard user check: ${isStandardUserPath}`)
+    console.log(`🔑 Using tenant ID: ${tenantId || 'none'}`)
+    
+    // IMPORTANT: Check if this is a SuperAdmin request first
+    const isSuperAdminRequest = searchParams.superAdmin === true;
+    console.log(`🔍 Is SuperAdmin request: ${isSuperAdminRequest}`);
+    
+    // IMPORTANT: For standard users, use our specialized function that loads all temples
+    if (isStandardUserPath && !isSuperAdminRequest) {
+      console.log('👤 Standard user detected - using specialized multi-fetch approach')
+      return await this.getTemplesForStandardUser()
+    }
+    
+    // Original code for other user types below...
     let response
     
-    // Handle SuperAdmin temple fetching with fallback strategy
-    if (searchParams.superAdmin) {
+    if (isSuperAdminRequest) {
       console.log(`🔍 Using SuperAdmin endpoint for tenant ${searchParams.tenantId}`)
       try {
         // Add cache busting timestamp to ensure fresh data
@@ -47,8 +74,8 @@ async getTemples(searchParams = {}) {
         }
       }
     }
-    // NEW LOGIC: Special case for temple admin dashboard
-    else if (currentPath.includes('/tenant/dashboard') || currentPath.match(/\/tenant\/\d+\/dashboard/)) {
+    // Handle normal temple admin case
+    else if (currentPath.includes('/tenant/dashboard')) {
       // Use the special endpoint for temple admins to see their created temples
       const timestamp = Date.now()
       console.log('🔑 Using temple admin special endpoint with multi-fallback strategy')
@@ -67,9 +94,13 @@ async getTemples(searchParams = {}) {
                           localStorage.getItem('current_tenant_id') ||
                           currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
           
-          console.log(`🔍 Trying /v1/entities/tenant/${tenantId}/created endpoint...`)
-          response = await api.get(`/v1/entities/tenant/${tenantId}/created?_=${timestamp}`)
-          console.log('✅ tenant-created endpoint successful')
+          if (tenantId) {
+            console.log(`🔍 Trying /v1/entities/tenant/${tenantId}/created endpoint...`)
+            response = await api.get(`/v1/entities/tenant/${tenantId}/created?_=${timestamp}`)
+            console.log('✅ tenant-created endpoint successful')
+          } else {
+            throw new Error('No tenant ID available for tenant-created endpoint')
+          }
         } catch (err2) {
           console.log('⚠️ tenant-created endpoint failed, trying general entities...', err2.message)
           
@@ -111,16 +142,20 @@ async getTemples(searchParams = {}) {
     console.log('📥 Temple API response received:', response)
 
     // Extract data from response
-    let templeData = response.data || response
+    let templeData = response?.data || response
     if (!Array.isArray(templeData)) {
-      if (templeData.data && Array.isArray(templeData.data)) {
+      if (templeData?.data && Array.isArray(templeData.data)) {
         templeData = templeData.data
-      } else if (templeData.temples && Array.isArray(templeData.temples)) {
+      } else if (templeData?.temples && Array.isArray(templeData.temples)) {
         templeData = templeData.temples
-      } else if (templeData.entities && Array.isArray(templeData.entities)) {
+      } else if (templeData?.entities && Array.isArray(templeData.entities)) {
         templeData = templeData.entities
-      } else if (templeData.items && Array.isArray(templeData.items)) {
+      } else if (templeData?.items && Array.isArray(templeData.items)) {
         templeData = templeData.items
+      } else {
+        // Return empty array if we couldn't extract data
+        console.log('⚠️ Could not extract temple data from response, returning empty array')
+        return []
       }
     }
 
@@ -129,11 +164,34 @@ async getTemples(searchParams = {}) {
       return [] // Return empty array instead of throwing error for better UI handling
     }
 
-    // NEW FILTER: Always filter by tenant ID from headers or URL params if we're in a tenant context
-    const tenantIdFromHeader = searchParams.headers?.['X-Tenant-ID'] || searchParams.tenantId;
+    // CRITICAL FIX: SuperAdmin filtering logic needs to run first
+    if (isSuperAdminRequest && searchParams.tenantId) {
+      console.log(`🔍 SUPERADMIN: Filtering temples by tenant ID ${searchParams.tenantId}`);
+      templeData = templeData.filter(temple => 
+        (temple.created_by && temple.created_by.toString() === searchParams.tenantId.toString()) ||
+        (temple.tenant_id && temple.tenant_id.toString() === searchParams.tenantId.toString()) ||
+        (temple.creator_id && temple.creator_id.toString() === searchParams.tenantId.toString())
+      );
+      console.log(`✅ SUPERADMIN: After filtering: ${templeData.length} temples match tenant ID ${searchParams.tenantId}`);
+      
+      // Return immediately after SuperAdmin filtering to avoid other filtering logic
+      const normalizedTemples = templeData.map(temple => this.normalizeTempleData(temple));
+      console.log(`✅ SUPERADMIN: Final normalized temples: ${normalizedTemples.length}`);
+      return normalizedTemples;
+    }
+
+    // Apply filtering if needed (for non-SuperAdmin flows)
+    const tenantIdFromHeader = searchParams.headers?.['X-Tenant-ID'] || 
+                              searchParams.tenantId || 
+                              localStorage.getItem('current_tenant_id') || 
+                              currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
     
-    // Apply filtering if in tenant context or if tenant ID is available
-    if (tenantIdFromHeader && (currentPath.includes('/tenant/') || searchParams.superAdmin)) {
+    // For standard user paths, no filtering is done
+    if (isStandardUserPath) {
+      console.log(`📊 STANDARD USER - SHOWING ALL TEMPLES (${templeData.length}) WITHOUT FILTERING`)
+    }
+    // Apply filtering for other roles if in tenant context or if tenant ID is available
+    else if (tenantIdFromHeader && (currentPath.includes('/tenant/') || searchParams.superAdmin)) {
       console.log(`🔍 Filtering temples by tenant ID ${tenantIdFromHeader}`);
       templeData = templeData.filter(temple => 
         (temple.created_by && temple.created_by.toString() === tenantIdFromHeader.toString()) ||
@@ -143,26 +201,271 @@ async getTemples(searchParams = {}) {
       console.log(`✅ After filtering: ${templeData.length} temples match tenant ID ${tenantIdFromHeader}`);
     }
 
-    // IMPORTANT FIX: Filter temples by tenant ID for SuperAdmin flow (original code)
-    if (searchParams.superAdmin && searchParams.tenantId) {
-      console.log(`🔍 Filtering temples by tenant ID ${searchParams.tenantId}`)
-      templeData = templeData.filter(temple => 
-        // Check different possible property names for created_by or tenant_id
-        (temple.created_by && temple.created_by.toString() === searchParams.tenantId.toString()) ||
-        (temple.tenant_id && temple.tenant_id.toString() === searchParams.tenantId.toString()) ||
-        (temple.creator_id && temple.creator_id.toString() === searchParams.tenantId.toString())
-      )
-      console.log(`✅ After filtering: ${templeData.length} temples match tenant ID ${searchParams.tenantId}`)
-    }
-
     const normalizedTemples = templeData.map(temple => this.normalizeTempleData(temple))
+    console.log(`✅ Final temples count: ${normalizedTemples.length}`)
     console.log('✅ Normalized temples:', normalizedTemples)
 
     return normalizedTemples
   } catch (error) {
     console.error('❌ Error fetching temples:', error)
     console.error('Error response:', error.response?.data)
-    // Return empty array instead of throwing error for better UI handling
+    return []
+  }
+},
+
+
+// Add this as a new method to temple.service.js
+async getSuperAdminTemplesStrict(tenantId) {
+  try {
+    console.log(`🔒 STRICT: Fetching temples for tenant ID ${tenantId}`);
+    
+    if (!tenantId) {
+      console.error('🚫 STRICT: No tenant ID provided');
+      return [];
+    }
+    
+    // Make a direct API call with the tenant ID
+    const timestamp = Date.now();
+    const response = await api.get(`/v1/entities?_=${timestamp}`, {
+      headers: {
+        'X-Tenant-ID': tenantId
+      }
+    });
+    
+    console.log('📥 STRICT: API response:', response);
+    
+    // Extract temple data
+    let templeData = response?.data || response;
+    if (!Array.isArray(templeData)) {
+      if (templeData?.data && Array.isArray(templeData.data)) templeData = templeData.data;
+      else if (templeData?.temples && Array.isArray(templeData.temples)) templeData = templeData.temples;
+      else if (templeData?.entities && Array.isArray(templeData.entities)) templeData = templeData.entities;
+      else if (templeData?.items && Array.isArray(templeData.items)) templeData = templeData.items;
+      else templeData = [];
+    }
+    
+    console.log(`📊 STRICT: Total temples before filtering: ${templeData.length}`);
+    
+    // EXPLICITLY filter by tenant ID
+    const filteredTemples = templeData.filter(temple => {
+      const createdByMatch = temple.created_by && temple.created_by.toString() === tenantId.toString();
+      const tenantIdMatch = temple.tenant_id && temple.tenant_id.toString() === tenantId.toString();
+      const creatorIdMatch = temple.creator_id && temple.creator_id.toString() === tenantId.toString();
+      
+      return createdByMatch || tenantIdMatch || creatorIdMatch;
+    });
+    
+    console.log(`📊 STRICT: Temples after filtering: ${filteredTemples.length}`);
+    
+    // Normalize temples
+    const normalizedTemples = filteredTemples.map(temple => this.normalizeTempleData(temple));
+    
+    return normalizedTemples;
+  } catch (error) {
+    console.error('❌ STRICT: Error fetching temples:', error);
+    return [];
+  }
+},
+
+// Add this as a new method to temple.service.js
+async getTemplesDirectByTenant(tenantId) {
+  try {
+    console.log(`📡 DIRECT: Making direct API call for tenant ${tenantId}`);
+    
+    if (!tenantId) {
+      console.error('📡 DIRECT: No tenant ID provided');
+      return [];
+    }
+    
+    // Try multiple endpoints to find one that works
+    let response = null;
+    let endpoint = '';
+    let success = false;
+    
+    // Add these headers to all requests
+    const headers = {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      'X-Tenant-ID': tenantId
+    };
+    
+    // First try: entities/by-creator
+    try {
+      endpoint = `/v1/entities/by-creator?tenant_id=${tenantId}&_=${Date.now()}`;
+      console.log(`📡 DIRECT: Trying endpoint: ${endpoint}`);
+      response = await api.get(endpoint, { headers });
+      console.log(`📡 DIRECT: Success with ${endpoint}`);
+      success = true;
+    } catch (err1) {
+      console.log(`📡 DIRECT: Failed with ${endpoint}: ${err1.message}`);
+      
+      // Second try: entities with tenant_id parameter
+      try {
+        endpoint = `/v1/entities?tenant_id=${tenantId}&_=${Date.now()}`;
+        console.log(`📡 DIRECT: Trying endpoint: ${endpoint}`);
+        response = await api.get(endpoint, { headers });
+        console.log(`📡 DIRECT: Success with ${endpoint}`);
+        success = true;
+      } catch (err2) {
+        console.log(`📡 DIRECT: Failed with ${endpoint}: ${err2.message}`);
+        
+        // Third try: superadmin/tenants/{id}/entities
+        try {
+          endpoint = `/v1/superadmin/tenants/${tenantId}/entities?_=${Date.now()}`;
+          console.log(`📡 DIRECT: Trying endpoint: ${endpoint}`);
+          response = await api.get(endpoint, { headers });
+          console.log(`📡 DIRECT: Success with ${endpoint}`);
+          success = true;
+        } catch (err3) {
+          console.log(`📡 DIRECT: Failed with ${endpoint}: ${err3.message}`);
+          
+          // Last resort: use regular entities endpoint
+          endpoint = `/v1/entities?_=${Date.now()}`;
+          console.log(`📡 DIRECT: Using fallback endpoint: ${endpoint}`);
+          response = await api.get(endpoint, { headers });
+        }
+      }
+    }
+    
+    // Log response for debugging
+    console.log(`📡 DIRECT: Response from ${endpoint}:`, response);
+    
+    // Extract temples
+    let temples = [];
+    if (response && response.data) {
+      temples = Array.isArray(response.data) ? response.data :
+                response.data.data ? response.data.data :
+                response.data.entities ? response.data.entities :
+                response.data.items ? response.data.items : [];
+    }
+    
+    console.log(`📡 DIRECT: Extracted ${temples.length} temples`);
+    
+    // Apply filtering client-side regardless of which endpoint worked
+    const filteredTemples = temples.filter(temple => {
+      // Try all possible property names for tenant ID
+      const createdByMatch = temple.created_by && temple.created_by.toString() === tenantId.toString();
+      const tenantIdMatch = temple.tenant_id && temple.tenant_id.toString() === tenantId.toString();
+      const creatorIdMatch = temple.creator_id && temple.creator_id.toString() === tenantId.toString();
+      
+      return createdByMatch || tenantIdMatch || creatorIdMatch;
+    });
+    
+    console.log(`📡 DIRECT: After filtering: ${filteredTemples.length} temples`);
+    
+    // Normalize the temples
+    return filteredTemples.map(temple => this.normalizeTempleData(temple));
+  } catch (error) {
+    console.error('📡 DIRECT: Fatal error:', error);
+    return [];
+  }
+},
+
+// Add this new method to your temple.service.js file
+async getTemplesForStandardUser() {
+  try {
+    console.log('🔎 Standard user: Fetching all accessible temples...')
+    const tenantId = localStorage.getItem('current_tenant_id') || 
+                     document.querySelector('meta[name="tenant-id"]')?.getAttribute('content') ||
+                     window.location.pathname.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
+    
+    console.log(`🔑 Using tenant ID: ${tenantId}`)
+    
+    // Create a Map to deduplicate temples by ID
+    const templeMap = new Map()
+    
+    // 1. First, get all entities (will be filtered by backend to show assigned entity)
+    try {
+      console.log('1️⃣ Fetching assigned entity...')
+      const timestamp = Date.now()
+      const response = await api.get(`/v1/entities?_=${timestamp}`)
+      
+      let temples = response.data || []
+      if (!Array.isArray(temples)) {
+        if (temples.data && Array.isArray(temples.data)) temples = temples.data
+        else if (temples.entities && Array.isArray(temples.entities)) temples = temples.entities
+        else if (temples.items && Array.isArray(temples.items)) temples = temples.items
+        else temples = []
+      }
+      
+      console.log(`✅ Got ${temples.length} assigned temples`)
+      
+      // Add temples to the map
+      temples.forEach(temple => {
+        templeMap.set(temple.id, temple)
+      })
+    } catch (err) {
+      console.warn('⚠️ Error fetching assigned entity:', err.message)
+    }
+    
+    // 2. Get temples for the tenant
+    if (tenantId) {
+      try {
+        console.log(`2️⃣ Fetching temples for tenant ${tenantId}...`)
+        const timestamp = Date.now()
+        const response = await api.get(`/v1/entities?tenant_id=${tenantId}&_=${timestamp}`)
+        
+        let temples = response.data || []
+        if (!Array.isArray(temples)) {
+          if (temples.data && Array.isArray(temples.data)) temples = temples.data
+          else if (temples.entities && Array.isArray(temples.entities)) temples = temples.entities
+          else if (temples.items && Array.isArray(temples.items)) temples = temples.items
+          else temples = []
+        }
+        
+        console.log(`✅ Got ${temples.length} tenant temples`)
+        
+        // Add temples to the map
+        temples.forEach(temple => {
+          templeMap.set(temple.id, temple)
+        })
+      } catch (err) {
+        console.warn(`⚠️ Error fetching tenant temples:`, err.message)
+      }
+    }
+    
+    // 3. Get temples for superadmin (as fallback)
+    try {
+      console.log(`3️⃣ Fetching all temples as fallback...`)
+      const timestamp = Date.now()
+      const response = await api.get(`/v1/superadmin/entities?_=${timestamp}`)
+      
+      let temples = response.data || []
+      if (!Array.isArray(temples)) {
+        if (temples.data && Array.isArray(temples.data)) temples = temples.data
+        else if (temples.entities && Array.isArray(temples.entities)) temples = temples.entities
+        else if (temples.items && Array.isArray(temples.items)) temples = temples.items
+        else temples = []
+      }
+      
+      // If we have a tenant ID, filter to only show related temples
+      if (tenantId) {
+        temples = temples.filter(temple => 
+          (temple.created_by && temple.created_by.toString() === tenantId.toString()) ||
+          (temple.tenant_id && temple.tenant_id.toString() === tenantId.toString()) ||
+          (temple.creator_id && temple.creator_id.toString() === tenantId.toString())
+        )
+      }
+      
+      console.log(`✅ Got ${temples.length} superadmin temples for tenant`)
+      
+      // Add temples to the map
+      temples.forEach(temple => {
+        templeMap.set(temple.id, temple)
+      })
+    } catch (err) {
+      console.warn('⚠️ Error fetching superadmin temples:', err.message)
+    }
+    
+    // Convert map values to array
+    const allTemples = Array.from(templeMap.values())
+    console.log(`🏛️ Total unique temples found: ${allTemples.length}`)
+    
+    // Normalize the temples
+    const normalizedTemples = allTemples.map(temple => this.normalizeTempleData(temple))
+    return normalizedTemples
+    
+  } catch (error) {
+    console.error('❌ Error in getTemplesForStandardUser:', error)
     return []
   }
 },

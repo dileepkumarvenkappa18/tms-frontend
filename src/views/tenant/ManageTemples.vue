@@ -291,23 +291,23 @@ const filteredTemples = computed(() => {
 
 // Methods
 const loadTemples = async () => {
-  loading.value = true
+  loading.value = true;
   try {
     // Get the selected tenant ID from localStorage
-    const selectedTenantId = localStorage.getItem('selected_tenant_id')
+    const selectedTenantId = localStorage.getItem('selected_tenant_id');
     
-    // Check if we're in the SuperAdmin flow with a selected tenant
     if (selectedTenantId) {
-      console.log(`Loading temples for tenant ID: ${selectedTenantId}`)
-      await templeStore.fetchTemplesForSuperAdmin(Number(selectedTenantId))
+      console.log(`⚡️ COMPONENT: Using direct method for tenant ID: ${selectedTenantId}`);
+      // Use our direct method instead of any existing methods
+      await templeStore.fetchDirectByTenant(selectedTenantId);
     } else {
-      // Normal flow - fetch all temples
-      await templeStore.fetchTemples()
+      // Normal flow for non-SuperAdmin users
+      await templeStore.fetchTemples();
     }
   } catch (error) {
-    error('Failed to load temples')
+    console.error('⚡️ COMPONENT: Failed to load temples:', error);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
@@ -345,8 +345,103 @@ const confirmDelete = async () => {
   }
 }
 
-// Lifecycle
+// Add this new function to your component
+const fetchTenantTemples = async () => {
+  try {
+    loading.value = true;
+    
+    // Get the selected tenant ID
+    const tenantId = localStorage.getItem('selected_tenant_id');
+    console.log(`🔍 Direct fetch for tenant ID: ${tenantId}`);
+    
+    if (!tenantId) {
+      console.error('No tenant ID found in localStorage');
+      return;
+    }
+    
+    // Make direct API call
+    const url = `/api/v1/superadmin/tenants/${tenantId}/entities`;
+    console.log(`🔍 Using URL: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        'X-Tenant-ID': tenantId,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    console.log(`🔍 API response:`, data);
+    
+    // Extract temples
+    let templeData = data;
+    if (!Array.isArray(templeData)) {
+      if (templeData.data && Array.isArray(templeData.data)) templeData = templeData.data;
+      else if (templeData.entities && Array.isArray(templeData.entities)) templeData = templeData.entities;
+      else if (templeData.items && Array.isArray(templeData.items)) templeData = templeData.items;
+    }
+    
+    console.log(`🔍 Extracted temples: ${templeData.length}`);
+    
+    // Normalize temples
+    const normalizedTemples = templeData.map(temple => ({
+      id: temple.id || temple.ID || 0,
+      name: temple.name || temple.Name || 'Unknown Temple',
+      description: temple.description || temple.Description || '',
+      templeType: temple.temple_type || temple.TempleType || '',
+      category: temple.temple_type || temple.TempleType || '',
+      addressLine1: temple.street_address || temple.StreetAddress || '',
+      city: temple.city || temple.City || '',
+      state: temple.state || temple.State || '',
+      district: temple.district || temple.District || '',
+      pincode: temple.pincode || temple.Pincode || '',
+      country: 'India',
+      phone: temple.phone || temple.Phone || '',
+      email: temple.email || temple.Email || '',
+      status: temple.status || temple.Status || 'pending',
+      mainDeity: temple.main_deity || temple.MainDeity || '',
+      establishedYear: temple.established_year || temple.EstablishedYear || null,
+      createdAt: temple.created_at || temple.CreatedAt || null,
+      updatedAt: temple.updated_at || temple.UpdatedAt || null,
+      createdBy: temple.created_by || temple.CreatedBy || null,
+      tenantId: temple.tenant_id || temple.TenantId || temple.created_by || temple.CreatedBy || null,
+      address: {
+        street: temple.street_address || temple.StreetAddress || '',
+        city: temple.city || temple.City || '',
+        state: temple.state || temple.State || '',
+        district: temple.district || temple.District || '',
+        pincode: temple.pincode || temple.Pincode || '',
+        country: 'India'
+      },
+      contact: {
+        phone: temple.phone || temple.Phone || '',
+        email: temple.email || temple.Email || '',
+        website: temple.website || temple.Website || ''
+      }
+    }));
+    
+    // Set directly in the store
+    templeStore.temples.value = normalizedTemples;
+    
+  } catch (error) {
+    console.error('Direct fetch error:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Then replace your onMounted hook with this:
 onMounted(() => {
-  loadTemples()
+  // Check if we're in SuperAdmin flow
+  const selectedTenantId = localStorage.getItem('selected_tenant_id');
+  
+  if (selectedTenantId) {
+    // Use our direct fetch for SuperAdmin
+    fetchTenantTemples();
+  } else {
+    // Use normal flow for other users
+    loadTemples();
+  }
 })
 </script>
