@@ -5,6 +5,7 @@ import superadminRoutes from './routes/superadmin'
 import MessageComposer from '@/components/communication/MessageComposer.vue'
 import { useAuthStore } from '@/stores/auth'
 import { setupRouteGuards } from './guards';
+import tenantRoutes from './routes/tenant'
 
 // Layouts
 import PublicLayout from '@/layouts/PublicLayout.vue'
@@ -235,6 +236,17 @@ const routes = [
           breadcrumb: 'Dashboard'
         }
       },
+      {
+  path: 'user-management',
+  name: 'TenantUserManagement',
+  component: () => import('@/views/tenant/UserManagement.vue'),
+  meta: {
+    title: 'Tenant User Management',
+    breadcrumb: 'User Management',
+    requiresAuth: true,
+    allowedRoles: ['tenant', 'templeadmin']
+  }
+},
       {
         path: 'entities/create',
         name: 'CreateTemple',

@@ -31,7 +31,15 @@
           Create Temple
         </router-link>
 
-        <!-- NEW: Reports Dashboard with Subsections that Link to Separate Pages -->
+        <!-- NEW: Tenant User Management Link -->
+        <router-link to="/tenant/user-management" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute('/tenant/user-management') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'">
+          <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/tenant/user-management') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          Tenant User Management
+        </router-link>
+
+        <!-- Reports Dashboard with Subsections that Link to Separate Pages -->
         <div class="mt-3">
           <!-- Reports Dashboard Main Button -->
           <div 
@@ -51,7 +59,7 @@
 
           <!-- Reports Dashboard Subsections -->
           <transition name="slide-down">
-            <div v-if="isReportsDashboardActive" class="mt-1 ml-6 space-y-1 bg-indigo-50 p-2 rounded-md">
+            <div v-if="isReportsDashboardActive" class="mt-1 ml-5 space-y-1 bg-indigo-50 p-2 rounded-md">
               <!-- Temple Register -->
               <router-link 
                 to="/tenant/reports/temple-register" 
@@ -88,7 +96,7 @@
                 <span>Devotee & Birthday Report</span>
               </router-link>
 
-              <!-- NEW: Audit Logs -->
+              <!-- Audit Logs -->
               <router-link 
                 to="/tenant/reports/audit-logs" 
                 class="px-3 py-2 text-sm rounded-md cursor-pointer flex items-center"

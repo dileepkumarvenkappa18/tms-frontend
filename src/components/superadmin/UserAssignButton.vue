@@ -4,7 +4,7 @@
     @click="navigateToAssignPage"
     class="text-indigo-600 hover:text-indigo-900 ml-2"
   >
-    Assign
+    Tenant Assigned / Assign
   </button>
 </template>
 
