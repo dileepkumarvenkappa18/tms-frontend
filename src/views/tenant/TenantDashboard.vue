@@ -398,27 +398,38 @@ watch(tenantId, async (newValue, oldValue) => {
 })
 
 // Load temple data for the current tenant
+// Load temple data for the current tenant
 const loadTempleData = async () => {
-  isLoading.value = true
+  isLoading.value = true;
   
   if (!tenantId.value) {
-    console.warn('No tenant ID available, cannot load temples')
-    isLoading.value = false
-    return
+    console.warn('No tenant ID available, cannot load temples');
+    isLoading.value = false;
+    return;
   }
   
   try {
     // Reset temple data to ensure clean state
-    resetTempleData()
+    resetTempleData();
     
-    // Load temples for current tenant with the tenantId parameter
-    console.log('Loading temples for tenant ID:', tenantId.value)
-    await templeStore.fetchTemples(tenantId.value)
+    // Check if this is a SuperAdmin viewing a tenant's temples
+    const selectedTenantId = localStorage.getItem('selected_tenant_id');
+    console.log('Loading temples for tenant ID:', tenantId.value, 'Selected tenant ID:', selectedTenantId);
+    
+    if (selectedTenantId) {
+      // Use the specialized method for SuperAdmin tenant view
+      console.log('Using fetchDirectByTenant for SuperAdmin tenant view');
+      await templeStore.fetchDirectByTenant(selectedTenantId);
+    } else {
+      // Regular temple fetch for non-SuperAdmin users
+      console.log('Using standard fetchTemples');
+      await templeStore.fetchTemples(tenantId.value);
+    }
   } catch (error) {
-    console.error('Error loading temple data:', error)
-    showToast('Failed to load temple data. Please try again.', 'error')
+    console.error('Error loading temple data:', error);
+    showToast('Failed to load temple data. Please try again.', 'error');
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
