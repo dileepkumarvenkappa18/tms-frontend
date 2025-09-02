@@ -17,7 +17,6 @@
 
     <!-- Card -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-      <!-- Card header -->
       <div class="p-6 border-b border-gray-200 flex justify-between items-center">
         <h2 class="text-lg font-semibold">Assign Tenants to User</h2>
         <button 
@@ -27,7 +26,6 @@
         </button>
       </div>
 
-      <!-- Card body -->
       <div class="p-6">
         <!-- Loading -->
         <div v-if="loading" class="py-10 flex justify-center">
@@ -37,9 +35,7 @@
         <!-- Error -->
         <div v-else-if="error" class="bg-red-50 border border-red-200 rounded p-4 mb-6">
           <p class="text-red-700">{{ error }}</p>
-          <button @click="fetchUserDetails" class="text-red-600 mt-2 underline">
-            Retry
-          </button>
+          <button @click="fetchUserDetails" class="text-red-600 mt-2 underline">Retry</button>
         </div>
 
         <!-- Content -->
@@ -48,6 +44,7 @@
           <div class="bg-indigo-50 border border-indigo-100 rounded p-4 mb-6">
             <h3 class="font-medium text-indigo-800 mb-2">User Details</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
               <!-- Name -->
               <div>
                 <p class="text-gray-500 text-sm">Name</p>
@@ -69,43 +66,43 @@
                 </span>
               </div>
 
-              <!-- Assigned or Not -->
+              <!-- Tenant Assigned -->
               <div>
-                <p class="text-gray-500 text-sm">Assigned</p>
+                <p class="text-gray-500 text-sm">Assigned Tenant</p>
                 <p class="font-medium">
-                  <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                    :class="user.assigned ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
-                    {{ user.assigned ? 'Yes' : 'No' }}
+                  <span 
+                    class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+                    :class="displayTenantName ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                    {{ displayTenantName || 'Not Assigned' }}
                   </span>
                 </p>
               </div>
 
-              <!-- Assigned Date -->
-              <div>
+              <!-- Assigned Date - Only show if tenant is assigned -->
+              <div v-if="displayTenantName && displayAssignedDate">
                 <p class="text-gray-500 text-sm">Assigned Date</p>
                 <p class="font-medium">
                   <span class="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded bg-gray-100 text-gray-800">
-                    {{ formattedAssignedDate }}
+                    {{ displayAssignedDate }}
                   </span>
                 </p>
               </div>
 
-              <!-- Reassigment Date -->
-              <div>
-                <p class="text-gray-500 text-sm">Re-Assign Date</p>
+              <!-- Re-assigned Date - Show when tenant is assigned and has reassignment date -->
+              <div v-if="displayTenantName && displayReassignmentDate">
+                <p class="text-gray-500 text-sm">Re-assigned Date</p>
                 <p class="font-medium">
-                  <span class="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded bg-gray-100 text-gray-800">
-                    {{ formattedReassignmentDate }}
+                  <span class="px-2 py-1 inline-flex text-xs leading-5 font-medium rounded bg-blue-100 text-blue-800">
+                    {{ displayReassignmentDate }}
                   </span>
                 </p>
               </div>
+
             </div>
           </div>
 
           <!-- Role Restriction -->
-          <div 
-            v-if="!canAssignTenants" 
-            class="bg-yellow-50 border border-yellow-200 rounded p-4 mb-6">
+          <div v-if="!canAssignTenants" class="bg-yellow-50 border border-yellow-200 rounded p-4 mb-6">
             <p class="text-yellow-800">
               Tenant assignment is only available for Standard User and Monitoring User roles.
             </p>
@@ -157,22 +154,51 @@ export default {
       return ['standarduser', 'monitoringuser'].includes(role);
     });
 
-    // ✅ Format assigned/reassignment dates (YYYY-MM-DD only)
+    // Get tenant name from multiple possible sources
+    const displayTenantName = computed(() => {
+      return user.value.tenantAssigned || 
+             user.value.tenant_assigned ||
+             (user.value.tenant_assignment_details && user.value.tenant_assignment_details.tenantName) || 
+             '';
+    });
+
     const formatDate = (dateStr) => {
-      if (!dateStr) return 'N/A';
-      return new Date(dateStr).toISOString().split('T')[0];
+      if (!dateStr) return '';
+      try {
+        return new Date(dateStr).toISOString().split('T')[0];
+      } catch (e) {
+        return '';
+      }
     };
 
-    const formattedAssignedDate = computed(() => formatDate(user.value.assignedDate));
-    const formattedReassignmentDate = computed(() => formatDate(user.value.reassignmentDate));
+    const displayAssignedDate = computed(() => {
+      const assignedDate = user.value.assignedDate || 
+                          (user.value.tenant_assignment_details && user.value.tenant_assignment_details.assignedOn);
+      return formatDate(assignedDate);
+    });
+
+    const displayReassignmentDate = computed(() => {
+      const reassignmentDate = user.value.reassignmentDate || 
+                              (user.value.tenant_assignment_details && user.value.tenant_assignment_details.updatedOn);
+      return formatDate(reassignmentDate);
+    });
 
     const fetchUserDetails = async () => {
       loading.value = true;
       error.value = '';
       try {
         const response = await superAdminService.getUserById(userId.value);
-        if (response.success) {
+        if (response.success && response.data) {
           user.value = response.data;
+
+          // Debug log to see what data we're getting
+          console.log('User data received:', response.data);
+
+          // Ensure tenantAssigned is reactive and updated correctly
+          if (!user.value.tenantAssigned && user.value.tenant_assignment_details) {
+            user.value.tenantAssigned = user.value.tenant_assignment_details.tenantName;
+          }
+
         } else {
           error.value = response.message || 'Failed to load user details';
         }
@@ -184,7 +210,7 @@ export default {
       }
     };
 
-    const assignTenantHandler = async ({ tenantId }) => {
+    const assignTenantHandler = async ({ tenantId, tenantName }) => {
       if (!tenantId) return alert('Invalid tenant selected');
       if (!canAssignTenants.value) return alert('This user cannot be assigned tenants');
 
@@ -192,17 +218,35 @@ export default {
       try {
         const response = await superAdminService.assignUserToTenant(userId.value, tenantId);
         if (response.success) {
+          // Immediately update user data for reactive UI
+          const currentTime = new Date().toISOString();
+          
+          user.value.tenantAssigned = tenantName;
+          user.value.tenant_assigned = tenantName; // backup field
+          
+          // Set assigned date only if it's the first assignment
+          if (!user.value.assignedDate) {
+            user.value.assignedDate = currentTime;
+          }
+          user.value.reassignmentDate = currentTime;
+
+          // Update tenant_assignment_details
+          if (!user.value.tenant_assignment_details) {
+            user.value.tenant_assignment_details = {};
+          }
+          user.value.tenant_assignment_details.tenantName = tenantName;
+          user.value.tenant_assignment_details.assignedOn = user.value.assignedDate || currentTime;
+          user.value.tenant_assignment_details.updatedOn = currentTime;
+
           alert('Tenant assigned successfully');
-          loading.value = false;
-          router.push({ name: 'SuperadminUserManagement' });
         } else {
-          loading.value = false;
           alert(response.message || 'Failed to assign tenant');
         }
       } catch (err) {
         console.error(err);
-        loading.value = false;
         alert('An error occurred while assigning tenant');
+      } finally {
+        loading.value = false;
       }
     };
 
@@ -220,8 +264,9 @@ export default {
       userRole,
       canAssignTenants,
       assignTenantHandler,
-      formattedAssignedDate,
-      formattedReassignmentDate
+      displayTenantName,
+      displayAssignedDate,
+      displayReassignmentDate
     };
   }
 };
