@@ -142,11 +142,75 @@ export const deleteTemple = async (id) => {
   }
 }
 
+/**
+ * Get users for a tenant
+ * @param {string|number} tenantId - The tenant ID
+ * @param {object} filters - Optional filters (role, name)
+ * @returns {Promise} - Promise with user data
+ */
+export const getTenantUsers = async (tenantId, filters = {}) => {
+  try {
+    console.log('📡 Fetching tenant users')
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (filters.role) params.append('role', filters.role);
+    if (filters.name) params.append('name', filters.name);
+    
+    const queryString = params.toString();
+    const endpoint = `/v1/tenants/${tenantId}/user/management${queryString ? `?${queryString}` : ''}`;
+    
+    console.log(`🔍 Making GET request to: ${endpoint}`);
+    const response = await api.get(endpoint);
+    
+    let users = response.data;
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      users = response.data.data;
+    }
+    
+    console.log(`✅ Received ${users.length} users:`, users);
+    return users;
+  } catch (error) {
+    console.error('❌ Error fetching tenant users:', error);
+    console.error('Error response:', error.response?.data);
+    return [];
+  }
+}
+
+/**
+ * Create or update a user for a tenant
+ * @param {string|number} tenantId - The tenant ID
+ * @param {object} userData - User data to create/update
+ * @returns {Promise} - Promise with created/updated user
+ */
+export const createOrUpdateTenantUser = async (tenantId, userData) => {
+  try {
+    console.log(`📡 Creating/updating user for tenant ${tenantId}:`, userData);
+    
+    // Set X-Tenant-ID header to match the route parameter
+    api.defaults.headers.common['X-Tenant-ID'] = tenantId;
+    
+    // Make the request using the same tenant ID for both URL and header
+    const response = await api.post(`/v1/tenants/${tenantId}/user`, userData);
+    
+    console.log('📥 User creation response:', response.data);
+    
+    // Return the user object from the response
+    return response.data.user || response.data;
+  } catch (error) {
+    console.error('❌ Error creating/updating tenant user:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+}
+
 export default {
   getTenantsForSelection,
   getTemples,
   getTempleById,
   createTemple,
   updateTemple,
-  deleteTemple
+  deleteTemple,
+  getTenantUsers,
+  createOrUpdateTenantUser
 }

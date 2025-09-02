@@ -1,6 +1,6 @@
 <template>
   <div class="p-6 bg-gray-50 min-h-screen">
-    <!-- Page Header with improved styling -->
+    <!-- Page Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
       <div>
         <h1 class="text-2xl font-bold font-['Roboto'] text-gray-800 mb-1">
@@ -31,7 +31,7 @@
           </div>
           <div>
             <p class="text-gray-500 text-sm">Total Users</p>
-            <h3 class="text-2xl font-bold text-gray-800">{{ users.length }}</h3>
+            <h3 class="text-2xl font-bold text-gray-800">{{ tenantStore.users.length }}</h3>
           </div>
         </div>
       </div>
@@ -46,7 +46,7 @@
           </div>
           <div>
             <p class="text-gray-500 text-sm">Standard Users</p>
-            <h3 class="text-2xl font-bold text-gray-800">{{ standardUsersCount }}</h3>
+            <h3 class="text-2xl font-bold text-gray-800">{{ tenantStore.standardUsersCount }}</h3>
           </div>
         </div>
       </div>
@@ -62,25 +62,41 @@
           </div>
           <div>
             <p class="text-gray-500 text-sm">Monitoring Users</p>
-            <h3 class="text-2xl font-bold text-gray-800">{{ monitoringUsersCount }}</h3>
+            <h3 class="text-2xl font-bold text-gray-800">{{ tenantStore.monitoringUsersCount }}</h3>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- User Management Table with enhanced card styling -->
-    <div class="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-100 transition-all duration-200 hover:shadow-lg">
-      <UserManagementTable :users="users" />
+    <!-- Loading State -->
+    <div v-if="tenantStore.isLoading" class="flex justify-center my-8">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-else-if="tenantStore.error" class="bg-red-50 text-red-600 p-4 rounded-xl mb-6">
+      <p>{{ tenantStore.error }}</p>
+      <button 
+        @click="fetchUsers" 
+        class="mt-2 text-sm font-medium text-red-700 hover:text-red-800"
+      >
+        Try Again
+      </button>
+    </div>
+
+    <!-- User Management Table -->
+    <div v-else class="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-100 transition-all duration-200 hover:shadow-lg">
+      <UserManagementTable 
+        :users="tenantStore.users" 
+      />
     </div>
 
     <!-- Create User Modal -->
-    <Transition name="modal-fade">
-      <CreateUserModal
-        v-if="showCreateModal"
-        @close="showCreateModal = false"
-        @create="createUser"
-      />
-    </Transition>
+    <CreateUserModal
+      v-if="showCreateModal"
+      @close="showCreateModal = false"
+      @create="createUser"
+    />
     
     <!-- Toast Notification -->
     <Transition name="toast">
@@ -104,82 +120,73 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import { useTenantStore } from '@/stores/tenant';
 import UserManagementTable from '@/components/tenant/UserManagementTable.vue';
 import CreateUserModal from '@/components/tenant/CreateUserModal.vue';
 
+// Composables
+const router = useRouter();
+const authStore = useAuthStore();
+const tenantStore = useTenantStore();
+
 // State
 const showCreateModal = ref(false);
-const users = ref([
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 234 567 8901',
-    role: 'StandardUser',
-    createdAt: '2024-08-15'
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    phone: '+1 234 567 8902',
-    role: 'MonitoringUser',
-    createdAt: '2024-08-10'
-  },
-  {
-    id: 3,
-    name: 'Bob Johnson',
-    email: 'bob.johnson@example.com',
-    phone: '+1 234 567 8903',
-    role: 'StandardUser',
-    createdAt: '2024-08-05'
-  }
-]);
-
-// Toast notification state
 const toast = ref({
   show: false,
   message: '',
-  type: 'success', // 'success' or 'error'
+  type: 'success'
 });
 
-// Computed properties
-const standardUsersCount = computed(() => {
-  return users.value.filter(user => user.role === 'StandardUser').length;
-});
-
-const monitoringUsersCount = computed(() => {
-  return users.value.filter(user => user.role === 'MonitoringUser').length;
-});
-
-// Methods
-const createUser = (userData) => {
-  console.log('Creating user:', userData);
+// Helper to get current tenant ID from route or auth store
+const getCurrentTenantId = () => {
+  // Try to get from route params first
+  const tenantIdFromRoute = router.currentRoute.value.params.tenantId;
+  if (tenantIdFromRoute) return tenantIdFromRoute;
   
-  // Check if user already exists
-  const existingUserIndex = users.value.findIndex(user => user.email === userData.email);
-  
-  if (existingUserIndex !== -1) {
-    // User exists, update role
-    users.value[existingUserIndex].role = userData.role;
-    showToast('User reassigned to new role successfully.', 'success');
-  } else {
-    // Create new user
-    const newUser = {
-      id: users.value.length + 1,
-      ...userData,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    
-    users.value.push(newUser);
-    showToast('User created and assigned to this tenant successfully.', 'success');
-  }
-  
-  // Close modal
-  showCreateModal.value = false;
+  // Then try from auth store
+  return authStore.tenantId || '1'; // Default to 1 if not found
 };
 
+// Fetch users on component mount
+const fetchUsers = async () => {
+  try {
+    const tenantId = getCurrentTenantId();
+    await tenantStore.fetchUsers(tenantId);
+  } catch (error) {
+    showToast('Failed to fetch users: ' + (error.message || 'Unknown error'), 'error');
+  }
+};
+
+onMounted(fetchUsers);
+
+// Handle user creation/update
+const createUser = async (userData) => {
+  try {
+    const result = await tenantStore.createOrUpdateUser(userData);
+    
+    // Check if the user already existed in this tenant
+    const isUpdate = tenantStore.users.some(u => 
+      u.email === userData.email && 
+      u.id !== result.id
+    );
+    
+    showToast(
+      isUpdate 
+        ? `User ${userData.email} reassigned to ${userData.role} role successfully` 
+        : 'User created and assigned to this tenant successfully',
+      'success'
+    );
+    
+    showCreateModal.value = false;
+  } catch (error) {
+    showToast('Error creating user: ' + (error.message || 'Unknown error'), 'error');
+  }
+};
+
+// Display toast notification
 const showToast = (message, type = 'success') => {
   toast.value = {
     show: true,
@@ -204,16 +211,5 @@ const showToast = (message, type = 'success') => {
 .toast-leave-to {
   opacity: 0;
   transform: translateY(30px);
-}
-
-/* Modal animation */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: all 0.3s ease;
-}
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
 }
 </style>

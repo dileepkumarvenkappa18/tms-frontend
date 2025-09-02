@@ -32,6 +32,16 @@ export default [
       role: 'tenant'
     }
   },
+{
+  path: 'user-management',
+  name: 'TenantUserManagement',
+  component: () => import('@/views/tenant/UserManagement.vue'),
+  meta: {
+    title: 'Tenant User Management',
+    requiresAuth: true,
+    role: 'tenant'
+  }
+},
 
   // Standard routes
   {
