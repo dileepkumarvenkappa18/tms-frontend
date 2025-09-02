@@ -88,6 +88,8 @@
     <div v-else class="bg-white rounded-2xl shadow-md p-6 mb-6 border border-gray-100 transition-all duration-200 hover:shadow-lg">
       <UserManagementTable 
         :users="tenantStore.users" 
+        @update-user="updateUser"
+        @toggle-status="toggleUserStatus"
       />
     </div>
 
@@ -99,23 +101,21 @@
     />
     
     <!-- Toast Notification -->
-    <Transition name="toast">
-      <div v-if="toast.show" class="fixed bottom-4 right-4 bg-white shadow-lg rounded-xl p-4 max-w-md border-l-4" :class="toast.type === 'success' ? 'border-green-500' : 'border-red-500'">
-        <div class="flex items-center">
-          <div v-if="toast.type === 'success'" class="mr-3 text-green-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div v-else class="mr-3 text-red-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p>{{ toast.message }}</p>
+    <div v-if="toast.show" class="fixed bottom-4 right-4 bg-white shadow-lg rounded-xl p-4 max-w-md border-l-4 z-50" :class="toast.type === 'success' ? 'border-green-500' : 'border-red-500'">
+      <div class="flex items-center">
+        <div v-if="toast.type === 'success'" class="mr-3 text-green-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
+        <div v-else class="mr-3 text-red-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p>{{ toast.message }}</p>
       </div>
-    </Transition>
+    </div>
   </div>
 </template>
 
@@ -140,20 +140,32 @@ const toast = ref({
   type: 'success'
 });
 
-// Helper to get current tenant ID from route or auth store
+// Helper to get current tenant ID - FIXED to prioritize localStorage value
 const getCurrentTenantId = () => {
-  // Try to get from route params first
-  const tenantIdFromRoute = router.currentRoute.value.params.tenantId;
-  if (tenantIdFromRoute) return tenantIdFromRoute;
+  // Use stored tenant ID from local storage first (most reliable)
+  const storedTenantId = localStorage.getItem('current_tenant_id');
+  if (storedTenantId) {
+    console.log(`Using tenant ID from localStorage: ${storedTenantId}`);
+    return storedTenantId;
+  }
   
   // Then try from auth store
-  return authStore.tenantId || '1'; // Default to 1 if not found
+  if (authStore.currentTenantId) {
+    console.log(`Using tenant ID from auth store: ${authStore.currentTenantId}`);
+    return authStore.currentTenantId;
+  }
+  
+  // Default to 1 if not found
+  console.warn('Could not determine tenant ID, defaulting to 1');
+  return '1';
 };
 
 // Fetch users on component mount
 const fetchUsers = async () => {
   try {
+    console.log('Fetching users...');
     const tenantId = getCurrentTenantId();
+    console.log(`Using tenant ID: ${tenantId}`);
     await tenantStore.fetchUsers(tenantId);
   } catch (error) {
     showToast('Failed to fetch users: ' + (error.message || 'Unknown error'), 'error');
@@ -183,6 +195,41 @@ const createUser = async (userData) => {
     showCreateModal.value = false;
   } catch (error) {
     showToast('Error creating user: ' + (error.message || 'Unknown error'), 'error');
+  }
+};
+
+// Handle user updates from the table component
+const updateUser = async (userData) => {
+  try {
+    console.log('Parent received update user event:', userData);
+    const tenantId = getCurrentTenantId();
+    console.log(`Updating user with tenant ID: ${tenantId}`);
+    
+    // Update user in the backend
+    await tenantStore.updateUser(tenantId, userData);
+    
+    // Show success toast
+    showToast(`User ${userData.name} updated successfully`, 'success');
+  } catch (error) {
+    console.error('Error updating user:', error);
+    showToast('Error updating user: ' + (error.message || 'Unknown error'), 'error');
+  }
+};
+
+// Handle user status toggle
+const toggleUserStatus = async ({ userId, status }) => {
+  try {
+    console.log(`Toggling status for user ${userId} to ${status}`);
+    const tenantId = getCurrentTenantId();
+    
+    // Call the store method to toggle status
+    await tenantStore.toggleUserStatus(tenantId, userId, status);
+    
+    // Show success toast
+    showToast(`User status updated to ${status}`, 'success');
+  } catch (error) {
+    console.error('Error toggling user status:', error);
+    showToast('Error updating user status: ' + (error.message || 'Unknown error'), 'error');
   }
 };
 

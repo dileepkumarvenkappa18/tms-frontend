@@ -1,93 +1,134 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getTenantUsers, createOrUpdateTenantUser } from '@/services/tenant.service'
-import { useAuthStore } from '@/stores/auth'
+import { getTenantUsers, createOrUpdateTenantUser, updateTenantUser, updateUserStatus } from '@/services/tenant.service'
 
 export const useTenantStore = defineStore('tenant', () => {
   // State
   const users = ref([])
   const isLoading = ref(false)
   const error = ref(null)
-  const currentTenantId = ref(null)
-  const authStore = useAuthStore()
+
+  // Computed
+  const standardUsersCount = computed(() => 
+    users.value.filter(user => user.role === 'StandardUser').length
+  )
   
+  const monitoringUsersCount = computed(() => 
+    users.value.filter(user => user.role === 'MonitoringUser').length
+  )
+
   // Actions
   const fetchUsers = async (tenantId, filters = {}) => {
-    if (!tenantId) {
-      // Try to get tenant ID from auth store if not provided
-      tenantId = authStore.tenantId
-      if (!tenantId) {
-        error.value = 'No tenant ID available'
-        return
-      }
-    }
-    
     isLoading.value = true
     error.value = null
-    currentTenantId.value = tenantId
     
     try {
-      const fetchedUsers = await getTenantUsers(tenantId, filters)
-      users.value = fetchedUsers
-      return fetchedUsers
+      console.log(`Fetching users for tenant ID: ${tenantId}`)
+      const data = await getTenantUsers(tenantId, filters)
+      users.value = data
+      console.log(`Fetched ${data.length} users successfully`)
+      return data
     } catch (err) {
+      console.error('Error fetching users:', err)
       error.value = err.message || 'Failed to fetch users'
-      console.error('Failed to fetch users:', err)
-      return []
+      throw err
     } finally {
       isLoading.value = false
     }
   }
-  
+
   const createOrUpdateUser = async (userData) => {
-    if (!currentTenantId.value) {
-      currentTenantId.value = authStore.tenantId
-      if (!currentTenantId.value) {
-        error.value = 'No tenant ID available'
-        return null
-      }
-    }
-    
     isLoading.value = true
     error.value = null
     
     try {
-      const result = await createOrUpdateTenantUser(currentTenantId.value, userData)
+      // Get tenant ID from localStorage
+      const tenantId = localStorage.getItem('current_tenant_id') || '1'
       
-      // Update local state - add or update user
-      const existingIndex = users.value.findIndex(u => u.email === userData.email)
-      if (existingIndex >= 0) {
-        users.value[existingIndex] = result
-      } else {
-        users.value.push(result)
-      }
+      console.log(`Creating/updating user for tenant ID: ${tenantId}`)
+      const result = await createOrUpdateTenantUser(tenantId, userData)
+      
+      // Refresh the user list
+      await fetchUsers(tenantId)
       
       return result
     } catch (err) {
+      console.error('Error creating/updating user:', err)
       error.value = err.message || 'Failed to create/update user'
       throw err
     } finally {
       isLoading.value = false
     }
   }
-  
-  // Computed properties
-  const standardUsersCount = computed(() => 
-    users.value.filter(u => u.role === 'StandardUser').length
-  )
-  
-  const monitoringUsersCount = computed(() => 
-    users.value.filter(u => u.role === 'MonitoringUser').length
-  )
-  
+
+  const updateUser = async (tenantId, userData) => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      console.log(`Updating user ${userData.id} for tenant ${tenantId}:`, userData)
+      
+      // Make the API call
+      const result = await updateTenantUser(tenantId, userData)
+      
+      // Update the local users array immediately for UI responsiveness
+      const index = users.value.findIndex(u => u.id === userData.id)
+      if (index !== -1) {
+        users.value[index] = { ...users.value[index], ...userData }
+        console.log('Updated local user state:', users.value[index])
+      } else {
+        console.warn(`User with ID ${userData.id} not found in local state`)
+      }
+      
+      return result
+    } catch (err) {
+      console.error('Error updating user:', err)
+      error.value = err.message || 'Failed to update user'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const toggleUserStatus = async (tenantId, userId, status) => {
+    isLoading.value = true
+    error.value = null
+    
+    try {
+      console.log(`Toggling status for user ${userId} to ${status}`)
+      const result = await updateUserStatus(tenantId, userId, status)
+      
+      // Update the local users array to reflect the status change
+      const index = users.value.findIndex(u => u.id === userId)
+      if (index !== -1) {
+        users.value[index] = { ...users.value[index], status }
+        console.log('Updated local user status:', users.value[index])
+      }
+      
+      return result
+    } catch (err) {
+      console.error('Error toggling user status:', err)
+      error.value = err.message || 'Failed to toggle user status'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
+    // State
     users,
     isLoading,
     error,
-    currentTenantId,
+    
+    // Computed
+    standardUsersCount,
+    monitoringUsersCount,
+    
+    // Actions
     fetchUsers,
     createOrUpdateUser,
-    standardUsersCount,
-    monitoringUsersCount
+    updateUser,
+    toggleUserStatus
   }
 })

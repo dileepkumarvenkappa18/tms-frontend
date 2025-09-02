@@ -190,8 +190,18 @@ export const createOrUpdateTenantUser = async (tenantId, userData) => {
     // Set X-Tenant-ID header to match the route parameter
     api.defaults.headers.common['X-Tenant-ID'] = tenantId;
     
+    // Format data with capitalized field names to match Go struct
+    const formattedData = {
+      Name: userData.name,
+      Email: userData.email,
+      Phone: userData.phone,
+      Password: userData.password,
+      Role: userData.role,
+      Status: userData.status || 'active'
+    };
+    
     // Make the request using the same tenant ID for both URL and header
-    const response = await api.post(`/v1/tenants/${tenantId}/user`, userData);
+    const response = await api.post(`/v1/tenants/${tenantId}/user`, formattedData);
     
     console.log('📥 User creation response:', response.data);
     
@@ -199,6 +209,88 @@ export const createOrUpdateTenantUser = async (tenantId, userData) => {
     return response.data.user || response.data;
   } catch (error) {
     console.error('❌ Error creating/updating tenant user:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+}
+
+/**
+ * Update an existing user for a tenant
+ * @param {string|number} tenantId - The tenant ID
+ * @param {object} userData - User data to update
+ * @returns {Promise} - Promise with updated user
+ */
+export const updateTenantUser = async (tenantId, userData) => {
+  try {
+    console.log(`📡 Updating user ${userData.id} for tenant ${tenantId}:`, userData);
+    
+    // Set X-Tenant-ID header to match the route parameter
+    api.defaults.headers.common['X-Tenant-ID'] = tenantId;
+    
+    // Check if this is only a status update (just id and status fields)
+    const isStatusUpdate = userData.hasOwnProperty('status') && 
+                          Object.keys(userData).filter(k => k !== 'id' && k !== 'status').length === 0;
+    
+    let response;
+    if (isStatusUpdate) {
+      // For status updates, send a simple JSON with just the status
+      console.log(`📡 Sending status update (${userData.status}) for user ${userData.id}`);
+      
+      // Send the status with capital S to match Go struct field
+      response = await api.put(`/v1/tenants/${tenantId}/user/${userData.id}`, {
+        Status: userData.status
+      });
+    } else {
+      // Always include status in full updates
+      // For full updates, convert to proper format matching Go struct field names
+      const formattedData = {
+        Name: userData.name,
+        Email: userData.email,
+        Phone: userData.phone,
+        Role: userData.role,
+        Password: userData.password || 'password123',
+        Status: userData.status // Make sure status is always included
+      };
+      
+      console.log(`📡 Sending full update for user ${userData.id}:`, formattedData);
+      response = await api.put(`/v1/tenants/${tenantId}/user/${userData.id}`, formattedData);
+    }
+    
+    console.log('📥 User update response:', response.data);
+    
+    // Return the user object from the response
+    return response.data.user || response.data;
+  } catch (error) {
+    console.error('❌ Error updating tenant user:', error);
+    console.error('Error response:', error.response?.data);
+    throw error;
+  }
+}
+
+/**
+ * Update a user's status in a tenant
+ * @param {string|number} tenantId - The tenant ID
+ * @param {string|number} userId - The user ID
+ * @param {string} status - The new status ('active' or 'inactive')
+ * @returns {Promise} - Promise with updated user
+ */
+export const updateUserStatus = async (tenantId, userId, status) => {
+  try {
+    console.log(`📡 Updating status to ${status} for user ${userId} in tenant ${tenantId}`);
+    
+    // Set X-Tenant-ID header to match the route parameter
+    api.defaults.headers.common['X-Tenant-ID'] = tenantId;
+    
+    // Use the existing endpoint with a simple status object
+    const response = await api.put(
+      `/v1/tenants/${tenantId}/user/${userId}`, 
+      { Status: status }  // Use capital 'S' to match Go struct
+    );
+    
+    console.log('📥 Status update response:', response.data);
+    return response.data.user || response.data;
+  } catch (error) {
+    console.error('❌ Error updating status:', error);
     console.error('Error response:', error.response?.data);
     throw error;
   }
@@ -212,5 +304,7 @@ export default {
   updateTemple,
   deleteTemple,
   getTenantUsers,
-  createOrUpdateTenantUser
+  createOrUpdateTenantUser,
+  updateTenantUser,
+  updateUserStatus
 }
