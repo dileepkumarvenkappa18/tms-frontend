@@ -18,13 +18,18 @@
         </div>
       </div>
     </div>
+
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Tenants Selection Card -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
         <div class="p-6 border-b border-gray-200">
-          <h3 class="text-xl font-bold text-gray-900">Select Tenants</h3>
-          <p class="text-gray-600 mt-1">Choose which tenants to include in your report</p>
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xl font-bold text-gray-900">Select Tenants</h3>
+              <p class="text-gray-600 mt-1">Choose which tenants to include in your report</p>
+            </div>
+          </div>
         </div>
         <div class="p-6">
           <div class="mb-6">
@@ -37,17 +42,27 @@
                 <button 
                   @click="selectAllTenants" 
                   class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  :disabled="filteredTenants.length === 0"
                 >
                   Select All
                 </button>
                 <button 
                   @click="clearTenantSelection"
                   class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  :disabled="selectedTenants.length === 0"
                 >
                   Clear
                 </button>
+                <button 
+                  @click="retryFetchTenants" 
+                  class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  :disabled="loading"
+                >
+                  {{ loading ? 'Loading...' : 'Retry Load' }}
+                </button>
               </div>
             </div>
+            
             <!-- Filters -->
             <div class="flex flex-wrap items-center gap-4 mb-4">
               <div class="relative flex-1 min-w-[250px]">
@@ -76,12 +91,51 @@
                 </select>
               </div>
             </div>
+            
+            <!-- Error Display -->
+            <div v-if="lastError && !loading" class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div class="flex items-start">
+                <svg class="h-5 w-5 text-red-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div class="ml-3">
+                  <p class="text-sm text-red-800">{{ lastError }}</p>
+                  <button 
+                    @click="retryFetchTenants" 
+                    class="mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <!-- Tenant List -->
             <div v-if="loading" class="py-10 flex justify-center">
               <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
             </div>
+            <div v-else-if="!superAdminStore.tenants || superAdminStore.tenants.length === 0" class="text-center py-8">
+              <div class="text-gray-400 mb-4">
+                <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <p class="text-gray-500 text-lg">No tenants available</p>
+              <p class="text-gray-400 text-sm mt-2">Click "Retry Load" to fetch tenant data</p>
+            </div>
             <div v-else-if="filteredTenants.length === 0" class="text-center py-8">
+              <div class="text-gray-400 mb-4">
+                <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
               <p class="text-gray-500">No tenants found matching your filters</p>
+              <button 
+                @click="clearFilters" 
+                class="mt-2 text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+              >
+                Clear Filters
+              </button>
             </div>
             <div v-else class="overflow-x-auto border border-gray-200 rounded-lg">
               <table class="min-w-full divide-y divide-gray-200">
@@ -105,12 +159,12 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="tenant in filteredTenants" :key="tenant.id" :class="{ 'bg-indigo-50': isSelected(tenant.id) }">
+                  <tr v-for="tenant in filteredTenants" :key="tenant.id || tenant.ID" :class="{ 'bg-indigo-50': isSelected(tenant.id || tenant.ID) }">
                     <td class="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        :checked="isSelected(tenant.id)"
-                        @change="toggleSelect(tenant.id)"
+                        :checked="isSelected(tenant.id || tenant.ID)"
+                        @change="toggleSelect(tenant.id || tenant.ID)"
                         class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
                     </td>
@@ -121,8 +175,8 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full" 
-                            :class="getStatusClass(tenant.status)">
-                        {{ tenant.status }}
+                            :class="getStatusClass(tenant.status || tenant.Status)">
+                        {{ tenant.status || tenant.Status || 'Unknown' }}
                       </span>
                     </td>
                   </tr>
@@ -130,6 +184,7 @@
               </table>
             </div>
           </div>
+          
           <!-- Report Type Selection -->
           <div class="mt-8 border-t border-gray-200 pt-6">
             <h4 class="text-lg font-medium text-gray-900 mb-4">Select Report Type</h4>
@@ -161,6 +216,7 @@
               </div>
             </div>
           </div>
+          
           <!-- Proceed Button -->
           <div class="mt-8 flex justify-end">
             <button 
@@ -173,6 +229,7 @@
           </div>
         </div>
       </div>
+      
       <!-- Selection Summary -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-6">
@@ -238,8 +295,9 @@ const searchQuery = ref('');
 const statusFilter = ref('all');
 const selectedTenants = ref([]);
 const selectedReport = ref('');
+const lastError = ref('');
 
-// Report types (with "User Details" and "Approval Status" removed)
+// Report types
 const reportTypes = [
   {
     id: 'temple-register',
@@ -275,163 +333,279 @@ const tenantTempleMap = ref({});
 
 // Computed properties
 const filteredTenants = computed(() => {
+  if (!superAdminStore.tenants || !Array.isArray(superAdminStore.tenants)) {
+    return [];
+  }
+  
   let tenants = superAdminStore.tenants;
+  
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     tenants = tenants.filter(tenant => 
       tenant.name?.toLowerCase().includes(query) || 
       tenant.fullName?.toLowerCase().includes(query) ||
+      tenant.FullName?.toLowerCase().includes(query) ||
       getTempleNameDisplay(tenant).toLowerCase().includes(query) ||
       getLocationDisplay(tenant).toLowerCase().includes(query)
     );
   }
+  
   if (statusFilter.value !== 'all') {
     tenants = tenants.filter(tenant => 
-      tenant.status?.toLowerCase() === statusFilter.value.toLowerCase()
+      (tenant.status?.toLowerCase() === statusFilter.value.toLowerCase()) ||
+      (tenant.Status?.toLowerCase() === statusFilter.value.toLowerCase())
     );
   }
+  
   return tenants;
 });
 
 const allSelected = computed(() => {
   return filteredTenants.value.length > 0 && 
-         filteredTenants.value.every(tenant => selectedTenants.value.includes(tenant.id));
+         filteredTenants.value.every(tenant => selectedTenants.value.includes(tenant.id || tenant.ID));
 });
+
 const someSelected = computed(() => {
   return selectedTenants.value.length > 0 && !allSelected.value;
 });
+
 const canProceed = computed(() => {
   return selectedTenants.value.length > 0 && selectedReport.value;
 });
 
 // Utility methods
 const getTenantDisplayName = (tenant) => {
-  return tenant.fullName || tenant.name || tenant.FullName || `Temple Admin #${tenant.id || tenant.ID}`;
-};
-const getTempleNameDisplay = (tenant) => {
-  if (tenantTempleMap.value[tenant.id || tenant.ID]) {
-    return tenantTempleMap.value[tenant.id || tenant.ID].name;
-  }
-  if (tenant.temple && tenant.temple.name) return tenant.temple.name;
-  if (tenant.Temple && tenant.Temple.name) return tenant.Temple.name;
-  if (tenant.Temple && tenant.Temple.Name) return tenant.Temple.Name;
-  if (tenant.EntityID && tenant.EntityName) return tenant.EntityName;
-  return getTenantDisplayName(tenant) + "'s Temple";
-};
-const getLocationDisplay = (tenant) => {
-  if (tenantTempleMap.value[tenant.id || tenant.ID]) {
-    const templeInfo = tenantTempleMap.value[tenant.id || tenant.ID];
-    if (templeInfo.city && templeInfo.state) return `${templeInfo.city}, ${templeInfo.state}`;
-  }
-  if (tenant.temple) {
-    if (tenant.temple.city && tenant.temple.state) return `${tenant.temple.city}, ${tenant.temple.state}`;
-    if (tenant.temple.address) return tenant.temple.address;
-  }
-  if (tenant.Temple) {
-    if (tenant.Temple.City && tenant.Temple.State) return `${tenant.Temple.City}, ${tenant.Temple.State}`;
-    if (tenant.Temple.Address) return tenant.Temple.Address;
-  }
-  if (tenant.EntityCity && tenant.EntityState) return `${tenant.EntityCity}, ${tenant.EntityState}`;
-  if (tenant.EntityAddress) return tenant.EntityAddress;
-  return "Location not available";
+  return tenant.fullName || tenant.FullName || tenant.name || tenant.Name || `Tenant #${tenant.id || tenant.ID}`;
 };
 
-// Fetch tenants and temple details
+const getTempleNameDisplay = (tenant) => {
+  const tenantId = tenant.id || tenant.ID;
+  
+  // Check mapped temple data first
+  if (tenantTempleMap.value[tenantId]?.name) {
+    return tenantTempleMap.value[tenantId].name;
+  }
+  
+  // Check various temple property structures in tenant object
+  if (tenant.temple?.name) return tenant.temple.name;
+  if (tenant.temple?.Name) return tenant.temple.Name;
+  if (tenant.Temple?.name) return tenant.Temple.name;
+  if (tenant.Temple?.Name) return tenant.Temple.Name;
+  if (tenant.EntityName) return tenant.EntityName;
+  if (tenant.templeName) return tenant.templeName;
+  if (tenant.TemplateName) return tenant.TemplateName;
+  if (tenant.organizationName) return tenant.organizationName;
+  if (tenant.OrganizationName) return tenant.OrganizationName;
+  
+  // Try to extract from address or other fields
+  if (tenant.temple?.address && tenant.temple.address.includes('Temple')) {
+    return tenant.temple.address.split(',')[0]?.trim();
+  }
+  
+  // Return tenant name + Temple instead of N/A
+  return `${getTenantDisplayName(tenant)}'s Temple`;
+};
+
+const getLocationDisplay = (tenant) => {
+  const tenantId = tenant.id || tenant.ID;
+  
+  // Check mapped temple data first
+  if (tenantTempleMap.value[tenantId]) {
+    const templeInfo = tenantTempleMap.value[tenantId];
+    if (templeInfo.city && templeInfo.state && templeInfo.city !== 'Not specified' && templeInfo.state !== 'Not specified') {
+      return `${templeInfo.city}, ${templeInfo.state}`;
+    } else if (templeInfo.address && templeInfo.address !== 'Address not available') {
+      return templeInfo.address;
+    }
+  }
+  
+  // Check various location property structures in tenant object
+  if (tenant.temple?.city && tenant.temple?.state) {
+    return `${tenant.temple.city}, ${tenant.temple.state}`;
+  }
+  if (tenant.Temple?.City && tenant.Temple?.State) {
+    return `${tenant.Temple.City}, ${tenant.Temple.State}`;
+  }
+  if (tenant.EntityCity && tenant.EntityState) {
+    return `${tenant.EntityCity}, ${tenant.EntityState}`;
+  }
+  if (tenant.city && tenant.state) {
+    return `${tenant.city}, ${tenant.state}`;
+  }
+  if (tenant.City && tenant.State) {
+    return `${tenant.City}, ${tenant.State}`;
+  }
+  if (tenant.temple?.address) return tenant.temple.address;
+  if (tenant.Temple?.Address) return tenant.Temple.Address;
+  if (tenant.EntityAddress) return tenant.EntityAddress;
+  if (tenant.address) return tenant.address;
+  if (tenant.Address) return tenant.Address;
+  if (tenant.location) return tenant.location;
+  if (tenant.Location) return tenant.Location;
+  
+  // Try to parse from full address field
+  if (tenant.temple?.fullAddress || tenant.Temple?.FullAddress || tenant.FullAddress) {
+    const fullAddr = tenant.temple?.fullAddress || tenant.Temple?.FullAddress || tenant.FullAddress;
+    const parts = fullAddr.split(',');
+    if (parts.length >= 2) {
+      return `${parts[parts.length - 2]?.trim()}, ${parts[parts.length - 1]?.trim()}`;
+    }
+    return fullAddr;
+  }
+  
+  // Return a meaningful default instead of N/A
+  return "Location not specified";
+};
+
+// Main fetch function
 const fetchTenants = async () => {
   loading.value = true;
+  lastError.value = '';
+  
   try {
-    const response = await superAdminService.getAvailableTenants();
-    if (response && response.success && response.data && response.data.length > 0) {
-      superAdminStore.tenants = response.data;
+    console.log('Starting tenant fetch...');
+    
+    // Method 1: Use store method fetchTenantsForReports
+    const response = await superAdminStore.fetchTenantsForReports();
+    console.log('Store fetchTenantsForReports response:', response);
+    
+    if (response && response.success && superAdminStore.tenants && Array.isArray(superAdminStore.tenants) && superAdminStore.tenants.length > 0) {
+      console.log('Successfully loaded tenants via store:', superAdminStore.tenants.length);
+      await fetchTempleDetailsForTenants();
+    } else {
+      console.log('Store method failed, trying basic fetchTenants...');
+      
+      // Method 2: Try basic fetchTenants
+      await superAdminStore.fetchTenants();
+      
+      if (superAdminStore.tenants && Array.isArray(superAdminStore.tenants) && superAdminStore.tenants.length > 0) {
+        console.log('Basic fetch successful:', superAdminStore.tenants.length);
+        await fetchTempleDetailsForTenants();
+      } else {
+        throw new Error('No tenants found in store after fetch attempts');
+      }
+    }
+    
+    // Process temple mapping
+    if (superAdminStore.tenants && Array.isArray(superAdminStore.tenants)) {
       superAdminStore.tenants.forEach(tenant => {
         if (tenant.temple) {
-          tenantTempleMap.value[tenant.id] = {
-            name: tenant.temple.name,
-            city: tenant.temple.city || (tenant.temple.address ? tenant.temple.address.split(',')[0]?.trim() : ''),
-            state: tenant.temple.state || (tenant.temple.address ? tenant.temple.address.split(',')[1]?.trim() : '')
+          const tenantId = tenant.id || tenant.ID;
+          tenantTempleMap.value[tenantId] = {
+            name: tenant.temple.name || tenant.temple.Name || '',
+            city: tenant.temple.city || tenant.temple.City || '',
+            state: tenant.temple.state || tenant.temple.State || ''
           };
         }
       });
-    } else {
-      const fallbackResponse = await superAdminStore.fetchTenantsForReports();
-      if (fallbackResponse && fallbackResponse.success) {
-        await fetchTempleDetailsForTenants();
-      } else {
-        throw new Error('Failed to fetch tenants');
-      }
+      
+      console.log('Final tenant count:', superAdminStore.tenants.length);
+      lastError.value = '';
     }
+    
   } catch (error) {
-    toast.error('Failed to load tenants with complete details');
-    try {
-      await superAdminStore.fetchTenants();
-      if (superAdminStore.tenants.length > 0) {
-        await fetchTempleDetailsForTenants();
-      }
-    } catch (fallbackError) {
-      toast.error('Using limited tenant data for demonstration');
+    console.error('Error fetching tenants:', error);
+    lastError.value = `Failed to load tenants: ${error.message}`;
+    
+    // Initialize empty array to prevent null errors
+    if (!superAdminStore.tenants) {
+      superAdminStore.tenants = [];
     }
+    
+    toast.error('Failed to load tenants. Please check console for details.');
   } finally {
     loading.value = false;
   }
 };
 
 const fetchTempleDetailsForTenants = async () => {
+  if (!superAdminStore.tenants || !Array.isArray(superAdminStore.tenants)) return;
+  
   for (const tenant of superAdminStore.tenants) {
-    if (!tenant.temple && !tenantTempleMap.value[tenant.id || tenant.ID]) {
+    const tenantId = tenant.id || tenant.ID;
+    
+    if (!tenant.temple && !tenantTempleMap.value[tenantId]) {
       try {
-        const tenantDetailsResponse = await superAdminService.getTenantDetails(tenant.id || tenant.ID);
-        if (tenantDetailsResponse.success && tenantDetailsResponse.data) {
-          const tenantData = tenantDetailsResponse.data;
-          const templeInfo = tenantData.temple || tenantData.Temple || 
-                           (tenantDetailsResponse.temples && tenantDetailsResponse.temples.length > 0 
-                            ? tenantDetailsResponse.temples[0] : null);
-          if (templeInfo) {
-            tenantTempleMap.value[tenant.id || tenant.ID] = {
-              name: templeInfo.name || templeInfo.Name || '',
-              city: templeInfo.city || templeInfo.City || 
-                    (templeInfo.address ? templeInfo.address.split(',')[0]?.trim() : '') ||
-                    (templeInfo.Address ? templeInfo.Address.split(',')[0]?.trim() : ''),
-              state: templeInfo.state || templeInfo.State || 
-                     (templeInfo.address ? templeInfo.address.split(',')[1]?.trim() : '') ||
-                     (templeInfo.Address ? templeInfo.Address.split(',')[1]?.trim() : '')
-            };
-            tenant.temple = {
-              name: tenantTempleMap.value[tenant.id || tenant.ID].name,
-              city: tenantTempleMap.value[tenant.id || tenant.ID].city,
-              state: tenantTempleMap.value[tenant.id || tenant.ID].state
-            };
+        if (typeof superAdminService.getTenantDetails === 'function') {
+          const tenantDetailsResponse = await superAdminService.getTenantDetails(tenantId);
+          
+          if (tenantDetailsResponse.success && tenantDetailsResponse.data) {
+            const tenantData = tenantDetailsResponse.data;
+            const templeInfo = tenantData.temple || tenantData.Temple || 
+                             (tenantDetailsResponse.temples && tenantDetailsResponse.temples.length > 0 
+                              ? tenantDetailsResponse.temples[0] : null);
+                              
+            if (templeInfo) {
+              tenantTempleMap.value[tenantId] = {
+                name: templeInfo.name || templeInfo.Name || '',
+                city: templeInfo.city || templeInfo.City || 
+                      (templeInfo.address ? templeInfo.address.split(',')[0]?.trim() : '') ||
+                      (templeInfo.Address ? templeInfo.Address.split(',')[0]?.trim() : ''),
+                state: templeInfo.state || templeInfo.State || 
+                       (templeInfo.address ? templeInfo.address.split(',')[1]?.trim() : '') ||
+                       (templeInfo.Address ? templeInfo.Address.split(',')[1]?.trim() : '')
+              };
+              
+              tenant.temple = {
+                name: tenantTempleMap.value[tenantId].name,
+                city: tenantTempleMap.value[tenantId].city,
+                state: tenantTempleMap.value[tenantId].state
+              };
+            }
           }
         }
-      } catch {}
+      } catch (error) {
+        console.warn(`Failed to fetch details for tenant ${tenantId}:`, error);
+      }
     }
   }
 };
 
+// Selection methods
 const isSelected = (tenantId) => selectedTenants.value.includes(tenantId);
+
 const toggleSelect = (tenantId) => {
   const index = selectedTenants.value.indexOf(tenantId);
-  if (index === -1) selectedTenants.value.push(tenantId);
-  else selectedTenants.value.splice(index, 1);
+  if (index === -1) {
+    selectedTenants.value.push(tenantId);
+  } else {
+    selectedTenants.value.splice(index, 1);
+  }
 };
 
 const toggleSelectAll = () => {
   if (allSelected.value) {
     selectedTenants.value = selectedTenants.value.filter(
-      id => !filteredTenants.value.some(tenant => tenant.id === id)
+      id => !filteredTenants.value.some(tenant => (tenant.id || tenant.ID) === id)
     );
   } else {
     const newSelectedIds = filteredTenants.value
-      .filter(tenant => !selectedTenants.value.includes(tenant.id))
-      .map(tenant => tenant.id);
+      .filter(tenant => !selectedTenants.value.includes(tenant.id || tenant.ID))
+      .map(tenant => tenant.id || tenant.ID);
     selectedTenants.value = [...selectedTenants.value, ...newSelectedIds];
   }
 };
 
 const selectAllTenants = () => {
-  selectedTenants.value = filteredTenants.value.map(tenant => tenant.id);
+  selectedTenants.value = filteredTenants.value.map(tenant => tenant.id || tenant.ID);
 };
-const clearTenantSelection = () => { selectedTenants.value = []; };
-const selectReport = (reportId) => { selectedReport.value = reportId; };
+
+const clearTenantSelection = () => { 
+  selectedTenants.value = []; 
+};
+
+const clearFilters = () => {
+  searchQuery.value = '';
+  statusFilter.value = 'all';
+};
+
+const selectReport = (reportId) => { 
+  selectedReport.value = reportId; 
+};
+
+const retryFetchTenants = async () => {
+  await fetchTenants();
+};
 
 const getStatusClass = (status) => {
   const statusMap = {
@@ -442,18 +616,27 @@ const getStatusClass = (status) => {
   };
   return statusMap[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
 };
+
 const getTenantName = (tenantId) => {
-  const tenant = superAdminStore.tenants.find(t => t.id === tenantId);
+  if (!superAdminStore.tenants || !Array.isArray(superAdminStore.tenants)) {
+    return `Tenant #${tenantId}`;
+  }
+  
+  const tenant = superAdminStore.tenants.find(t => (t.id || t.ID) === tenantId);
   return tenant ? getTenantDisplayName(tenant) : `Tenant #${tenantId}`;
 };
+
 const getReportName = () => {
   const report = reportTypes.find(r => r.id === selectedReport.value);
   return report ? report.name : 'None Selected';
 };
+
 const proceedToReport = () => {
   if (!canProceed.value) return;
+  
   const report = reportTypes.find(r => r.id === selectedReport.value);
   if (!report) return;
+  
   const tenantsParam = selectedTenants.value.join(',');
   router.push({
     path: report.route,
@@ -466,6 +649,7 @@ const proceedToReport = () => {
 
 // Lifecycle hook
 onMounted(async () => {
+  console.log('Component mounted, fetching tenants...');
   await fetchTenants();
 });
 </script>

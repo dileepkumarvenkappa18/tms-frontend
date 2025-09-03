@@ -219,84 +219,105 @@ const fetchDirectByTenant = async (tenantId) => {
 }
 
  const createTemple = async (templeData) => {
-    try {
-      loading.value = true
-      error.value = null
+  try {
+    loading.value = true
+    error.value = null
 
-      // Create FormData if there are file uploads
-      let formDataToSend = templeData
-      if (!(templeData instanceof FormData)) {
-        if (templeData.documents && templeData.documents.length > 0) {
-          const formData = new FormData()
-          
-          // Append JSON data
-          formData.append('data', JSON.stringify({
-            name: templeData.name,
-            description: templeData.description,
-            phone: templeData.contact?.phone,
-            email: templeData.contact?.email,
-            addressLine1: templeData.address?.street,
-            city: templeData.address?.city,
-            state: templeData.address?.state,
-            pincode: templeData.address?.pincode,
-            country: templeData.address?.country || 'India',
-            templeType: templeData.category,
-            establishedDate: templeData.establishedYear ? `${templeData.establishedYear}-01-01` : null,
-            contactPerson: templeData.contact?.name
-          }))
-          
-          // Append documents
-          if (templeData.documents.registration) {
-            formData.append('registration', templeData.documents.registration)
-          }
-          if (templeData.documents.trustDeed) {
-            formData.append('trustDeed', templeData.documents.trustDeed)
-          }
-          if (templeData.documents.property) {
-            formData.append('property', templeData.documents.property)
-          }
-          if (templeData.documents.additional && templeData.documents.additional.length) {
-            templeData.documents.additional.forEach((file, index) => {
-              formData.append(`additional_${index}`, file)
-            })
-          }
-          
-          formDataToSend = formData
+    // Create FormData if there are file uploads
+    let formDataToSend = templeData
+    if (!(templeData instanceof FormData)) {
+      if (templeData.documents && templeData.documents.length > 0) {
+        const formData = new FormData()
+        
+        // Append JSON data
+        formData.append('data', JSON.stringify({
+          name: templeData.name,
+          description: templeData.description,
+          phone: templeData.contact?.phone,
+          email: templeData.contact?.email,
+          addressLine1: templeData.address?.street,
+          city: templeData.address?.city,
+          state: templeData.address?.state,
+          pincode: templeData.address?.pincode,
+          country: templeData.address?.country || 'India',
+          templeType: templeData.category,
+          establishedDate: templeData.establishedYear ? `${templeData.establishedYear}-01-01` : null,
+          contactPerson: templeData.contact?.name
+        }))
+        
+        // Append documents
+        if (templeData.documents.registration) {
+          formData.append('registration', templeData.documents.registration)
         }
+        if (templeData.documents.trustDeed) {
+          formData.append('trustDeed', templeData.documents.trustDeed)
+        }
+        if (templeData.documents.property) {
+          formData.append('property', templeData.documents.property)
+        }
+        if (templeData.documents.additional && templeData.documents.additional.length) {
+          templeData.documents.additional.forEach((file, index) => {
+            formData.append(`additional_${index}`, file)
+          })
+        }
+        
+        formDataToSend = formData
       }
-
-      const response = await templeService.createTemple(formDataToSend)
-      
-      // Add the new temple to the list
-      temples.value.push(response)
-      
-      toast.success('Temple created successfully. It will be reviewed by the admin.')
-      
-      resetForm()
-      
-      // IMPORTANT: Force refresh temple list after creation
-      await fetchTemples()
-      
-      // Clear any cached data in localStorage that might be related to temples
-      try {
-        localStorage.removeItem('dashboard_local_data')
-        localStorage.removeItem('dashboard_counts')
-        localStorage.removeItem('dashboard_seva_names')
-      } catch (e) {
-        console.warn('Could not clear localStorage cache:', e)
-      }
-      
-      return response
-
-    } catch (err) {
-      const errorMessage = err.message || 'Failed to create temple'
-      error.value = errorMessage
-      toast.error(errorMessage)
-      console.error('Error creating temple:', err)
-      throw err
-    } finally {
-      loading.value = false
     }
+
+    const response = await templeService.createTemple(formDataToSend)
+    
+    // Create a proper temple object to add to the list
+    // Even if the API doesn't return the complete temple data
+    const newTemple = {
+      id: response.id || response.ID || Date.now(), // Fallback ID if not returned
+      name: formDataToSend.name || '',
+      description: formDataToSend.description || '',
+      status: 'pending', // Explicitly set status to pending
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      // Include other fields from the form data
+      main_deity: formDataToSend.main_deity || '',
+      temple_type: formDataToSend.temple_type || formDataToSend.category || '',
+      phone: formDataToSend.phone || '',
+      email: formDataToSend.email || '',
+      city: formDataToSend.city || '',
+      state: formDataToSend.state || '',
+      district: formDataToSend.district || '',
+      pincode: formDataToSend.pincode || '',
+      street_address: formDataToSend.street_address || ''
+    }
+    
+    // Add the new temple to the list
+    temples.value.push(newTemple)
+    
+    toast.success('Temple created successfully. It will be reviewed by the admin.')
+    
+    resetForm()
+    
+    // Remove the fetchTemples() call that was causing the issue
+    // This prevents overriding our local addition
+    
+    // Clear any cached data in localStorage that might be related to temples
+    try {
+      localStorage.removeItem('dashboard_local_data')
+      localStorage.removeItem('dashboard_counts')
+      localStorage.removeItem('dashboard_seva_names')
+    } catch (e) {
+      console.warn('Could not clear localStorage cache:', e)
+    }
+    
+    return response
+
+  } catch (err) {
+    const errorMessage = err.message || 'Failed to create temple'
+    error.value = errorMessage
+    toast.error(errorMessage)
+    console.error('Error creating temple:', err)
+    throw err
+  } finally {
+    loading.value = false
+  }
 }
 
   const updateTemple = async (id, updates) => {

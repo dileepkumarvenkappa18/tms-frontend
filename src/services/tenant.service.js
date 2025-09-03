@@ -150,7 +150,7 @@ export const deleteTemple = async (id) => {
  */
 export const getTenantUsers = async (tenantId, filters = {}) => {
   try {
-    console.log('📡 Fetching tenant users')
+    console.log('📡 Fetching tenant users');
     
     // Build query parameters
     const params = new URLSearchParams();
@@ -168,8 +168,11 @@ export const getTenantUsers = async (tenantId, filters = {}) => {
       users = response.data.data;
     }
     
-    console.log(`✅ Received ${users.length} users:`, users);
-    return users;
+    // Standardize each user's data
+    const standardizedUsers = users.map(standardizeUserData);
+    
+    console.log(`✅ Received ${standardizedUsers.length} users:`, standardizedUsers);
+    return standardizedUsers;
   } catch (error) {
     console.error('❌ Error fetching tenant users:', error);
     console.error('Error response:', error.response?.data);
@@ -205,8 +208,12 @@ export const createOrUpdateTenantUser = async (tenantId, userData) => {
     
     console.log('📥 User creation response:', response.data);
     
-    // Return the user object from the response
-    return response.data.user || response.data;
+    // Standardize the user data from the response
+    const user = response.data.user || response.data;
+    const standardizedUser = standardizeUserData(user);
+    
+    // Return the standardized user object
+    return standardizedUser;
   } catch (error) {
     console.error('❌ Error creating/updating tenant user:', error);
     console.error('Error response:', error.response?.data);
@@ -296,6 +303,29 @@ export const updateUserStatus = async (tenantId, userId, status) => {
   }
 }
 
+/**
+ * Standardize user data format between backend and frontend
+ * @param {object} user - User data from API
+ * @returns {object} - Standardized user object
+ */
+const standardizeUserData = (user) => {
+  if (!user) return user;
+  
+  // Create a clone to avoid mutations
+  const standardized = {...user};
+  
+  // Standardize role format (convert from backend to frontend format)
+  if (typeof standardized.role === 'string') {
+    if (standardized.role.toLowerCase() === 'monitoringuser') {
+      standardized.role = 'MonitoringUser';
+    } else if (standardized.role.toLowerCase() === 'standarduser') {
+      standardized.role = 'StandardUser';
+    }
+  }
+  
+  return standardized;
+};
+
 export default {
   getTenantsForSelection,
   getTemples,
@@ -306,5 +336,6 @@ export default {
   getTenantUsers,
   createOrUpdateTenantUser,
   updateTenantUser,
-  updateUserStatus
+  updateUserStatus,
+  standardizeUserData
 }

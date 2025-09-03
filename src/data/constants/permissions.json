@@ -57,7 +57,9 @@
         "reports.own_temple",
         "analytics.own_temple",
         "profile.edit_own",
-        "settings.own_temple"
+        "settings.own_temple",
+        "tenant_users.view",
+        "tenant_users.manage"
       ]
     },
     "devotee": {
@@ -141,6 +143,18 @@
         "name": "Delete Tenants",
         "description": "Delete tenant accounts",
         "category": "tenants"
+      }
+    },
+    "tenant_users": {
+      "view": {
+        "name": "View Tenant Users",
+        "description": "View users within tenant",
+        "category": "tenant_users"
+      },
+      "manage": {
+        "name": "Manage Tenant Users",
+        "description": "Create, update and manage users within tenant",
+        "category": "tenant_users"
       }
     },
     "temples": {
@@ -527,6 +541,11 @@
     "users": {
       "name": "User Management",
       "description": "Manage system users",
+      "color": "blue"
+    },
+    "tenant_users": {
+      "name": "Tenant User Management",
+      "description": "Manage users within tenant",
       "color": "blue"
     },
     "entity": {
