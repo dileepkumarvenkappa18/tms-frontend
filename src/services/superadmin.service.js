@@ -121,6 +121,119 @@ class SuperAdminService {
   }
 }
 
+async getTenantDetails(tenantId) {
+  try {
+    console.log(`Service: Fetching tenant details for ID ${tenantId}`);
+    
+    // Try to get tenant details from the dedicated endpoint
+    try {
+      const response = await api.get(`${this.baseURL}/tenants/${tenantId}`);
+      console.log('Service: Tenant details response:', response);
+      
+      if (response && response.data) {
+        console.log('Retrieved temple details for tenant:', response.data);
+        return {
+          success: true,
+          data: response.data
+        };
+      }
+    } catch (error) {
+      console.warn(`Primary tenant details endpoint failed:`, error);
+      
+      // Try fallback endpoint
+      try {
+        const fallbackResponse = await api.get(`${this.baseURL}/tenant-details/${tenantId}`);
+        if (fallbackResponse && fallbackResponse.data) {
+          return {
+            success: true,
+            data: { temple_details: fallbackResponse.data }
+          };
+        }
+      } catch (fallbackError) {
+        console.warn(`Fallback endpoint failed too:`, fallbackError);
+      }
+    }
+    
+    // If we reach here, both attempts failed, return mock data
+    console.log('Using mock data for tenant details');
+    return {
+      success: true,
+      data: this.getMockTenantDetails(tenantId)
+    };
+    
+  } catch (error) {
+    console.error(`Service: Error fetching tenant details for ID ${tenantId}:`, error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+
+// Mock data for tenant details in case endpoints fail
+getMockTenantDetails(tenantId) {
+  // Generate some fake but realistic data based on the tenant ID
+  const temples = [
+    { name: 'Sri Krishna Temple', place: 'Bengaluru, Karnataka' },
+    { name: 'Ganesh Temple', place: 'Mumbai, Maharashtra' },
+    { name: 'Meenakshi Temple', place: 'Madurai, Tamil Nadu' },
+    { name: 'Jagannath Temple', place: 'Puri, Odisha' },
+    { name: 'Kashi Vishwanath', place: 'Varanasi, Uttar Pradesh' }
+  ];
+  
+  // Use tenant ID as an index (with wrapping)
+  const index = (tenantId % temples.length);
+  const temple = temples[index];
+  
+  return {
+    temple_details: {
+      temple_name: temple.name,
+      temple_place: temple.place,
+      temple_address: `${123 + tenantId} Temple Street, ${temple.place.split(',')[0]}`,
+      temple_phone_no: `+91 98765${10000 + Number(tenantId)}`,
+      temple_description: `A beautiful ${temple.name} dedicated to devotional services.`
+    }
+  };
+}
+
+// Add this method to superadmin.service.js
+async batchFetchTenantDetails(tenantIds) {
+  console.log(`Service: Batch fetching details for ${tenantIds.length} tenants`);
+  const results = {};
+  
+  // Process in smaller batches of 3 with delay between batches
+  const batchSize = 3;
+  const delay = 1000; // 1 second delay between batches
+  
+  for (let i = 0; i < tenantIds.length; i += batchSize) {
+    const batch = tenantIds.slice(i, i + batchSize);
+    console.log(`Processing batch ${Math.floor(i/batchSize) + 1}: ${batch}`);
+    
+    // Process each tenant in the current batch concurrently
+    const batchPromises = batch.map(async (tenantId) => {
+      try {
+        const response = await this.getTenantDetails(tenantId);
+        if (response.success) {
+          results[tenantId] = response.data;
+        }
+      } catch (error) {
+        console.warn(`Error fetching details for tenant ${tenantId}:`, error);
+      }
+    });
+    
+    // Wait for current batch to complete
+    await Promise.all(batchPromises);
+    
+    // Add delay before next batch (but not after the last batch)
+    if (i + batchSize < tenantIds.length) {
+      console.log(`Waiting ${delay}ms before next batch...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  return results;
+}
+
   /**
    * Helper method to format location from tenant data
    */
@@ -468,74 +581,113 @@ class SuperAdminService {
    * Try multiple possible endpoints to find the right one
    */
   async getTempleadminsForReports() {
+  try {
+    console.log('Service: Fetching temple admins list for reports...')
+    
+    // Try the enhanced endpoint first which includes temple details
     try {
-      console.log('Service: Fetching temple admins list for reports...')
+      const response = await api.get(`${this.baseURL}/tenants/reports`);
+      console.log('Service: Enhanced tenants/reports response:', response);
       
-      // First try using the superadmin/tenants endpoint with templeadmin role filter
-      try {
-        const params = new URLSearchParams({
-          role: 'templeadmin',
-          status: 'active'  // Only get active templeadmins
-        })
+      if (response && (Array.isArray(response.data) || Array.isArray(response))) {
+        const tenantData = Array.isArray(response.data) ? response.data : 
+                          Array.isArray(response) ? response : [];
         
-        const response = await api.get(`${this.baseURL}/tenants?${params}`)
-        console.log('Service: Tenant response for templeadmins:', response)
+        console.log('Service: First tenant data from enhanced endpoint:', tenantData[0]);
         
-        if (response && (Array.isArray(response.data) || Array.isArray(response))) {
-          const tenantData = Array.isArray(response.data) ? response.data : 
-                            Array.isArray(response) ? response : [];
-          
-          return {
-            success: true,
-            data: tenantData,
-            message: 'Temple admins list fetched successfully'
+        return {
+          success: true,
+          data: tenantData,
+          message: 'Temple admins list fetched successfully with temple details'
+        }
+      }
+    } catch (enhancedError) {
+      console.warn('Enhanced endpoint not available, trying standard endpoints...');
+    }
+    
+    // Try using the superadmin/tenants endpoint with templeadmin role filter
+    try {
+      const params = new URLSearchParams({
+        role: 'templeadmin',
+        status: 'active'  // Only get active templeadmins
+      })
+      
+      const response = await api.get(`${this.baseURL}/tenants?${params}`)
+      console.log('Service: Tenant response for templeadmins:', response)
+      
+      if (response && (Array.isArray(response.data) || Array.isArray(response))) {
+        const tenantData = Array.isArray(response.data) ? response.data : 
+                          Array.isArray(response) ? response : [];
+                          
+        // Fetch temple details for each tenant
+        for (const tenant of tenantData) {
+          const tenantId = tenant.id || tenant.ID;
+          try {
+            const detailsResponse = await api.get(`${this.baseURL}/tenant-details/${tenantId}`);
+            if (detailsResponse && detailsResponse.data) {
+              tenant.temple_details = detailsResponse.data;
+              tenant.temple = {
+                name: detailsResponse.data.temple_name,
+                city: detailsResponse.data.temple_place,
+                state: detailsResponse.data.temple_state || ""
+              };
+            }
+          } catch (detailsError) {
+            console.warn(`Could not fetch details for tenant ${tenantId}:`, detailsError);
           }
         }
-      } catch (tenantError) {
-        console.warn('Could not fetch templeadmins from tenants endpoint, trying alternatives...')
-      }
-      
-      // Second try: get all tenants and filter for templeadmins in the code
-      try {
-        const allTenantsResponse = await this.getAllTenants()
         
-        if (allTenantsResponse.success && Array.isArray(allTenantsResponse.data)) {
-          // Filter for templeadmins by role
-          const templeadmins = allTenantsResponse.data.filter(tenant => {
-            const role = tenant.role?.roleName || tenant.role?.RoleName || '';
-            return role.toLowerCase() === 'templeadmin' || role.toLowerCase() === 'temple_admin';
-          });
-          
-          return {
-            success: true,
-            data: templeadmins,
-            message: 'Temple admins filtered from all tenants'
-          }
+        return {
+          success: true,
+          data: tenantData,
+          message: 'Temple admins list fetched successfully with supplementary details'
         }
-      } catch (allTenantsError) {
-        console.warn('Could not fetch templeadmins from all tenants:', allTenantsError)
       }
+    } catch (tenantError) {
+      console.warn('Could not fetch templeadmins from tenants endpoint, trying alternatives...');
+    }
+    
+    // Second try: get all tenants and filter for templeadmins in the code
+    try {
+      const allTenantsResponse = await this.getAllTenants()
       
-      // As a last resort, use mock data
-      console.warn('No API endpoints available for temple admins, using mock data')
-      return {
-        success: true,
-        data: this.getMockAllTenants().filter(t => t.Role?.RoleName === 'templeadmin'),
-        message: 'Mock temple admins list loaded (API endpoints not available)'
+      if (allTenantsResponse.success && Array.isArray(allTenantsResponse.data)) {
+        // Filter for templeadmins by role
+        const templeadmins = allTenantsResponse.data.filter(tenant => {
+          const role = tenant.role?.roleName || tenant.role?.RoleName || '';
+          return role.toLowerCase() === 'templeadmin' || role.toLowerCase() === 'temple_admin';
+        });
+        
+        return {
+          success: true,
+          data: templeadmins,
+          message: 'Temple admins filtered from all tenants'
+        }
       }
-      
-    } catch (error) {
-      console.error('Service: Error fetching temple admins list:', error)
-      
-      // Fallback to mock data for development
-      console.warn('Temple admins list endpoint not found, using mock data')
-      return {
-        success: true,
-        data: this.getMockAllTenants(),
-        message: 'Mock temple admins list loaded (API endpoint not available)'
-      }
+    } catch (allTenantsError) {
+      console.warn('Could not fetch templeadmins from all tenants:', allTenantsError);
+    }
+    
+    // As a last resort, use mock data
+    console.warn('No API endpoints available for temple admins, using mock data');
+    return {
+      success: true,
+      data: this.getMockTenantsWithTempleDetails(),
+      message: 'Mock temple admins list loaded (API endpoints not available)'
+    }
+    
+  } catch (error) {
+    console.error('Service: Error fetching temple admins list:', error);
+    
+    // Fallback to mock data for development
+    console.warn('Temple admins list endpoint not found, using mock data');
+    return {
+      success: true,
+      data: this.getMockTenantsWithTempleDetails(),
+      message: 'Mock temple admins list loaded (API endpoint not available)'
     }
   }
+}
 
   async approveTenant(tenantId) {
     try {

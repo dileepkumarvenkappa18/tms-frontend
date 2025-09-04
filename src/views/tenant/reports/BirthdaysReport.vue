@@ -1030,28 +1030,75 @@ const downloadReport = async () => {
 
 const loadTemplesForTenants = async () => {
   try {
+    console.log('Starting simplified temple loading for tenants');
+    
     if (!templeStore) {
       console.error('Temple store is not available');
       return;
     }
 
-    if (fromSuperadmin.value && safeTenantIds.value.length > 1) {
-      // For multiple tenants, load temples for first tenant as example
-      console.log('Loading temples for multiple tenants:', safeTenantIds.value);
-      if (safeTenantIds.value.length > 0 && typeof templeStore.fetchTemples === 'function') {
-        await templeStore.fetchTemples(safeTenantIds.value[0]);
+    // Clear existing temples
+    templeStore.clearTempleData();
+
+    // Determine tenant ID(s) to use
+    const tenantIds = fromSuperadmin.value && safeTenantIds.value.length > 0 
+      ? safeTenantIds.value 
+      : [safeTenantId.value];
+    
+    console.log('Loading temples for tenant IDs:', tenantIds);
+
+    // Direct API import
+    const api = await import('@/plugins/axios').then(m => m.default);
+    
+    // Direct approach: Get all entities and strictly filter by created_by
+    try {
+      const response = await api.get('/v1/entities');
+      let allEntities = [];
+      
+      // Extract entities array from response
+      if (response.data && Array.isArray(response.data)) {
+        allEntities = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        allEntities = response.data.data;
       }
-    } else {
-      // Single tenant
-      const currentTenantId = fromSuperadmin.value ? safeTenantIds.value[0] : safeTenantId.value;
-      if (currentTenantId && typeof templeStore.fetchTemples === 'function') {
-        console.log('Loading temples for tenant:', currentTenantId);
-        await templeStore.fetchTemples(currentTenantId);
+      
+      console.log(`Total entities found: ${allEntities.length}`);
+      
+      // STRICT filtering: Only include entities where created_by EXACTLY matches a tenant ID
+      const strictlyFilteredTemples = allEntities.filter(entity => 
+        tenantIds.some(tenantId => 
+          String(entity.created_by) === String(tenantId)
+        )
+      );
+      
+      console.log(`STRICTLY filtered to ${strictlyFilteredTemples.length} temples matching tenant IDs exactly`);
+
+      // Set the temples in store
+      if (strictlyFilteredTemples.length > 0) {
+        // Basic normalization
+        templeStore.temples = strictlyFilteredTemples.map(temple => ({
+          id: temple.id,
+          name: temple.name || temple.temple_name || temple.templeName || 'Unknown Temple',
+          status: temple.status || 'active'
+        }));
+        
+        console.log(`Successfully loaded ${templeStore.temples.length} temples for selected tenant(s)`);
+        return;
       }
+      
+      // If strict filtering yielded no results, show an empty list
+      console.warn('No temples found for the selected tenant(s) after strict filtering');
+      templeStore.temples = [];
+      
+    } catch (err) {
+      console.error('Error fetching and filtering temples:', err);
+      templeStore.temples = [];
+      showToast('Failed to load temples for the selected tenant(s)', 'error');
     }
   } catch (error) {
-    console.error('Error loading temples:', error);
-    showToast('Failed to load temple data. Please try again.', 'error');
+    console.error('Overall error in loadTemplesForTenants:', error);
+    templeStore.temples = [];
+    showToast('Failed to load temple data', 'error');
   }
 };
 

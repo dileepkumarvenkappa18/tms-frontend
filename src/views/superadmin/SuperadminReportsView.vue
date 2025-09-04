@@ -19,6 +19,21 @@
       </div>
     </div>
 
+    <!-- Debug Panel (for development only, remove in production) -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 mb-2 bg-gray-800 text-white rounded-lg" style="font-family: monospace; font-size: 12px;">
+      <details>
+        <summary class="cursor-pointer">Debug Info (click to expand)</summary>
+        <div class="mt-2">
+          <div>Selected Tenant IDs: {{ JSON.stringify(selectedTenants) }}</div>
+          <div class="mt-1">Selected Report: {{ selectedReport }}</div>
+          <div class="mt-1">Total Tenants: {{ superAdminStore.tenants?.length || 0 }}</div>
+          <div class="mt-1">Filtered Tenants: {{ filteredTenants.length }}</div>
+          <div class="mt-1">Tenant Temple Map Keys: {{ Object.keys(tenantTempleMap) }}</div>
+          <div class="mt-1">Can Proceed: {{ canProceed }}</div>
+        </div>
+      </details>
+    </div>
+
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Tenants Selection Card -->
@@ -88,6 +103,7 @@
                   <option value="approved">Approved</option>
                   <option value="pending">Pending</option>
                   <option value="rejected">Rejected</option>
+                  <option value="active">Active</option>
                 </select>
               </div>
             </div>
@@ -159,12 +175,12 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-                  <tr v-for="tenant in filteredTenants" :key="tenant.id || tenant.ID" :class="{ 'bg-indigo-50': isSelected(tenant.id || tenant.ID) }">
+                  <tr v-for="tenant in filteredTenants" :key="getTenantId(tenant)" :class="{ 'bg-indigo-50': isSelected(getTenantId(tenant)) }">
                     <td class="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        :checked="isSelected(tenant.id || tenant.ID)"
-                        @change="toggleSelect(tenant.id || tenant.ID)"
+                        :checked="isSelected(getTenantId(tenant))"
+                        @change="toggleSelect(getTenantId(tenant))"
                         class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                       />
                     </td>
@@ -362,7 +378,7 @@ const filteredTenants = computed(() => {
 
 const allSelected = computed(() => {
   return filteredTenants.value.length > 0 && 
-         filteredTenants.value.every(tenant => selectedTenants.value.includes(tenant.id || tenant.ID));
+         filteredTenants.value.every(tenant => isSelected(getTenantId(tenant)));
 });
 
 const someSelected = computed(() => {
@@ -373,15 +389,82 @@ const canProceed = computed(() => {
   return selectedTenants.value.length > 0 && selectedReport.value;
 });
 
-// Utility methods
-const getTenantDisplayName = (tenant) => {
-  return tenant.fullName || tenant.FullName || tenant.name || tenant.Name || `Tenant #${tenant.id || tenant.ID}`;
+// Helper function to get tenant ID - NEW unified function
+const getTenantId = (tenant) => {
+  // Try all possible ID fields
+  let id = null;
+  if (tenant.id !== undefined) id = tenant.id;
+  else if (tenant.ID !== undefined) id = tenant.ID;
+  else if (tenant.tenant_id !== undefined) id = tenant.tenant_id;
+  else if (tenant.tenantId !== undefined) id = tenant.tenantId;
+  else if (tenant.userId !== undefined) id = tenant.userId;
+  else if (tenant.user_id !== undefined) id = tenant.user_id;
+  
+  // Normalize the ID to an integer if possible
+  return normalizeId(id);
 };
 
-const getTempleNameDisplay = (tenant) => {
-  const tenantId = tenant.id || tenant.ID;
+// Helper function to normalize IDs - UPDATED more robust handling
+const normalizeId = (id) => {
+  // If id is undefined or null, return null
+  if (id === undefined || id === null) {
+    return null;
+  }
   
-  // Check mapped temple data first
+  // If it's already a number, return it
+  if (typeof id === 'number') {
+    return id;
+  }
+  
+  // If it's a string that can be converted to a number, do so
+  if (typeof id === 'string') {
+    // Remove any non-numeric characters for strict numeric parsing
+    const numericStr = id.replace(/[^0-9]/g, '');
+    if (numericStr && !isNaN(parseInt(numericStr, 10))) {
+      return parseInt(numericStr, 10);
+    }
+  }
+  
+  // Return as is if we can't convert it to a number
+  return id;
+};
+
+// Debug function to dump a tenant object - remove in production
+const dumpTenantObject = (tenant) => {
+  console.log('Tenant Object:', JSON.stringify(tenant, null, 2));
+  
+  // Print location-related fields specifically
+  console.log('Location-related fields:');
+  if (tenant.temple) console.log('- temple:', tenant.temple);
+  if (tenant.Temple) console.log('- Temple:', tenant.Temple);
+  if (tenant.temple_details) console.log('- temple_details:', tenant.temple_details);
+  if (tenant.location) console.log('- location:', tenant.location);
+  if (tenant.Location) console.log('- Location:', tenant.Location);
+  if (tenant.city) console.log('- city:', tenant.city);
+  if (tenant.state) console.log('- state:', tenant.state);
+  if (tenant.address) console.log('- address:', tenant.address);
+};
+
+// Utility methods
+const getTenantDisplayName = (tenant) => {
+  return tenant.fullName || tenant.FullName || tenant.name || tenant.Name || `Tenant #${getTenantId(tenant)}`;
+};
+
+// IMPROVED: getTempleNameDisplay function
+const getTempleNameDisplay = (tenant) => {
+  const tenantId = getTenantId(tenant);
+  
+  // Debug tenant object if there's an issue with temple name display
+  if (process.env.NODE_ENV === 'development' && !tenant.temple && !tenantTempleMap.value[tenantId]) {
+    console.log(`No temple data for tenant ${tenantId}:`, tenant);
+  }
+  
+  // Directly check temple_details field
+  if (tenant.temple_details?.temple_name) {
+    return tenant.temple_details.temple_name;
+  }
+  
+  // Check mapped temple data
   if (tenantTempleMap.value[tenantId]?.name) {
     return tenantTempleMap.value[tenantId].name;
   }
@@ -391,73 +474,71 @@ const getTempleNameDisplay = (tenant) => {
   if (tenant.temple?.Name) return tenant.temple.Name;
   if (tenant.Temple?.name) return tenant.Temple.name;
   if (tenant.Temple?.Name) return tenant.Temple.Name;
-  if (tenant.EntityName) return tenant.EntityName;
   if (tenant.templeName) return tenant.templeName;
   if (tenant.TemplateName) return tenant.TemplateName;
-  if (tenant.organizationName) return tenant.organizationName;
-  if (tenant.OrganizationName) return tenant.OrganizationName;
-  
-  // Try to extract from address or other fields
-  if (tenant.temple?.address && tenant.temple.address.includes('Temple')) {
-    return tenant.temple.address.split(',')[0]?.trim();
-  }
   
   // Return tenant name + Temple instead of N/A
   return `${getTenantDisplayName(tenant)}'s Temple`;
 };
 
+// IMPROVED: getLocationDisplay function with more aggressive fallbacks
 const getLocationDisplay = (tenant) => {
-  const tenantId = tenant.id || tenant.ID;
+  const tenantId = getTenantId(tenant);
   
-  // Check mapped temple data first
+  // DEBUG: If there's an issue with location display
+  if (process.env.NODE_ENV === 'development' && !tenant.temple && !tenantTempleMap.value[tenantId]) {
+    console.log(`No location data for tenant ${tenantId}:`, tenant);
+  }
+  
+  // Check temple_details directly
+  if (tenant.temple_details?.temple_place) {
+    return tenant.temple_details.temple_place;
+  }
+  
+  // Check mapped temple data
   if (tenantTempleMap.value[tenantId]) {
     const templeInfo = tenantTempleMap.value[tenantId];
-    if (templeInfo.city && templeInfo.state && templeInfo.city !== 'Not specified' && templeInfo.state !== 'Not specified') {
+    if (templeInfo.city && templeInfo.state) {
       return `${templeInfo.city}, ${templeInfo.state}`;
-    } else if (templeInfo.address && templeInfo.address !== 'Address not available') {
+    } else if (templeInfo.address) {
       return templeInfo.address;
     }
   }
   
-  // Check various location property structures in tenant object
+  // Try all possible location fields in order of preference
+  // Standard fields
   if (tenant.temple?.city && tenant.temple?.state) {
     return `${tenant.temple.city}, ${tenant.temple.state}`;
   }
   if (tenant.Temple?.City && tenant.Temple?.State) {
     return `${tenant.Temple.City}, ${tenant.Temple.State}`;
   }
-  if (tenant.EntityCity && tenant.EntityState) {
-    return `${tenant.EntityCity}, ${tenant.EntityState}`;
-  }
-  if (tenant.city && tenant.state) {
-    return `${tenant.city}, ${tenant.state}`;
-  }
-  if (tenant.City && tenant.State) {
-    return `${tenant.City}, ${tenant.State}`;
-  }
+  
+  // Check if temple or Temple has location or place field
+  if (tenant.temple?.location) return tenant.temple.location;
+  if (tenant.Temple?.Location) return tenant.Temple.Location;
+  if (tenant.temple?.place) return tenant.temple.place;
+  if (tenant.Temple?.Place) return tenant.Temple.Place;
+  
+  // Check address fields
   if (tenant.temple?.address) return tenant.temple.address;
   if (tenant.Temple?.Address) return tenant.Temple.Address;
-  if (tenant.EntityAddress) return tenant.EntityAddress;
-  if (tenant.address) return tenant.address;
-  if (tenant.Address) return tenant.Address;
+  
+  // Direct fields on tenant object
   if (tenant.location) return tenant.location;
   if (tenant.Location) return tenant.Location;
+  if (tenant.city && tenant.state) return `${tenant.city}, ${tenant.state}`;
+  if (tenant.City && tenant.State) return `${tenant.City}, ${tenant.State}`;
+  if (tenant.address) return tenant.address;
+  if (tenant.Address) return tenant.Address;
+  if (tenant.place) return tenant.place;
+  if (tenant.Place) return tenant.Place;
   
-  // Try to parse from full address field
-  if (tenant.temple?.fullAddress || tenant.Temple?.FullAddress || tenant.FullAddress) {
-    const fullAddr = tenant.temple?.fullAddress || tenant.Temple?.FullAddress || tenant.FullAddress;
-    const parts = fullAddr.split(',');
-    if (parts.length >= 2) {
-      return `${parts[parts.length - 2]?.trim()}, ${parts[parts.length - 1]?.trim()}`;
-    }
-    return fullAddr;
-  }
-  
-  // Return a meaningful default instead of N/A
-  return "Location not specified";
+  // Hard fallback if no location can be found
+  return "Location not available";
 };
 
-// Main fetch function
+// Main fetch function - ENHANCED to include more temple detail fetching
 const fetchTenants = async () => {
   loading.value = true;
   lastError.value = '';
@@ -471,6 +552,11 @@ const fetchTenants = async () => {
     
     if (response && response.success && superAdminStore.tenants && Array.isArray(superAdminStore.tenants) && superAdminStore.tenants.length > 0) {
       console.log('Successfully loaded tenants via store:', superAdminStore.tenants.length);
+      
+      // Process data structure for display
+      processTenantsData();
+      
+      // Fetch additional temple details
       await fetchTempleDetailsForTenants();
     } else {
       console.log('Store method failed, trying basic fetchTenants...');
@@ -480,29 +566,16 @@ const fetchTenants = async () => {
       
       if (superAdminStore.tenants && Array.isArray(superAdminStore.tenants) && superAdminStore.tenants.length > 0) {
         console.log('Basic fetch successful:', superAdminStore.tenants.length);
+        
+        // Process data structure for display
+        processTenantsData();
+        
+        // Fetch additional temple details
         await fetchTempleDetailsForTenants();
       } else {
         throw new Error('No tenants found in store after fetch attempts');
       }
     }
-    
-    // Process temple mapping
-    if (superAdminStore.tenants && Array.isArray(superAdminStore.tenants)) {
-      superAdminStore.tenants.forEach(tenant => {
-        if (tenant.temple) {
-          const tenantId = tenant.id || tenant.ID;
-          tenantTempleMap.value[tenantId] = {
-            name: tenant.temple.name || tenant.temple.Name || '',
-            city: tenant.temple.city || tenant.temple.City || '',
-            state: tenant.temple.state || tenant.temple.State || ''
-          };
-        }
-      });
-      
-      console.log('Final tenant count:', superAdminStore.tenants.length);
-      lastError.value = '';
-    }
-    
   } catch (error) {
     console.error('Error fetching tenants:', error);
     lastError.value = `Failed to load tenants: ${error.message}`;
@@ -518,80 +591,186 @@ const fetchTenants = async () => {
   }
 };
 
-const fetchTempleDetailsForTenants = async () => {
+// NEW: Process tenant data for display
+const processTenantsData = () => {
   if (!superAdminStore.tenants || !Array.isArray(superAdminStore.tenants)) return;
   
-  for (const tenant of superAdminStore.tenants) {
-    const tenantId = tenant.id || tenant.ID;
+  // Debug first tenant object to understand the structure
+  if (superAdminStore.tenants.length > 0) {
+    console.log('First tenant object:', superAdminStore.tenants[0]);
+  }
+  
+  // Process each tenant to ensure required fields
+  superAdminStore.tenants.forEach(tenant => {
+    const tenantId = getTenantId(tenant);
     
-    if (!tenant.temple && !tenantTempleMap.value[tenantId]) {
+    // Skip if we can't get a valid ID
+    if (tenantId === null) {
+      console.warn('Tenant has no valid ID:', tenant);
+      return;
+    }
+    
+    // Extract temple details from tenant object
+    if (tenant.temple_details) {
+      // Create temple map entry from temple_details
+      tenantTempleMap.value[tenantId] = {
+        name: tenant.temple_details.temple_name || '',
+        city: tenant.temple_details.temple_place ? tenant.temple_details.temple_place.split(',')[0]?.trim() : '',
+        state: tenant.temple_details.temple_place ? tenant.temple_details.temple_place.split(',')[1]?.trim() : '',
+        address: tenant.temple_details.temple_address || ''
+      };
+    }
+    // If temple field exists, extract from there
+    else if (tenant.temple) {
+      tenantTempleMap.value[tenantId] = {
+        name: tenant.temple.name || tenant.temple.Name || '',
+        city: tenant.temple.city || tenant.temple.City || '',
+        state: tenant.temple.state || tenant.temple.State || '',
+        address: tenant.temple.address || tenant.temple.Address || ''
+      };
+    }
+    // If Temple field exists (different casing), extract from there
+    else if (tenant.Temple) {
+      tenantTempleMap.value[tenantId] = {
+        name: tenant.Temple.name || tenant.Temple.Name || '',
+        city: tenant.Temple.city || tenant.Temple.City || '',
+        state: tenant.Temple.state || tenant.Temple.State || '',
+        address: tenant.Temple.address || tenant.Temple.Address || ''
+      };
+    }
+  });
+  
+  console.log(`Processed ${Object.keys(tenantTempleMap.value).length} temple data entries`);
+};
+
+// Enhanced temple details fetching with better error handling
+const fetchTempleDetailsForTenants = async () => {
+  if (!superAdminStore.tenants || !Array.isArray(superAdminStore.tenants)) {
+    return;
+  }
+  
+  // Get tenants that don't have temple details
+  const tenantsNeedingDetails = superAdminStore.tenants.filter(tenant => {
+    const tenantId = getTenantId(tenant);
+    return tenantId !== null && !tenant.temple && !tenant.Temple && !tenant.temple_details && !tenantTempleMap.value[tenantId];
+  });
+  
+  if (tenantsNeedingDetails.length === 0) {
+    console.log('All tenants already have temple details');
+    return;
+  }
+  
+  console.log(`Fetching temple details for ${tenantsNeedingDetails.length} tenants...`);
+  
+  // Process in batches to avoid overwhelming the server
+  const batchSize = 5;
+  for (let i = 0; i < tenantsNeedingDetails.length; i += batchSize) {
+    const batch = tenantsNeedingDetails.slice(i, i + batchSize);
+    
+    // Process each tenant in parallel within the batch
+    await Promise.all(batch.map(async (tenant) => {
       try {
+        const tenantId = getTenantId(tenant);
+        
+        // Skip if no valid ID
+        if (tenantId === null) return;
+        
         if (typeof superAdminService.getTenantDetails === 'function') {
-          const tenantDetailsResponse = await superAdminService.getTenantDetails(tenantId);
+          const response = await superAdminService.getTenantDetails(tenantId);
           
-          if (tenantDetailsResponse.success && tenantDetailsResponse.data) {
-            const tenantData = tenantDetailsResponse.data;
-            const templeInfo = tenantData.temple || tenantData.Temple || 
-                             (tenantDetailsResponse.temples && tenantDetailsResponse.temples.length > 0 
-                              ? tenantDetailsResponse.temples[0] : null);
-                              
-            if (templeInfo) {
-              tenantTempleMap.value[tenantId] = {
-                name: templeInfo.name || templeInfo.Name || '',
-                city: templeInfo.city || templeInfo.City || 
-                      (templeInfo.address ? templeInfo.address.split(',')[0]?.trim() : '') ||
-                      (templeInfo.Address ? templeInfo.Address.split(',')[0]?.trim() : ''),
-                state: templeInfo.state || templeInfo.State || 
-                       (templeInfo.address ? templeInfo.address.split(',')[1]?.trim() : '') ||
-                       (templeInfo.Address ? templeInfo.Address.split(',')[1]?.trim() : '')
-              };
-              
-              tenant.temple = {
-                name: tenantTempleMap.value[tenantId].name,
-                city: tenantTempleMap.value[tenantId].city,
-                state: tenantTempleMap.value[tenantId].state
-              };
-            }
+          if (response && response.success && response.data) {
+            // Process temple details
+            const details = response.data;
+            
+            // Update tenant temple map
+            tenantTempleMap.value[tenantId] = {
+              name: details.temple_name || details.templeName || details.TempleName || '',
+              city: details.temple_place || details.templePlace || details.TemplePlace || '',
+              state: details.temple_state || details.templeState || details.TempleState || '',
+              address: details.temple_address || details.templeAddress || details.TempleAddress || ''
+            };
+            
+            // Update tenant object for consistency
+            tenant.temple_details = {
+              temple_name: tenantTempleMap.value[tenantId].name,
+              temple_place: tenantTempleMap.value[tenantId].city + (tenantTempleMap.value[tenantId].state ? ', ' + tenantTempleMap.value[tenantId].state : ''),
+              temple_address: tenantTempleMap.value[tenantId].address
+            };
+            
+            console.log(`Updated temple details for tenant ${tenantId}`);
           }
         }
       } catch (error) {
-        console.warn(`Failed to fetch details for tenant ${tenantId}:`, error);
+        console.warn(`Failed to fetch temple details for tenant:`, error);
       }
+    }));
+    
+    // Small delay between batches
+    if (i + batchSize < tenantsNeedingDetails.length) {
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
+  
+  console.log(`Completed fetching temple details. Temple map has ${Object.keys(tenantTempleMap.value).length} entries.`);
 };
 
-// Selection methods
-const isSelected = (tenantId) => selectedTenants.value.includes(tenantId);
+// Selection methods - IMPROVED with better error handling
+const isSelected = (tenantId) => {
+  // Handle invalid IDs gracefully
+  if (tenantId === null || tenantId === undefined) return false;
+  
+  const normalizedId = normalizeId(tenantId);
+  return selectedTenants.value.some(id => normalizeId(id) === normalizedId);
+};
 
 const toggleSelect = (tenantId) => {
-  const index = selectedTenants.value.indexOf(tenantId);
+  // Handle invalid IDs gracefully
+  if (tenantId === null || tenantId === undefined) {
+    console.warn('Attempted to toggle selection with null/undefined ID');
+    return;
+  }
+  
+  const normalizedId = normalizeId(tenantId);
+  const index = selectedTenants.value.findIndex(id => normalizeId(id) === normalizedId);
+  
   if (index === -1) {
-    selectedTenants.value.push(tenantId);
+    selectedTenants.value.push(normalizedId);
+    console.log(`Added tenant ${normalizedId} to selection, now have ${selectedTenants.value.length} selected`);
   } else {
     selectedTenants.value.splice(index, 1);
+    console.log(`Removed tenant ${normalizedId} from selection, now have ${selectedTenants.value.length} selected`);
   }
 };
 
 const toggleSelectAll = () => {
   if (allSelected.value) {
+    // Deselect all filtered tenants
     selectedTenants.value = selectedTenants.value.filter(
-      id => !filteredTenants.value.some(tenant => (tenant.id || tenant.ID) === id)
+      id => !filteredTenants.value.some(tenant => normalizeId(getTenantId(tenant)) === normalizeId(id))
     );
   } else {
+    // Select all filtered tenants that are not already selected
     const newSelectedIds = filteredTenants.value
-      .filter(tenant => !selectedTenants.value.includes(tenant.id || tenant.ID))
-      .map(tenant => tenant.id || tenant.ID);
+      .filter(tenant => !isSelected(getTenantId(tenant)))
+      .map(tenant => normalizeId(getTenantId(tenant)))
+      .filter(id => id !== null); // Filter out null IDs
+    
     selectedTenants.value = [...selectedTenants.value, ...newSelectedIds];
   }
+  console.log(`After toggle all, have ${selectedTenants.value.length} selected tenants`);
 };
 
 const selectAllTenants = () => {
-  selectedTenants.value = filteredTenants.value.map(tenant => tenant.id || tenant.ID);
+  selectedTenants.value = filteredTenants.value
+    .map(tenant => normalizeId(getTenantId(tenant)))
+    .filter(id => id !== null); // Filter out null IDs
+  
+  console.log(`Selected all tenants: ${selectedTenants.value.length} total`);
 };
 
 const clearTenantSelection = () => { 
   selectedTenants.value = []; 
+  console.log('Cleared tenant selection');
 };
 
 const clearFilters = () => {
@@ -601,9 +780,11 @@ const clearFilters = () => {
 
 const selectReport = (reportId) => { 
   selectedReport.value = reportId; 
+  console.log('Selected report:', reportId);
 };
 
 const retryFetchTenants = async () => {
+  console.log('Retrying tenant fetch...');
   await fetchTenants();
 };
 
@@ -622,7 +803,11 @@ const getTenantName = (tenantId) => {
     return `Tenant #${tenantId}`;
   }
   
-  const tenant = superAdminStore.tenants.find(t => (t.id || t.ID) === tenantId);
+  // Normalize the ID for comparison
+  const normalizedId = normalizeId(tenantId);
+  
+  // Find tenant by normalized ID
+  const tenant = superAdminStore.tenants.find(t => normalizeId(getTenantId(t)) === normalizedId);
   return tenant ? getTenantDisplayName(tenant) : `Tenant #${tenantId}`;
 };
 
@@ -631,13 +816,38 @@ const getReportName = () => {
   return report ? report.name : 'None Selected';
 };
 
+// IMPROVED: proceedToReport function
 const proceedToReport = () => {
   if (!canProceed.value) return;
   
   const report = reportTypes.find(r => r.id === selectedReport.value);
   if (!report) return;
   
-  const tenantsParam = selectedTenants.value.join(',');
+  // Debug info - before processing
+  console.log('Selected tenant IDs before processing:', selectedTenants.value);
+  
+  // Ensure all IDs are numbers where possible and non-null
+  const processedIds = selectedTenants.value
+    .map(id => normalizeId(id))
+    .filter(id => id !== null);
+    
+  console.log('Processed tenant IDs:', processedIds);
+  
+  // Log numeric vs string IDs for debugging
+  const numericIds = processedIds.filter(id => typeof id === 'number');
+  const stringIds = processedIds.filter(id => typeof id === 'string');
+  console.log(`ID types: ${numericIds.length} numeric, ${stringIds.length} string`);
+  
+  // Create comma-separated string of tenant IDs
+  const tenantsParam = processedIds.join(',');
+  console.log('Final tenants parameter string:', tenantsParam);
+  
+  if (!tenantsParam) {
+    toast.error('No valid tenant IDs to include in report');
+    return;
+  }
+  
+  // Navigate to report with query params
   router.push({
     path: report.route,
     query: {
@@ -645,6 +855,9 @@ const proceedToReport = () => {
       from: 'superadmin'
     }
   });
+  
+  // Log the final URL for debugging
+  console.log('Navigating to:', `${report.route}?tenants=${tenantsParam}&from=superadmin`);
 };
 
 // Lifecycle hook

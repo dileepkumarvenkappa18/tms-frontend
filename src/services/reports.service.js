@@ -632,63 +632,72 @@ async downloadUserDetailsReport(params) {
   }
 
   async downloadTempleRegisteredReport(params) {
-    const { entityId, entityIds, status, dateRange = 'weekly', startDate, endDate, format, isSuperAdmin } = params
+  const { entityId, entityIds, templeId, status, dateRange = 'weekly', startDate, endDate, format, isSuperAdmin } = params;
 
-    if ((!entityId && !entityIds) || !format) {
-      throw new Error('Entity ID (or IDs) and format are required')
-    }
-
-    const queryParams = new URLSearchParams({
-      date_range: dateRange,
-      format
-    })
-
-    if (status) {
-      queryParams.append('status', status)
-    }
-
-    if (dateRange === 'custom' && startDate && endDate) {
-      queryParams.append('start_date', startDate)
-      queryParams.append('end_date', endDate)
-    }
-
-    let url;
-    
-    // Choose the right API endpoint based on user role
-    if (isSuperAdmin) {
-      if (entityIds && entityIds.length > 1) {
-        url = `/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`
-      } else {
-        url = `/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}`
-      }
-    } else {
-      url = `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`
-    }
-
-    try {
-      return await this.downloadReport(url, { format }, 'temple_registered_report', async () => {
-        // Fallback function for alternative URLs if the first one fails
-        if (isSuperAdmin) {
-          // Try alternative patterns
-          const alternatives = [
-            entityIds && entityIds.length > 1 
-              ? `/v1/superadmin/temple-registered/report?${queryParams}&tenants=${entityIds.join(',')}`
-              : `/v1/superadmin/temple-registered/report?${queryParams}&tenant_id=${entityId}`,
-            
-            entityIds && entityIds.length > 1
-              ? `/v1/superadmin/entities/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`
-              : `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`
-          ];
-          
-          return alternatives;
-        }
-        return null; // No alternatives for regular users
-      });
-    } catch (error) {
-      console.error('Error downloading temple-registered report:', error)
-      throw error
-    }
+  if ((!entityId && !entityIds) || !format) {
+    throw new Error('Entity ID (or IDs) and format are required');
   }
+
+  const queryParams = new URLSearchParams({
+    date_range: dateRange,
+    format
+  });
+
+  if (status) {
+    queryParams.append('status', status);
+  }
+
+  if (dateRange === 'custom' && startDate && endDate) {
+    queryParams.append('start_date', startDate);
+    queryParams.append('end_date', endDate);
+  }
+
+  // Add templeId parameter if it's specified
+  if (templeId && templeId !== 'all') {
+    queryParams.append('temple_id', templeId);
+  }
+
+  let url;
+  
+  // Choose the right API endpoint based on user role and number of tenants
+  if (isSuperAdmin || entityIds?.length > 1) {
+    if (entityIds && entityIds.length > 1) {
+      // When multiple tenants are selected, use superadmin reports endpoint with tenants parameter
+      url = `/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`;
+    } else {
+      url = `/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}`;
+    }
+  } else {
+    // Single tenant case
+    url = `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`;
+  }
+
+  console.log('🔄 Final report URL:', url);
+
+  try {
+    return await this.downloadReport(url, { format }, 'temple_registered_report', async () => {
+      // Fallback function for alternative URLs if the first one fails
+      if (isSuperAdmin || entityIds?.length > 1) {
+        // Try alternative patterns
+        const alternatives = [
+          entityIds && entityIds.length > 1 
+            ? `/v1/superadmin/temple-registered/report?${queryParams}&tenants=${entityIds.join(',')}`
+            : `/v1/superadmin/temple-registered/report?${queryParams}&tenant_id=${entityId}`,
+          
+          entityIds && entityIds.length > 1
+            ? `/v1/superadmin/entities/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`
+            : `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`
+        ];
+        
+        return alternatives;
+      }
+      return null; // No alternatives for regular users
+    });
+  } catch (error) {
+    console.error('Error downloading temple-registered report:', error)
+    throw error
+  }
+}
 
   async getTempleRegisteredPreview(params) {
     try {

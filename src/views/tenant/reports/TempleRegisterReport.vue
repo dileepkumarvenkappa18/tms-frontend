@@ -59,10 +59,13 @@
                 class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="all">All Temples</option>
-                <option v-for="temple in templeStore.temples" :key="temple.id" :value="temple.id">
+                <option v-for="temple in filteredTemples" :key="temple.id" :value="temple.id">
                   {{ temple.name }}
                 </option>
               </select>
+            </div>
+            <div v-if="debugMode" class="mt-2 text-xs text-gray-500">
+              Found {{ filteredTemples.length }} temples for tenant(s): {{ tenantIds.join(', ') }}
             </div>
           </div>
 
@@ -264,6 +267,8 @@ const startDate = ref('');
 const endDate = ref('');
 const isDownloading = ref(false);
 const errorMessage = ref('');
+const allTemples = ref([]); // Store temples from all tenants
+const debugMode = ref(true); // Enable for troubleshooting
 
 // Initialize dates
 const initializeDates = () => {
@@ -298,6 +303,13 @@ const formats = [
 
 // Computed properties
 const tenantId = computed(() => {
+  // If coming from superadmin with tenants in URL parameter, use the first one
+  if (route.query.tenants) {
+    const tenantIdArray = route.query.tenants.split(',');
+    return tenantIdArray[0]; // Use first tenant ID as default display
+  }
+  
+  // Otherwise use route params or fallback methods
   return route.params.tenantId || userStore.user?.id || localStorage.getItem('current_tenant_id');
 });
 
@@ -305,7 +317,7 @@ const tenantId = computed(() => {
 const fromSuperadmin = computed(() => route.query.from === 'superadmin');
 const tenantIds = computed(() => {
   if (route.query.tenants) {
-    return route.query.tenants.split(',');
+    return route.query.tenants.split(',').map(id => id.trim());
   }
   return [tenantId.value]; // Default to current tenant only
 });
@@ -323,6 +335,41 @@ const isFormValid = computed(() => {
     return startDate.value && endDate.value && new Date(startDate.value) <= new Date(endDate.value);
   }
   return true;
+});
+
+// IMPROVED: Filtered temples computed property to show ONLY approved temples from selected tenants
+// with deduplication by temple ID
+const filteredTemples = computed(() => {
+  let templesForDropdown = [];
+  
+  if (fromSuperadmin.value && tenantIds.value.length > 1) {
+    // For multiple tenants, use the deduplicated allTemples array
+    templesForDropdown = allTemples.value;
+  } else {
+    // Single tenant case
+    templesForDropdown = templeStore.temples;
+  }
+  
+  // Now filter for approved temples only
+  return templesForDropdown.filter(temple => {
+    // Check if temple belongs to one of the selected tenants
+    const createdBy = String(temple.created_by || temple.createdBy || '');
+    const templeTenantId = String(temple.tenant_id || temple.tenantId || '');
+    const belongsToSelectedTenant = tenantIds.value.some(tid => 
+      createdBy === tid || templeTenantId === tid
+    );
+    
+    // Check if temple is approved
+    const status = (temple.status || '').toLowerCase();
+    const isApproved = status === 'approved' || status === 'active';
+    
+    // Log each temple for debugging
+    if (debugMode.value) {
+      console.log(`Temple ${temple.id} (${temple.name}): tenant match=${belongsToSelectedTenant}, status=${status}, approved=${isApproved}`);
+    }
+    
+    return belongsToSelectedTenant && isApproved;
+  });
 });
 
 // Methods
@@ -363,7 +410,15 @@ const clearError = () => {
 
 const getTempleName = (templeId) => {
   if (templeId === 'all') return 'All Temples';
-  const temple = templeStore.temples.find(t => t.id.toString() === templeId.toString());
+  
+  // Check in allTemples array first for multiple tenant case
+  if (allTemples.value.length > 0) {
+    const temple = allTemples.value.find(t => String(t.id) === String(templeId));
+    if (temple) return temple.name;
+  }
+  
+  // Then check in templeStore.temples
+  const temple = templeStore.temples.find(t => String(t.id) === String(templeId));
   return temple ? temple.name : 'Unknown Temple';
 };
 
@@ -398,7 +453,9 @@ const buildReportParams = () => {
     const params = {
       entityIds: tenantIds.value,
       dateRange: activeFilter.value,
-      format: selectedFormat.value
+      format: selectedFormat.value,
+      // Add the temple/entity ID parameter
+      templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value
     };
 
     // Add status filter if not 'all'
@@ -459,7 +516,7 @@ const downloadReport = async () => {
     console.log('Downloading report with the following parameters:');
     console.log('- Temple:', selectedTemple.value === 'all' ? 'All Temples' : getTempleName(selectedTemple.value));
     if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      console.log('- Tenants:', tenantIds.value.length, 'selected');
+      console.log('- Tenants:', tenantIds.value.join(', '));
     }
     console.log('- Time filter:', getTimeFilterLabel(activeFilter.value));
     console.log('- Date range:', formatDate(startDate.value), 'to', formatDate(endDate.value));
@@ -481,15 +538,111 @@ const downloadReport = async () => {
   }
 };
 
+// Helper function to deduplicate temples by ID
+const deduplicateTemplesByID = (temples) => {
+  const uniqueTemples = [];
+  const seenIds = new Set();
+  
+  for (const temple of temples) {
+    const templeId = temple.id?.toString();
+    
+    if (!templeId) {
+      console.warn('Temple without ID:', temple);
+      continue;
+    }
+    
+    if (!seenIds.has(templeId)) {
+      seenIds.add(templeId);
+      uniqueTemples.push(temple);
+    } else {
+      console.log(`Skipping duplicate temple ID: ${templeId}, name: ${temple.name}`);
+    }
+  }
+  
+  console.log(`Deduplicated: ${temples.length} temples -> ${uniqueTemples.length} unique temples`);
+  return uniqueTemples;
+};
+
+// Fetch temples for a specific tenant
+const fetchTemplesForTenant = async (tenantId) => {
+  try {
+    console.log(`Fetching temples for tenant ID: ${tenantId}`);
+    
+    // Clear temple store before fetching
+    if (templeStore.clearTemples) {
+      templeStore.clearTemples();
+    } else {
+      templeStore.temples = [];
+    }
+    
+    // Fetch temples for this tenant
+    await templeStore.fetchTemples(tenantId);
+    
+    console.log(`Fetched ${templeStore.temples.length} temples for tenant ${tenantId}`);
+    
+    // Debug: Log detailed info about each temple
+    if (templeStore.temples.length > 0 && debugMode.value) {
+      templeStore.temples.forEach(temple => {
+        console.log(`Temple ID: ${temple.id}, Name: ${temple.name}, Status: ${temple.status}`);
+        console.log(`CreatedBy: ${temple.created_by || temple.createdBy}, TenantID: ${temple.tenant_id || temple.tenantId}`);
+      });
+    }
+    
+    // Make a copy of the temples and add the source tenant ID
+    const templesWithTenantId = templeStore.temples.map(temple => ({
+      ...temple,
+      sourceTenantId: tenantId
+    }));
+    
+    return templesWithTenantId;
+  } catch (error) {
+    console.error(`Error fetching temples for tenant ${tenantId}:`, error);
+    return [];
+  }
+};
+
 // Lifecycle hooks
 onMounted(async () => {
   // Initialize default dates
   initializeDates();
   
-  // Fetch temples if not already loaded
-  if (templeStore.temples.length === 0) {
+  // Log tenant IDs from URL
+  if (route.query.tenants) {
+    console.log('Tenant IDs from URL:', route.query.tenants);
+    console.log('Parsed tenant IDs:', tenantIds.value);
+  }
+  
+  // Reset collections
+  allTemples.value = [];
+  
+  if (fromSuperadmin.value && tenantIds.value.length > 1) {
+    console.log(`Fetching temples for ${tenantIds.value.length} tenants: ${tenantIds.value.join(', ')}`);
+    
+    let collectedTemples = [];
+    
+    // Fetch temples for each tenant sequentially
+    for (const tid of tenantIds.value) {
+      const tenantTemples = await fetchTemplesForTenant(tid);
+      collectedTemples.push(...tenantTemples);
+    }
+    
+    // Deduplicate temples by ID
+    allTemples.value = deduplicateTemplesByID(collectedTemples);
+    
+    // Debug log deduplicated temples
+    console.log(`After deduplication: ${allTemples.value.length} unique temples`);
+    
+    // Log filtered temples (approved only)
+    console.log(`After filtering for approved status, found ${filteredTemples.value.length} temples`);
+  } else {
+    // Single tenant case
     try {
-      await templeStore.fetchTemples(tenantId.value);
+      const singleTenantId = tenantIds.value[0];
+      console.log('Fetching temples for single tenant:', singleTenantId);
+      await fetchTemplesForTenant(singleTenantId);
+      
+      // Log filtered temples (approved only)
+      console.log(`After filtering for approved status, found ${filteredTemples.value.length} temples`);
     } catch (error) {
       console.error('Error loading temple data:', error);
       showToast('Failed to load temple data. Please try again.', 'error');

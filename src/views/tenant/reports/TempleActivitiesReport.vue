@@ -316,6 +316,7 @@ import { useReportsStore } from '@/stores/reports';
 import { useToast } from '@/composables/useToast';
 import { useSuperAdminService } from '@/composables/useSuperAdminService';
 import templeService from '@/services/temple.service'; // Import temple service
+import api from '@/plugins/axios';
 
 // Composables
 const route = useRoute();
@@ -471,7 +472,9 @@ const loadReportPreview = async () => {
       if (tenantIds.value.length > 1) {
         params.entityIds = tenantIds.value;
       } else {
-        params.entityId = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
+        // Make sure to pass both the tenant ID and the selected temple ID
+        params.entityId = effectiveTenantId.value;
+        params.selectedTemple = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
       }
       
       console.log('Loading report preview with superadmin params:', params);
@@ -490,94 +493,154 @@ const loadReportPreview = async () => {
 };
 
 const fetchTemples = async () => {
-  if (templeStore.temples.length === 0) {
-    loading.value = true;
-    error.value = null;
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    console.log('Fetching temples with effectiveTenantId:', effectiveTenantId.value);
+    console.log('tenantIds:', tenantIds.value);
     
-    try {
-      console.log('Fetching temples for tenants:', tenantIds.value);
+    // Clear existing temples first
+    templeStore.clearTempleData();
+    
+    // For superadmin with multiple tenants
+    if (fromSuperadmin.value && tenantIds.value.length > 1) {
+      console.log(`Fetching temples for ${tenantIds.value.length} tenants:`, tenantIds.value);
+      const allTemples = [];
       
-      // Clear existing temples
-      templeStore.clearTempleData();
-      
-      // Handle multiple tenants case
-      if (fromSuperadmin.value && tenantIds.value.length > 1) {
-        // Fetch temples for each tenant and combine them
-        const allTemples = [];
-        const fetchPromises = [];
+      // Use a more robust approach for multiple tenants
+      try {
+        // Try to get all entities first
+        const response = await api.get('/v1/entities');
+        let allEntities = [];
+        
+        if (response.data && Array.isArray(response.data)) {
+          allEntities = response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          allEntities = response.data.data;
+        }
+        
+        console.log(`Fetched ${allEntities.length} total entities`);
+        
+        // Filter entities for each tenant ID
+        for (const tenantId of tenantIds.value) {
+          // Filter by created_by field
+          const tenantTemples = allEntities.filter(temple => 
+            String(temple.created_by) === String(tenantId)
+          );
+          
+          console.log(`Filtered ${tenantTemples.length} temples for tenant ${tenantId}`);
+          allTemples.push(...tenantTemples);
+        }
+      } catch (err) {
+        console.error('Error fetching all entities:', err);
+        
+        // Fallback: try fetching for each tenant individually
+        console.log('Using fallback: fetching each tenant individually');
         
         for (const tenantId of tenantIds.value) {
-          fetchPromises.push(
-            fetchTemplesForTenant(tenantId)
-              .then(temples => {
-                allTemples.push(...temples);
-              })
-              .catch(err => {
-                console.warn(`Error fetching temples for tenant ${tenantId}:`, err);
-                // Continue with other tenants even if one fails
-              })
-          );
-        }
-        
-        // Wait for all fetch operations to complete
-        await Promise.all(fetchPromises);
-        
-        // Update the store with combined temples
-        templeStore.temples = allTemples;
-        console.log(`Fetched ${allTemples.length} temples from ${tenantIds.value.length} tenants`);
-      }
-      // Handle single tenant case 
-      else if (effectiveTenantId.value) {
-        // Try using direct entity endpoint instead of superadmin endpoint
-        try {
-          const response = await api.get(`/v1/entities?tenant_id=${effectiveTenantId.value}`);
-          let temples = [];
-          
-          if (response.data && Array.isArray(response.data)) {
-            temples = response.data;
-          } else if (response.data && Array.isArray(response.data.data)) {
-            temples = response.data.data;
-          } else if (response.data && Array.isArray(response.data.entities)) {
-            temples = response.data.entities;
+          try {
+            // Try entity endpoint with explicit tenant_id
+            const response = await api.get(`/v1/entities?created_by=${tenantId}`);
+            let temples = [];
+            
+            if (response.data && Array.isArray(response.data)) {
+              temples = response.data;
+            } else if (response.data && Array.isArray(response.data.data)) {
+              temples = response.data.data;
+            }
+            
+            console.log(`Found ${temples.length} temples for tenant ${tenantId}`);
+            allTemples.push(...temples);
+          } catch (tenantErr) {
+            console.warn(`Error fetching temples for tenant ${tenantId}:`, tenantErr);
           }
-          
-          templeStore.temples = temples.map(temple => templeService.normalizeTempleData(temple));
-          console.log(`Fetched ${templeStore.temples.length} temples directly for tenant ${effectiveTenantId.value}`);
-        } catch (err) {
-          // Fall back to using the store method if direct API call fails
-          console.warn('Direct API call failed, using store method:', err);
-          
-          if (fromSuperadmin.value) {
-            await templeStore.fetchTemplesForSuperAdmin(effectiveTenantId.value);
-          } else {
-            await templeStore.fetchTemples(effectiveTenantId.value);
-          }
-          
-          console.log(`Fetched ${templeStore.temples.length} temples for tenant ${effectiveTenantId.value}`);
         }
-      } else {
-        throw new Error('No tenant ID available to fetch temples');
       }
       
-      if (templeStore.temples.length === 0) {
-        console.warn('No temples found for the selected tenant(s)');
+      // Process and normalize all temples
+      templeStore.temples = allTemples.map(temple => templeService.normalizeTempleData(temple));
+      console.log(`Set ${templeStore.temples.length} total temples for ${tenantIds.value.length} tenants`);
+    } 
+    // Single tenant case (use the code that works well from your feedback)
+    else if (effectiveTenantId.value) {
+      const tenantId = effectiveTenantId.value;
+      console.log(`Fetching temples for single tenant ${tenantId}`);
+      
+      // Try direct superadmin endpoint first for better filtering
+      try {
+        const response = await api.get(`/v1/superadmin/tenants/${tenantId}/temples`);
+        if (response.data && (Array.isArray(response.data) || Array.isArray(response.data.data))) {
+          const temples = Array.isArray(response.data) ? response.data : response.data.data;
+          templeStore.temples = temples.map(temple => templeService.normalizeTempleData(temple));
+          console.log(`Found ${temples.length} temples via superadmin endpoint`);
+          return; // Exit if we found temples this way
+        }
+      } catch (err) {
+        console.log('Superadmin temple endpoint failed, trying entities endpoint');
       }
-    } catch (err) {
-      console.error('Error fetching temples:', err);
-      error.value = `Failed to load temples: ${err.message}`;
-      showToast(`Failed to load temple data: ${err.message}`, 'error');
-    } finally {
-      loading.value = false;
+      
+      // If superadmin endpoint fails, try the entities endpoint with hard filtering
+      try {
+        const response = await api.get(`/v1/entities`);
+        let allEntities = [];
+        
+        if (response.data && Array.isArray(response.data)) {
+          allEntities = response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          allEntities = response.data.data;
+        }
+        
+        // Very strict filtering - exact string match on tenant ID
+        const filteredTemples = allEntities.filter(temple => 
+          String(temple.created_by) === String(tenantId)
+        );
+        
+        console.log(`Filtered ${filteredTemples.length} temples from ${allEntities.length} total entities for tenant ${tenantId}`);
+        
+        // Set the filtered temples in the store
+        templeStore.temples = filteredTemples.map(temple => templeService.normalizeTempleData(temple));
+      } catch (err) {
+        console.error('Error fetching and filtering temples:', err);
+        
+        // Last resort - try store method with manual filtering
+        console.log('Using store method with manual filtering');
+        if (fromSuperadmin.value) {
+          await templeStore.fetchTemplesForSuperAdmin(tenantId);
+        } else {
+          await templeStore.fetchTemples(tenantId);
+        }
+        
+        // Force filter the temples after fetching
+        const originalCount = templeStore.temples.length;
+        templeStore.temples = templeStore.temples.filter(temple => 
+          String(temple.created_by) === String(tenantId)
+        );
+        console.log(`Filtered temple store from ${originalCount} to ${templeStore.temples.length} temples`);
+      }
+    } else {
+      throw new Error('No tenant ID available to fetch temples');
     }
+    
+    // Add a check for empty temples
+    if (templeStore.temples.length === 0) {
+      console.warn('No temples found for the selected tenant(s)');
+    }
+  } catch (err) {
+    console.error('Error in fetchTemples:', err);
+    error.value = `Failed to load temples: ${err.message}`;
+    showToast(`Failed to load temple data: ${err.message}`, 'error');
+  } finally {
+    loading.value = false;
   }
 };
 
 // Helper function to fetch temples for a single tenant
 const fetchTemplesForTenant = async (tenantId) => {
   try {
-    // Try direct entity endpoint first (most reliable from logs)
+    // Try with created_by parameter first
     try {
-      const response = await api.get(`/v1/entities?tenant_id=${tenantId}`);
+      const response = await api.get(`/v1/entities?created_by=${tenantId}`);
       let temples = [];
       
       if (response.data && Array.isArray(response.data)) {
@@ -588,6 +651,45 @@ const fetchTemplesForTenant = async (tenantId) => {
         temples = response.data.entities;
       }
       
+      if (temples.length > 0) {
+        console.log(`Found ${temples.length} temples for tenant ${tenantId} using created_by parameter`);
+        return temples.map(temple => templeService.normalizeTempleData(temple));
+      }
+      
+      // If no temples found, try with tenant_id parameter
+      const altResponse = await api.get(`/v1/entities?tenant_id=${tenantId}`);
+      
+      if (altResponse.data && Array.isArray(altResponse.data)) {
+        temples = altResponse.data;
+      } else if (altResponse.data && Array.isArray(altResponse.data.data)) {
+        temples = altResponse.data.data;
+      } else if (altResponse.data && Array.isArray(altResponse.data.entities)) {
+        temples = altResponse.data.entities;
+      }
+      
+      if (temples.length > 0) {
+        console.log(`Found ${temples.length} temples for tenant ${tenantId} using tenant_id parameter`);
+        return temples.map(temple => templeService.normalizeTempleData(temple));
+      }
+      
+      // Last resort - get all temples and filter manually
+      const genericResponse = await api.get('/v1/entities');
+      let allTemples = [];
+      
+      if (genericResponse.data && Array.isArray(genericResponse.data)) {
+        allTemples = genericResponse.data;
+      } else if (genericResponse.data && Array.isArray(genericResponse.data.data)) {
+        allTemples = genericResponse.data.data;
+      } else if (genericResponse.data && Array.isArray(genericResponse.data.entities)) {
+        allTemples = genericResponse.data.entities;
+      }
+      
+      // Manually filter temples by tenant ID
+      temples = allTemples.filter(temple => 
+        temple.created_by == tenantId || temple.tenant_id == tenantId
+      );
+      
+      console.log(`Manually filtered ${temples.length} temples for tenant ${tenantId}`);
       return temples.map(temple => templeService.normalizeTempleData(temple));
     } catch (err) {
       // Fall back to using the service
@@ -596,6 +698,18 @@ const fetchTemplesForTenant = async (tenantId) => {
         tenantId: tenantId,
         superAdmin: true
       });
+      
+      // Ensure we're filtering properly
+      if (Array.isArray(temples) && temples.length > 0) {
+        const filteredTemples = temples.filter(temple =>
+          temple.created_by == tenantId || temple.tenant_id == tenantId
+        );
+        
+        if (filteredTemples.length > 0) {
+          console.log(`Filtered service temples from ${temples.length} down to ${filteredTemples.length} for tenant ${tenantId}`);
+          return filteredTemples;
+        }
+      }
       
       return Array.isArray(temples) ? temples : [];
     }
@@ -606,51 +720,52 @@ const fetchTemplesForTenant = async (tenantId) => {
 };
 
 const downloadReport = async () => {
-  try {
-    // Create parameters object
-    let params = {
-      type: activityType.value,
-      dateRange: activeFilter.value,
-      format: selectedFormat.value,
-      startDate: startDate.value,
-      endDate: endDate.value,
-      isSuperAdmin: fromSuperadmin.value
-    };
-    
-    // Always use entity endpoint approach since it works from console logs
-    if (fromSuperadmin.value) {
-      if (tenantIds.value.length > 1) {
-        params.entityIds = tenantIds.value;
-      } else {
-        params.entityId = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
-      }
-      
-      console.log('Downloading report with superadmin params:', params);
-      const result = await reportsStore.downloadActivitiesReport(params);
-      
-      if (result && result.success) {
-        showToast(`${getActivityTypeLabel(activityType.value)} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
-      } else {
-        throw new Error(result.message || 'Failed to download report');
-      }
-    } else {
-      // Regular entity view - FIX: Use the correct entityId value based on selection
-      params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-      
-      console.log('Downloading report with regular params:', params);
-      const result = await reportsStore.downloadActivitiesReport(params);
-      
-      if (result && result.success) {
-        showToast(`${getActivityTypeLabel(activityType.value)} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
-      }
+    try {
+        // Create parameters object
+        let params = {
+            type: activityType.value,
+            dateRange: activeFilter.value,
+            format: selectedFormat.value,
+            startDate: startDate.value,
+            endDate: endDate.value,
+            isSuperAdmin: fromSuperadmin.value
+        };
+        
+        // Always use entity endpoint approach since it works from console logs
+        if (fromSuperadmin.value) {
+            if (tenantIds.value.length > 1) {
+                params.entityIds = tenantIds.value;
+            } else {
+                params.entityId = effectiveTenantId.value;
+                // Make sure to include selectedTemple parameter for filtering
+                params.selectedTemple = selectedTemple.value;
+            }
+            
+            console.log('Downloading report with superadmin params:', params);
+            const result = await reportsStore.downloadActivitiesReport(params);
+            
+            if (result && result.success) {
+                showToast(`${getActivityTypeLabel(activityType.value)} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
+            } else {
+                throw new Error(result.message || 'Failed to download report');
+            }
+        } else {
+            // Regular entity view
+            params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
+            
+            console.log('Downloading report with regular params:', params);
+            const result = await reportsStore.downloadActivitiesReport(params);
+            
+            if (result && result.success) {
+                showToast(`${getActivityTypeLabel(activityType.value)} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error downloading report:', error);
+        showToast('Failed to download report. Please try again.', 'error');
     }
-  } catch (error) {
-    console.error('Error downloading report:', error);
-    showToast('Failed to download report. Please try again.', 'error');
-  }
 };
 
-// Lifecycle hooks
 // Lifecycle hooks
 onMounted(async () => {
   console.log('TempleActivitiesReport mounted');

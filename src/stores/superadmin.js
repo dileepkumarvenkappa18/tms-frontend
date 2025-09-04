@@ -258,75 +258,85 @@ export const useSuperAdminStore = defineStore('superadmin', () => {
   
 
   // NEW: Fetch tenants for reports section
-  async function fetchTenantsForReports() {
-    loadingTenants.value = true
-    tenantError.value = null
+async function fetchTenantsForReports() {
+  loadingTenants.value = true
+  tenantError.value = null
+  
+  try {
+    console.log('Store: Fetching tenants for reports...')
     
-    try {
-      console.log('Store: Fetching tenants for reports...')
-      const response = await superAdminService.getTempleadminsForReports()
-      console.log('Store: Got response for reports tenants:', response)
+    const response = await superAdminService.getTempleadminsForReports()
+    console.log('Store: Raw API response for reports:', response)
+    
+    if (response && response.success && Array.isArray(response.data)) {
+      console.log('Store: First tenant raw data:', JSON.stringify(response.data[0], null, 2))
       
-      if (response.success && Array.isArray(response.data)) {
-        console.log('Store: Setting', response.data.length, 'tenants for reports')
+      tenants.value = response.data.map(tenant => {
+        // Get tenant ID 
+        const tenantId = tenant.id || tenant.ID;
         
-        tenants.value = response.data.map(tenant => {
-          // Extract temple information from the response
-          // Check for entity property which may contain temple data
-          const entityData = tenant.entity || tenant.Entity || {};
-          const templeInfo = tenant.temple || tenant.Temple || entityData || {};
-          
-          // Create the temple object properly from various possible sources
-          const temple = {
-            name: templeInfo.name || templeInfo.Name || entityData.name || entityData.Name || tenant.temple_name || tenant.templeName || 'N/A',
-            address: templeInfo.address || templeInfo.Address || entityData.address || entityData.Address || tenant.temple_address || tenant.templeAddress || 'N/A',
-            city: templeInfo.city || templeInfo.City || entityData.city || entityData.City || tenant.temple_city || tenant.city || tenant.City || 'N/A',
-            state: templeInfo.state || templeInfo.State || entityData.state || entityData.State || tenant.temple_state || tenant.state || tenant.State || 'N/A',
-            type: templeInfo.type || templeInfo.Type || entityData.type || entityData.Type || 'Hindu Temple'
+        // Log each tenant's temple data
+        console.log(`Tenant ${tenantId} temple data:`, 
+                   tenant.temple, 
+                   'temple_details:', 
+                   tenant.temple_details);
+        
+        // Map the tenant with consistent property names
+        const mappedTenant = {
+          id: tenantId,
+          fullName: tenant.full_name || tenant.fullName || tenant.FullName || tenant.name || '',
+          name: tenant.name || tenant.fullName || tenant.full_name || tenant.FullName || '',
+          email: tenant.email || tenant.Email || '',
+          phone: tenant.phone || tenant.Phone || '',
+          status: ((tenant.status || tenant.Status || 'active').toString()).toLowerCase(),
+          createdAt: tenant.created_at || tenant.createdAt || tenant.CreatedAt || new Date().toISOString(),
+          updatedAt: tenant.updated_at || tenant.updatedAt || tenant.UpdatedAt,
+          temple_details: tenant.temple_details || tenant.templeDetails || {}
+        };
+        
+        // Create temple object from temple_details if available
+        if (tenant.temple_details) {
+          mappedTenant.temple = {
+            name: tenant.temple_details.temple_name || '',
+            city: tenant.temple_details.temple_place || '',
+            state: ''
           };
-          
-          // Log detailed temple information for debugging
-          console.log('Temple data for tenant:', tenant.full_name || tenant.fullName || tenant.name, 'Temple:', temple);
-          
-          return {
-            id: tenant.id || tenant.ID,
-            fullName: tenant.full_name || tenant.fullName || tenant.FullName || tenant.name || '',
-            name: tenant.name || tenant.fullName || tenant.full_name || tenant.FullName || '',
-            email: tenant.email || tenant.Email || '',
-            phone: tenant.phone || tenant.Phone || '',
-            status: ((tenant.status || tenant.Status || 'active').toString()).toLowerCase(),
-            createdAt: tenant.created_at || tenant.createdAt || tenant.CreatedAt || new Date().toISOString(),
-            updatedAt: tenant.updated_at || tenant.updatedAt || tenant.UpdatedAt,
-            temple: temple
-          }
-        });
-        
-        return {
-          success: true,
-          data: tenants.value
+        } else if (tenant.temple) {
+          mappedTenant.temple = tenant.temple;
         }
-      } else {
-        console.log('Store: Empty or invalid response for reports tenants')
-        tenants.value = []
-        tenantError.value = 'No tenant data available for reports'
         
-        return {
-          success: false,
-          error: 'No tenant data available for reports'
-        }
+        console.log(`Mapped tenant ${tenantId}:`, mappedTenant);
+        return mappedTenant;
+      });
+      
+      console.log('Store: Final mapped tenants count:', tenants.value.length);
+      
+      return {
+        success: true,
+        data: tenants.value
       }
-    } catch (error) {
-      console.error('Store: Error fetching tenants for reports:', error)
-      tenantError.value = error.message
+    } else {
+      console.log('Store: Empty or invalid response for reports tenants')
+      tenants.value = []
+      tenantError.value = 'No tenant data available for reports'
       
       return {
         success: false,
-        error: error.message
+        error: 'No tenant data available for reports'
       }
-    } finally {
-      loadingTenants.value = false
     }
+  } catch (error) {
+    console.error('Store: Error fetching tenants for reports:', error)
+    tenantError.value = error.message
+    
+    return {
+      success: false,
+      error: error.message
+    }
+  } finally {
+    loadingTenants.value = false
   }
+}
 
   async function fetchPendingEntities() {
     loadingEntities.value = true
