@@ -159,21 +159,21 @@
 
             <!-- Action Button -->
             <button
-              @click="directBookSeva(seva)"
-              :disabled="(seva.max_bookings_per_day - (bookingCounts[seva.id] || 0)) === 0 || bookingInProgress[seva.id] || bookedSevas[seva.id]"
-              :class="[
-                'w-full py-3 px-4 rounded-lg font-medium transition-colors',
-                bookingInProgress[seva.id] ? 'bg-gray-400 text-white cursor-wait' :
-                bookedSevas[seva.id] ? 'bg-green-600 text-white cursor-default' :
-                (seva.max_bookings_per_day - (bookingCounts[seva.id] || 0)) > 0
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              ]"
-            >
-              {{ bookingInProgress[seva.id] ? 'Booking...' :
-                 bookedSevas[seva.id] ? 'Seva Booked' : 
-                 (seva.max_bookings_per_day - (bookingCounts[seva.id] || 0)) > 0 ? 'Book Now' : 'Fully Booked' }}
-            </button>
+  @click="directBookSeva(seva)"
+  :disabled="bookedSevas[seva.id] || bookingInProgress[seva.id] || (seva.max_bookings_per_day - (bookingCounts[seva.id] || 0)) === 0"
+  :class="[
+    'w-full py-3 px-4 rounded-lg font-medium transition-colors',
+    bookingInProgress[seva.id] ? 'bg-gray-400 text-white cursor-wait' :
+    bookedSevas[seva.id] ? 'bg-green-600 text-white cursor-default' :
+    (seva.max_bookings_per_day - (bookingCounts[seva.id] || 0)) > 0
+      ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+  ]"
+>
+  {{ bookingInProgress[seva.id] ? 'Booking...' :
+     bookedSevas[seva.id] ? 'Seva Booked' : 
+     (seva.max_bookings_per_day - (bookingCounts[seva.id] || 0)) > 0 ? 'Book Now' : 'Fully Booked' }}
+</button>
           </div>
         </div>
       </div>
@@ -271,11 +271,11 @@ const directBookSeva = async (seva) => {
   if (bookedSevas[seva.id] || 
       bookingInProgress[seva.id] || 
       (seva.max_bookings_per_day - (bookingCounts.value[seva.id] || 0)) <= 0) {
-    return
+    return;
   }
   
   // Set booking in progress for this seva
-  bookingInProgress[seva.id] = true
+  bookingInProgress[seva.id] = true;
   
   try {
     console.log('Sending booking request:', { seva_id: seva.id });
@@ -285,8 +285,9 @@ const directBookSeva = async (seva) => {
     console.log('Booking response:', response);
     
     if (response.success) {
-      // Mark this seva as booked
-      bookedSevas[seva.id] = true;
+      // Mark this seva as booked with consistent ID type
+      const sevaId = seva.id.toString();
+      bookedSevas[sevaId] = true;
       
       // Update booking count
       if (!bookingCounts.value[seva.id]) {
@@ -345,20 +346,53 @@ const fetchSevas = async () => {
 }
 
 // Fetch user's bookings and update the UI
+// Fetch user's bookings and update the UI
 const fetchUserBookings = async () => {
   try {
-    const response = await sevaService.getMyBookings()
+    const response = await sevaService.getMyBookings();
     
     if (response.success && response.data) {
+      console.log('User bookings response:', response.data);
+      
+      // Clear existing bookings
+      Object.keys(bookedSevas).forEach(key => {
+        delete bookedSevas[key];
+      });
+      
       // Mark sevas as booked if they exist in the user's bookings
       response.data.forEach(booking => {
-        bookedSevas[booking.seva_id] = true
-      })
+        // Convert IDs to strings to ensure consistent comparison
+        const sevaId = booking.seva_id || booking.SevaID;
+        if (sevaId) {
+          console.log('Marking seva as booked:', sevaId);
+          bookedSevas[sevaId] = true;
+        }
+      });
+      
+      console.log('Updated bookedSevas:', bookedSevas);
     }
   } catch (error) {
-    console.error('Failed to fetch user bookings:', error)
+    console.error('Failed to fetch user bookings:', error);
   }
 }
+
+// Lifecycle
+onMounted(async () => {
+  try {
+    // First fetch sevas
+    await fetchSevas();
+    
+    // Then fetch bookings to mark booked sevas
+    await fetchUserBookings();
+    
+    console.log('Component mounted - Seva IDs:', 
+      sevaStore.sevas.map(s => s.id), 
+      'Booked sevas:', bookedSevas
+    );
+  } catch (error) {
+    console.error('Error during component initialization:', error);
+  }
+});
 
 // Lifecycle
 onMounted(async () => {
