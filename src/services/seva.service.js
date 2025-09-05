@@ -39,44 +39,24 @@ class SevaService {
    * @returns {Promise<Object>} Booking response
    */
   async bookSeva(sevaId) {
-    // For UI demo purposes only - actual data won't be stored in database
-    // since backend requires additional fields we're not sending
-    
-    // Minimal payload matching backend's BookSevaRequest struct
-    const payload = { seva_id: sevaId };
-    
-    try {
-      // Attempt API call but it will likely fail due to database constraints
-      await api.post('/v1/sevas/bookings', payload);
-      
-      // If by some chance it succeeds, save to localStorage as well
-      this._saveBookingToLocalStorage(sevaId);
-      
-      // Return success
-      return {
-        success: true,
-        data: { seva_id: sevaId },
-        message: 'Seva booked successfully'
-      };
-    } catch (error) {
-      // API call will fail, but we want the UI to show success for demo purposes
-      console.error('Backend API call failed as expected:', error.message);
-      
-      // Save to localStorage for persistence
-      this._saveBookingToLocalStorage(sevaId);
-      
-      // Return simulated success for UI demonstration
-      return {
-        success: true, // Force success for UI purposes
-        data: { 
-          id: Math.floor(Math.random() * 1000),
-          seva_id: sevaId,
-          status: 'pending'
-        },
-        message: 'Seva booked successfully (UI DEMO ONLY)'
-      };
-    }
+  const payload = { seva_id: sevaId };
+
+  try {
+    const response = await api.post('/v1/sevas/bookings', payload);
+
+    return {
+      success: true,
+      data: response.data,
+      message: 'Seva booked successfully'
+    };
+  } catch (error) {
+    console.error('Error booking seva:', error.response?.data || error);
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to book seva'
+    };
   }
+}
 
   /**
    * Helper method to save booking to localStorage
@@ -109,53 +89,21 @@ class SevaService {
    * @returns {Promise<Object>} User's booking history
    */
   async getMyBookings() {
-    try {
-      // Get bookings from API
-      const response = await api.get('/v1/sevas/my-bookings');
-      let bookings = response.data?.bookings || [];
-      
-      console.log('My bookings from API:', bookings);
-      
-      // Also get bookings from localStorage
-      try {
-        const localBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-        console.log('My bookings from localStorage:', localBookings);
-        
-        // Merge bookings, avoiding duplicates by seva_id
-        const sevaIds = new Set(bookings.map(b => b.seva_id));
-        for (const localBooking of localBookings) {
-          if (!sevaIds.has(localBooking.seva_id)) {
-            bookings.push(localBooking);
-            sevaIds.add(localBooking.seva_id);
-          }
-        }
-      } catch (e) {
-        console.error('Error reading localStorage bookings:', e);
-      }
-      
-      return {
-        success: true,
-        data: bookings
-      };
-    } catch (error) {
-      // Fallback to localStorage only if API fails
-      try {
-        const localBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-        console.log('Fallback to localStorage bookings:', localBookings);
-        return {
-          success: true,
-          data: localBookings
-        };
-      } catch (e) {
-        console.error('Error reading localStorage bookings:', e);
-        return {
-          success: false,
-          error: error.response?.data?.error || 'Failed to fetch booking history',
-          data: []
-        };
-      }
-    }
+  try {
+    const response = await api.get('/v1/sevas/my-bookings');
+    return {
+      success: true,
+      data: response.data?.bookings || []
+    };
+  } catch (error) {
+    console.error('Error fetching my bookings:', error.response?.data || error);
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch booking history',
+      data: []
+    };
   }
+}
 
   /**
    * Get seva by ID

@@ -113,24 +113,40 @@ export function useTempleActivities() {
   }
 
   /**
-   * Fetch upcoming events for a temple
-   */
-  const fetchUpcomingEvents = async (entityId) => {
-    try {
-      // Set current entity ID to help backend
-      localStorage.setItem('current_entity_id', entityId)
-      
-      // Fetch upcoming events
-      const response = await axios.get(`${API_URL}/events/upcoming`, createAuthHeader())
-      
-      // Store in activities and return
+ * Fetch upcoming events for a temple
+ */
+const fetchUpcomingEvents = async (entityId) => {
+  try {
+    // Set current entity ID to help backend
+    localStorage.setItem('current_entity_id', entityId)
+    
+    // Ensure we're using the correct entity ID in the request
+    console.log(`Fetching upcoming events for entity ID: ${entityId}`)
+    
+    // Get the tenant ID from localStorage if available
+    const tenantId = localStorage.getItem('current_tenant_id') || entityId
+    console.log(`Using tenant ID: ${tenantId}`)
+    
+    // Set headers for this specific request
+    const headers = createAuthHeader()
+    headers.headers['X-Entity-ID'] = entityId.toString()
+    
+    // Make the API call with proper headers
+    const response = await axios.get(`${API_URL}/events/upcoming`, headers)
+    
+    // Store in activities and return
+    if (Array.isArray(response.data)) {
       activities.upcomingEvents = response.data
       return activities.upcomingEvents
-    } catch (err) {
-      console.error('Error fetching upcoming events:', err)
+    } else {
+      console.warn('Unexpected response format from events/upcoming:', response.data)
       return []
     }
+  } catch (err) {
+    console.error('Error fetching upcoming events:', err)
+    return []
   }
+}
 
   /**
    * Fetch sevas for a temple

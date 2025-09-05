@@ -134,62 +134,58 @@ export const useSevaStore = defineStore('seva', () => {
   }
   
   // Fetch recent sevas for the devotee dashboard with seva names
-  const fetchRecentSevas = async () => {
-    loadingRecentSevas.value = true
-    try {
-      // First get the bookings
-      const response = await sevaService.getMyBookings()
+  // Update the fetchRecentSevas method in the seva.store.js file
+const fetchRecentSevas = async () => {
+  loadingRecentSevas.value = true;
+  try {
+    // Always fetch the catalog first, regardless of whether we have bookings
+    await fetchSevaCatalog();
+    
+    // Then get the bookings
+    const response = await sevaService.getMyBookings();
+    
+    if (response.success) {
+      let bookings = response.data || [];
       
-      if (response.success) {
-        let bookings = response.data || []
+      // Map seva names to bookings using the catalog
+      bookings = bookings.map(booking => {
+        const sevaId = booking.seva_id || booking.SevaID;
+        const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
         
-        // If we have bookings, ensure seva catalog is loaded
-        if (bookings.length > 0) {
-          // Fetch seva catalog if not already loaded
-          if (sevaCatalog.value.length === 0) {
-            await fetchSevaCatalog()
-          }
-          
-          // Map seva names to bookings
-          bookings = bookings.map(booking => {
-            const sevaId = booking.seva_id || booking.SevaID
-            const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId)
-            
-            return {
-              ...booking,
-              seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
-              seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
-              seva_description: seva?.description || seva?.Description || '',
-              seva: seva ? {
-                id: seva.id || seva.ID,
-                name: seva.name || seva.Name,
-                type: seva.type || seva.Type || seva.seva_type,
-                description: seva.description || seva.Description
-              } : null
-            }
-          })
-          
-          console.log('Bookings with seva names:', bookings)
-        }
-        
-        // Sort by booking time, newest first
-        const sorted = [...bookings].sort((a, b) => {
-          const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now())
-          const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now())
-          return dateB - dateA
-        })
-        
-        recentSevas.value = sorted
-      } else {
-        recentSevas.value = []
-      }
-    } catch (error) {
-      console.error('Failed to fetch recent sevas:', error)
-      recentSevas.value = []
-    } finally {
-      loadingRecentSevas.value = false
+        return {
+          ...booking,
+          seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
+          seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
+          seva_description: seva?.description || seva?.Description || '',
+          seva: seva ? {
+            id: seva.id || seva.ID,
+            name: seva.name || seva.Name,
+            type: seva.type || seva.Type || seva.seva_type,
+            description: seva.description || seva.Description
+          } : null
+        };
+      });
+      
+      console.log('Bookings with seva names:', bookings);
+      
+      // Sort by booking time, newest first
+      const sorted = [...bookings].sort((a, b) => {
+        const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
+        const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
+        return dateB - dateA;
+      });
+      
+      recentSevas.value = sorted;
+    } else {
+      recentSevas.value = [];
     }
+  } catch (error) {
+    console.error('Failed to fetch recent sevas:', error);
+    recentSevas.value = [];
+  } finally {
+    loadingRecentSevas.value = false;
   }
+}
   
   const createSeva = async (sevaData) => {
     loading.value = true

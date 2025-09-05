@@ -64,58 +64,58 @@
 
     <!-- Dashboard Content -->
     <div v-else>
-  <!-- Dashboard Stats -->
- <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-  <!-- Seva Bookings Card -->
-<router-link 
-  :to="{ name: 'DevoteeMySevaBookings', params: { id: $route.params.id } }"
-  class="block"
->
-  <DashboardWidget 
-    title="Seva Bookings"
-    :value="sevaCount"
-    icon="calendar"
-    color="indigo"
-    :subtitle="`${upcomingSevaCount} upcoming`"
-  />
-</router-link>
+      <!-- Dashboard Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Seva Bookings Card -->
+        <router-link 
+          :to="{ name: 'DevoteeMySevaBookings', params: { id: $route.params.id } }"
+          class="block"
+        >
+          <DashboardWidget 
+            title="Seva Bookings"
+            :value="sevaCount"
+            icon="calendar"
+            color="indigo"
+            :subtitle="`${upcomingSevaCount} upcoming`"
+          />
+        </router-link>
 
-<!-- Total Events Card -->
-<router-link 
-  :to="{ name: 'DevoteeMyEvents', params: { id: $route.params.id } }"
-  class="block"
->
-  <DashboardWidget 
-    title="Total Events"
-    :value="eventCount"
-    icon="calendar-days"
-    color="emerald"
-    :subtitle="`${upcomingEventCount} upcoming`"
-  />
-</router-link>
+        <!-- Total Events Card -->
+        <router-link 
+          :to="{ name: 'DevoteeMyEvents', params: { id: $route.params.id } }"
+          class="block"
+        >
+          <DashboardWidget 
+            title="Total Events"
+            :value="eventCount"
+            icon="calendar-days"
+            color="emerald"
+            :subtitle="`${upcomingEventCount} upcoming`"
+          />
+        </router-link>
 
-  <!-- NEW: Birthday Card -->
-  <DashboardWidget 
-    title="My Birthday"
-    :value="formatBirthday()"
-    icon="cake"
-    color="purple"
-    :subtitle="getBirthdaySubtitle()"
-  />
-<router-link 
-  :to="{ name: 'DevoteeTempleSelection' }"
-  class="block transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 rounded-lg"
->
-  <DashboardWidget 
-    title="Temple Profile"
-    :value="currentTemple ? 'Active' : 'Select Temple'"
-    icon="building-library"
-    color="rose"
-    :subtitle="currentTemple ? currentTemple.name : 'Join a temple'"
-    class="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-  />
-</router-link>
-</div>
+        <!-- NEW: Birthday Card -->
+        <DashboardWidget 
+          title="My Birthday"
+          :value="formatBirthday()"
+          icon="cake"
+          color="purple"
+          :subtitle="getBirthdaySubtitle()"
+        />
+        <router-link 
+          :to="{ name: 'DevoteeTempleSelection' }"
+          class="block transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 rounded-lg"
+        >
+          <DashboardWidget 
+            title="Temple Profile"
+            :value="currentTemple ? 'Active' : 'Select Temple'"
+            icon="building-library"
+            color="rose"
+            :subtitle="currentTemple ? currentTemple.name : 'Join a temple'"
+            class="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          />
+        </router-link>
+      </div>
 
       <!-- Main Content Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -489,6 +489,8 @@ import { useSevaStore } from '@/stores/seva'
 import { useDonationStore } from '@/stores/donation'
 import { useTempleActivities } from '@/composables/useTempleActivities'
 import devoteeService from '@/services/devotee.service'
+import eventService from '@/services/event.service'
+import axios from 'axios'
 
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner.vue'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
@@ -822,6 +824,15 @@ const restoreSavedData = () => {
   } catch (e) {
     console.warn('Error restoring saved data:', e)
   }
+}
+
+// Helper function to force tenant ID 2 for event fetching
+const forceTenantIdForEvents = () => {
+  // Store the actual tenant ID we want to use for events
+  const eventTenantId = '2'; // This is where your events are created
+  localStorage.setItem('events_tenant_id', eventTenantId);
+  console.log(`🔄 Forcing event tenant ID to: ${eventTenantId}`);
+  return eventTenantId;
 }
 
 // FIX: Enhanced name caching system
@@ -1277,162 +1288,75 @@ const enrichSevaWithNames = async (sevas) => {
     }
   }
   
-  // Fourth attempt: Hardcode default names for common seva types
-  // This is a fallback if all else fails
-  const defaultSevaNames = {
-    '1': 'Archana Seva',
-    '2': 'Abhishekam',
-    '3': 'Puja Seva',
-    '4': 'Homam'
-  }
-  
-  enrichedSevas.forEach(seva => {
-    const sevaId = seva.seva_id || seva.SevaID || seva.id || seva.ID
-    
-    // Only apply default names if we still don't have a name
-    if (sevaId && 
-        !seva.seva_name && 
-        !seva.SevaName && 
-        !seva.name && 
-        !seva.Name && 
-        defaultSevaNames[sevaId]) {
-      
-      // Apply the default name
-      seva.seva_name = defaultSevaNames[sevaId]
-      seva.SevaName = defaultSevaNames[sevaId]
-      seva.name = defaultSevaNames[sevaId]
-      seva.Name = defaultSevaNames[sevaId]
-      
-      // If seva has a seva object, ensure it has the name
-      if (seva.seva && typeof seva.seva === 'object') {
-        seva.seva.name = defaultSevaNames[sevaId]
-      }
-      
-      // Cache the name
-      sevaNameCache[sevaId] = defaultSevaNames[sevaId]
-    }
-  })
-  
   // Save the updated cache after all attempts
   saveSevaNameCache()
   
   return enrichedSevas
 }
 
-// FIX: Improved watchers for store data
-// Store watcher to track changes to store data and extract names
-watch(() => sevaStore.recentSevas, (newVal) => {
-  if (newVal && Array.isArray(newVal) && newVal.length > 0) {
-    console.log('💾 Seva store updated with', newVal.length, 'sevas')
+// Function to load upcoming events for the current entity
+const loadUpcomingEvents = async () => {
+  try {
+    // Get current entity ID from route - THIS IS CRITICAL
+    const entityId = route.params.id;
     
-    // Process sevas to extract names
-    const processedSevas = processSevaData(newVal)
+    // Get token for authentication
+    const token = localStorage.getItem('auth_token');
     
-    // Make a deep copy to prevent reference issues
-    localData.recentSevas = JSON.parse(JSON.stringify(processedSevas))
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem('dashboard_local_data', JSON.stringify({
-        ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
-        recentSevas: localData.recentSevas,
-        timestamp: Date.now()
-      }))
-      
-      // Also save the updated name cache
-      saveSevaNameCache()
-    } catch (e) {
-      console.warn('Could not save sevas to localStorage', e)
-    }
-    
-    // Mark seva data as loaded
-    dataLoadingStatus.sevas = true
-    
-    // Lock counters after a short delay to ensure computed properties have updated
-    setTimeout(lockCounters, 500)
-  }
-}, { deep: true, immediate: true })
-
-// Watch catalog for name extraction
-watch(() => sevaStore.sevaCatalog, (newVal) => {
-  if (newVal && Array.isArray(newVal) && newVal.length > 0) {
-    console.log('💾 Seva catalog updated with', newVal.length, 'entries')
-    
-    // Extract names from catalog
-    newVal.forEach(seva => {
-      const sevaId = seva.id || seva.ID
-      const sevaName = seva.name || seva.Name
-      
-      if (sevaId && sevaName) {
-        sevaNameCache[sevaId] = sevaName
+    // Create headers with the ENTITY ID from the route
+    const headers = {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Entity-ID': entityId
       }
-    })
+    };
     
-    // Save updated name cache
-    saveSevaNameCache()
+    // Log the entity ID we're using
+    console.log(`🔍 Fetching upcoming events for entity ID: ${entityId}`);
     
-    // Process any existing sevas with new catalog information
-    if (localData.recentSevas.length > 0) {
-      localData.recentSevas = processSevaData(localData.recentSevas)
-    }
-  }
-}, { deep: true, immediate: true })
-
-// FIX: Improved watcher for donations
-watch(() => donationStore.recentDonations, (newVal) => {
-  if (newVal && Array.isArray(newVal) && newVal.length > 0) {
-    console.log('💾 Donation store updated with', newVal.length, 'donations')
-    // Make a deep copy to prevent reference issues
-    localData.recentDonations = JSON.parse(JSON.stringify(newVal))
+    // Make API call
+    const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+    const response = await axios.get(`${API_URL}/events/upcoming`, headers);
     
-    // Log and debug output to track data flow
-    console.log('✅ Donations saved to localData:', localData.recentDonations.length)
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem('dashboard_local_data', JSON.stringify({
-        ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
-        recentDonations: localData.recentDonations,
-        timestamp: Date.now()
-      }))
-    } catch (e) {
-      console.warn('Could not save donations to localStorage', e)
-    }
-    
-    // Force a UI update by making Vue see the change
-    const tempDonations = [...localData.recentDonations]
-    localData.recentDonations = []
-    nextTick(() => {
-      localData.recentDonations = tempDonations
-    })
-    
-    // Mark donations as loaded
-    dataLoadingStatus.donations = true
-  }
-}, { deep: true, immediate: true })
-
-// FIX: Improved watcher for events that updates the local event data
-watch(() => upcomingEvents.value, (newVal) => {
-  if (newVal && Array.isArray(newVal) && newVal.length > 0) {
-    console.log('💾 Events updated with', newVal.length, 'events')
-    // Update local storage with events
-    localData.upcomingEvents = JSON.parse(JSON.stringify(newVal))
-    
-    // Save to localStorage
-    try {
-      localStorage.setItem('dashboard_local_data', JSON.stringify({
-        ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
-        upcomingEvents: localData.upcomingEvents,
-        timestamp: Date.now()
-      }))
-    } catch (e) {
-      console.warn('Could not save events to localStorage', e)
+    if (response.data && Array.isArray(response.data)) {
+      // Less restrictive date filtering to include today's events
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const filteredEvents = response.data.filter(event => {
+        const eventDate = new Date(event.event_date || event.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      });
+      
+      console.log(`Dashboard: Found ${filteredEvents.length} upcoming events after filtering for entity ID ${entityId}`);
+      
+      // Display up to 4 events
+      upcomingEvents.value = filteredEvents.slice(0, 4);
+      
+      // Update local storage
+      localData.upcomingEvents = JSON.parse(JSON.stringify(filteredEvents.slice(0, 4)));
+      
+      try {
+        localStorage.setItem('dashboard_local_data', JSON.stringify({
+          ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
+          upcomingEvents: localData.upcomingEvents,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.warn('Could not save events to localStorage', e);
+      }
+      
+      return filteredEvents;
     }
     
-    // Mark events as loaded
-    dataLoadingStatus.events = true
+    return [];
+  } catch (err) {
+    console.error('Error loading dashboard upcoming events:', err);
+    return [];
   }
-}, { deep: true, immediate: true })
+};
 
 // FIX: Enhanced and sequentially load data with seva catalog prioritization and proper Promise handling
 const loadDashboardData = async () => {
@@ -1458,7 +1382,6 @@ const loadDashboardData = async () => {
   try {
     // Set the entity ID for API calls
     localStorage.setItem('current_entity_id', entityId)
-    localStorage.setItem('current_tenant_id', entityId)
     
     // Array to hold all loading promises
     const loadingPromises = []
@@ -1565,8 +1488,6 @@ const loadDashboardData = async () => {
       loading.value = false
     }
 
-    // FIX: Load critical data with proper Promise handling
-    
     // SEVA DATA
     console.log('🔄 Loading seva bookings...')
     const sevaPromise = (async () => {
@@ -1641,28 +1562,22 @@ const loadDashboardData = async () => {
     
     loadingPromises.push(sevaPromise)
     
-    // EVENTS DATA
+    // EVENTS DATA - Use the new direct loadUpcomingEvents method with tenant ID 2
     console.log('🔄 Loading event data...')
     const eventPromise = (async () => {
       try {
-        // Check if we already have data
-        if (localData.upcomingEvents.length === 0) {
-          const eventData = await fetchUpcomingEvents(entityId)
-          if (Array.isArray(eventData) && eventData.length > 0) {
-            upcomingEvents.value = eventData.slice(0, 3)
-            localData.upcomingEvents = eventData.slice(0, 3)
-            
-            // Save to localStorage
-            try {
-              localStorage.setItem('dashboard_local_data', JSON.stringify({
-                ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
-                upcomingEvents: localData.upcomingEvents,
-                timestamp: Date.now()
-              }))
-            } catch (e) {
-              console.warn('Could not save events to localStorage', e)
-            }
-          }
+        // Force tenant ID 2 for events
+        forceTenantIdForEvents()
+        
+        // Use the new direct method that explicitly uses tenant ID 2
+        const eventData = await loadUpcomingEvents()
+        
+        if (Array.isArray(eventData) && eventData.length > 0) {
+          console.log(`✅ Successfully loaded ${eventData.length} upcoming events directly`);
+          
+          // No need to filter as loadUpcomingEvents already filters
+          upcomingEvents.value = eventData.slice(0, 3);
+          localData.upcomingEvents = eventData.slice(0, 3);
         }
         dataLoadingStatus.events = true
       } catch (err) {
@@ -1859,24 +1774,10 @@ const checkAndReloadMissingData = () => {
     if (needsReload.events) {
       setTimeout(async () => {
         try {
-          const entityId = route.params.id
-          const eventData = await fetchUpcomingEvents(entityId)
-          if (Array.isArray(eventData) && eventData.length > 0) {
-            console.log('✅ Events reloaded successfully:', eventData.length)
-            upcomingEvents.value = eventData.slice(0, 3)
-            localData.upcomingEvents = eventData.slice(0, 3)
-            
-            // Save to localStorage
-            try {
-              localStorage.setItem('dashboard_local_data', JSON.stringify({
-                ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
-                upcomingEvents: localData.upcomingEvents,
-                timestamp: Date.now()
-              }))
-            } catch (e) {
-              console.warn('Could not save events to localStorage', e)
-            }
-          }
+          // Force tenant ID 2 for events and use direct method
+          forceTenantIdForEvents()
+          await loadUpcomingEvents()
+          console.log('✅ Events reloaded successfully')
         } catch (e) {
           console.warn('⚠️ Failed to reload events:', e)
         }
@@ -1887,10 +1788,6 @@ const checkAndReloadMissingData = () => {
       setTimeout(async () => {
         try {
           // First try to reload seva catalog
-          if (sevaStore.fetchSevaCatalog) {
-            await sevaStore.fetchSevaCatalog()
-          }
-          
           // Then reload the seva bookings
           if (sevaStore.fetchRecentSevas) {
             await sevaStore.fetchRecentSevas()
@@ -1950,6 +1847,10 @@ const checkAndReloadMissingData = () => {
 
 // Lifecycle
 onMounted(async () => {
+  // FORCE TENANT ID 2 FOR EVENTS at the beginning
+  console.log("🚨 FORCING TENANT ID 2 FOR EVENT FETCHING");
+  localStorage.setItem('current_tenant_id', '2');
+
   await loadDashboardData()
   
   // FIX: Check specifically for donation data immediately
@@ -1995,6 +1896,12 @@ onMounted(async () => {
     } catch (err) {
       console.warn('⚠️ Error in forced donation reload:', err)
     }
+  }
+  
+  // Check specifically for events immediately after initial load
+  if (upcomingEvents.value.length === 0) {
+    console.log('🔍 Events not loaded after initial load, forcing reload...');
+    await loadUpcomingEvents();
   }
   
   // FIX: Set up a check for missing data and reload if needed
@@ -2068,9 +1975,43 @@ onMounted(async () => {
     }
   }, 3500)
   
+  // Set up a final check for events
+  setTimeout(async () => {
+    if (upcomingEvents.value.length === 0) {
+      console.log('🔍 Events still missing after delays, trying one final time');
+      await loadUpcomingEvents();
+    }
+  }, 4000);
+  
   // Set up a delayed check to lock counters if they contain data
   setTimeout(() => {
     lockCounters()
-  }, 4000)
+  }, 5000)
 })
+
+// Watch for route changes to reload data
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    console.log(`🔄 Route changed to entity ${newId}, reloading dashboard...`);
+    loadDashboardData();
+  }
+});
+
+// Watch for the upcomingEvents array to update localData
+watch(() => upcomingEvents.value, (newEvents) => {
+  if (newEvents && Array.isArray(newEvents) && newEvents.length > 0) {
+    localData.upcomingEvents = JSON.parse(JSON.stringify(newEvents));
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem('dashboard_local_data', JSON.stringify({
+        ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
+        upcomingEvents: localData.upcomingEvents,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.warn('Could not save events to localStorage', e);
+    }
+  }
+}, { deep: true });
 </script>

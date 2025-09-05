@@ -311,8 +311,8 @@ const loadEvents = async () => {
   try {
     loading.value = true;
     
-    // Use eventService instead of direct apiClient calls
-    const data = await eventService.getEvents();
+    // Use getUpcomingEvents instead of getEvents since it's working
+    const data = await eventService.getUpcomingEvents();
     console.log("🔍 Events Response:", data);
     
     const today = new Date();
@@ -342,18 +342,6 @@ const loadEvents = async () => {
     try {
       // Skip RSVP fetching for now as it's not working correctly
       // We'll implement this later when we have the correct API structure
-      
-      /* 
-      // This doesn't work:
-      const rsvpResponse = await apiClient.get('/api/v1/event-rsvps/my');
-      console.log("🔍 User RSVPs:", rsvpResponse);
-      
-      if (rsvpResponse && rsvpResponse.data && Array.isArray(rsvpResponse.data)) {
-        userRSVPs.value = new Set(
-          rsvpResponse.data.map(rsvp => rsvp.event_id)
-        );
-      }
-      */
     } catch (rsvpError) {
       console.error('Error fetching RSVPs:', rsvpError);
     }

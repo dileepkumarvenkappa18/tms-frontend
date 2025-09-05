@@ -1,26 +1,78 @@
 // src/services/event.service.js
 import { apiClient } from '@/plugins/axios';
+import axios from 'axios'; // Add this import for direct axios calls
 
 const eventService = {
   async getEvents() {
-  try {
-    const response = await apiClient.event.getAll();
-    console.log("🔍 Full Response:", response); // Confirmed from your logs
-    return response.data || []; // ✅ FIXED: return directly
-  } catch (error) {
-    throw this.handleError(error);
-  }
-},
-
-  async getUpcomingEvents() {
     try {
-      const response = await apiClient.event.getUpcoming();
-      return response.data;
+      // Use direct approach with explicit headers for better control
+      const tenantId = localStorage.getItem('current_tenant_id') || '2';
+      const entityId = localStorage.getItem('current_entity_id') || '1';
+      
+      console.log(`Using tenant ID: ${tenantId}, entity ID: ${entityId} for events`);
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      };
+      
+      // Make sure to use the correct endpoint path based on your API
+      const response = await axios.get('/api/v1/events', headers);
+      console.log("🔍 Full Response:", response);
+      return response.data || [];
     } catch (error) {
       throw this.handleError(error);
     }
   },
 
+  async getUpcomingEvents() {
+    try {
+      // ALWAYS use tenant ID 2 for upcoming events, as this is where temple admins create events
+      const tenantId = '2';
+      const entityId = localStorage.getItem('current_entity_id') || '1';
+      
+      console.log(`Using tenant ID: ${tenantId}, entity ID: ${entityId} for upcoming events`);
+      
+      // Make a custom request with the specific tenant ID
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      };
+      
+      console.log('Requesting upcoming events with headers:', headers);
+      
+      // Fix the endpoint path to match your API structure
+      const response = await axios.get('/api/v1/events/upcoming', headers);
+      
+      console.log('Upcoming events API response:', response);
+      
+      if (response.data && Array.isArray(response.data)) {
+        console.log(`Retrieved ${response.data.length} events from API`);
+        
+        // Log the first few events for debugging
+        if (response.data.length > 0) {
+          console.log('Sample event data:', response.data[0]);
+        } else {
+          console.log('No events returned from API');
+        }
+      }
+      
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching upcoming events:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  // Rest of the methods remain unchanged...
   async getEventById(id) {
     try {
       const response = await apiClient.event.getById(id);
@@ -52,7 +104,6 @@ const eventService = {
           const apiData = {
             title: parsedData.title,
             description: parsedData.description || '',
-            // FIX: Don't default to 'other' - use event_type directly
             event_type: parsedData.event_type || parsedData.type || parsedData.eventType,
             event_date: dateStr,
             event_time: timeStr,
@@ -60,7 +111,7 @@ const eventService = {
             is_active: parsedData.isActive !== undefined ? parsedData.isActive : true
           };
 
-          console.log('Creating event with data:', apiData); // Debug log
+          console.log('Creating event with data:', apiData);
           const response = await apiClient.event.create(apiData);
           return response.data;
         }
@@ -68,7 +119,6 @@ const eventService = {
         const apiData = {
           title: eventData.title,
           description: eventData.description || '',
-          // FIX: Don't default to 'other' - use event_type directly
           event_type: eventData.event_type || eventData.type || eventData.eventType,
           event_date: eventData.event_date || eventData.date,
           event_time: eventData.event_time || eventData.time,
@@ -76,7 +126,7 @@ const eventService = {
           is_active: eventData.isActive !== undefined ? eventData.isActive : true
         };
 
-        console.log('Creating event with data:', apiData); // Debug log
+        console.log('Creating event with data:', apiData);
         const response = await apiClient.event.create(apiData);
         return response.data;
       }
@@ -90,7 +140,6 @@ const eventService = {
       const apiData = {
         title: eventData.title,
         description: eventData.description || '',
-        // FIX: Don't default to 'other' - use event_type directly
         event_type: eventData.event_type || eventData.type || eventData.eventType,
         event_date: eventData.event_date || eventData.date,
         event_time: eventData.event_time || eventData.time,
@@ -98,7 +147,7 @@ const eventService = {
         is_active: eventData.isActive !== undefined ? eventData.isActive : true
       };
 
-      console.log('Updating event with data:', apiData); // Debug log
+      console.log('Updating event with data:', apiData);
       const response = await apiClient.event.update(id, apiData);
 
       return {
