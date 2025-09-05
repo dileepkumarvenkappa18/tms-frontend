@@ -244,7 +244,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useTempleStore } from '@/stores/temple';
 import { useAuthStore } from '@/stores/auth';
@@ -339,6 +339,7 @@ const isFormValid = computed(() => {
 
 // IMPROVED: Filtered temples computed property to show ONLY approved temples from selected tenants
 // with deduplication by temple ID
+// IMPROVED: Filtered temples computed property - more lenient for tenant users
 const filteredTemples = computed(() => {
   let templesForDropdown = [];
   
@@ -350,7 +351,28 @@ const filteredTemples = computed(() => {
     templesForDropdown = templeStore.temples;
   }
   
-  // Now filter for approved temples only
+  // Debug: Log the temples that will be filtered
+  if (debugMode.value && templesForDropdown.length > 0) {
+    console.log(`⚡ Before filtering: ${templesForDropdown.length} temples found`);
+  }
+  
+  // For tenant users, just check the approval status and skip tenant ID matching
+  if (!fromSuperadmin.value) {
+    return templesForDropdown.filter(temple => {
+      // For tenant users, we only care about approved temples
+      const status = (temple.status || '').toLowerCase();
+      const isApproved = status === 'approved' || status === 'active';
+      
+      // Debug log
+      if (debugMode.value) {
+        console.log(`Temple ${temple.id} (${temple.name}): TENANT USER VIEW, status=${status}, approved=${isApproved}`);
+      }
+      
+      return isApproved;
+    });
+  }
+  
+  // For superadmin, continue with strict tenant matching + approval status
   return templesForDropdown.filter(temple => {
     // Check if temple belongs to one of the selected tenants
     const createdBy = String(temple.created_by || temple.createdBy || '');
@@ -448,14 +470,24 @@ const formatDate = (dateString) => {
 };
 
 const buildReportParams = () => {
-  // Use entityIds if coming from superadmin with multiple tenants
-  if (fromSuperadmin.value && tenantIds.value.length > 1) {
+  // CRITICAL FIX: Properly detect if user is a superadmin
+  // Check both the route and user role to ensure correct detection
+  const isSuperAdmin = 
+    userStore.user?.roleId === 1 || 
+    userStore.user?.role === 'superadmin' || 
+    fromSuperadmin.value || 
+    route.path.includes('/superadmin/');
+
+  console.log(`🔑 User role detection: roleId=${userStore.user?.roleId}, isSuperAdmin=${isSuperAdmin}, fromSuperadmin=${fromSuperadmin.value}`);
+  
+  // Multi-tenant superadmin case
+  if (isSuperAdmin && tenantIds.value.length > 1) {
     const params = {
       entityIds: tenantIds.value,
       dateRange: activeFilter.value,
       format: selectedFormat.value,
-      // Add the temple/entity ID parameter
-      templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value
+      templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value,
+      isSuperAdmin: true // Explicitly set to true for superadmin
     };
 
     // Add status filter if not 'all'
@@ -470,12 +502,15 @@ const buildReportParams = () => {
     }
 
     return params;
-  } else {
-    // Original logic for single tenant
+  } 
+  // Single tenant case (could be either superadmin or tenant)
+  else {
     const params = {
-      entityId: entityId.value,
+      entityId: tenantId.value,
       dateRange: activeFilter.value,
-      format: selectedFormat.value
+      format: selectedFormat.value,
+      templeId: selectedTemple.value === 'all' ? 'all' : selectedTemple.value,
+      isSuperAdmin: isSuperAdmin // Set based on detection
     };
 
     // Add status filter if not 'all'
@@ -502,7 +537,7 @@ const downloadReport = async () => {
   try {
     const params = buildReportParams();
     
-    // Validate parameters using the service validation
+    // Validate parameters
     const validation = ReportsService.validateReportParams({
       ...params,
       type: 'temple-registered'
@@ -512,16 +547,25 @@ const downloadReport = async () => {
       throw new Error(validation.errors.join(', '));
     }
 
-    // Console logging (matching your existing format)
-    console.log('Downloading report with the following parameters:');
-    console.log('- Temple:', selectedTemple.value === 'all' ? 'All Temples' : getTempleName(selectedTemple.value));
-    if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      console.log('- Tenants:', tenantIds.value.join(', '));
+    // Debug logging
+    console.log('Download params:', JSON.stringify(params));
+    
+    // IMPORTANT: Explicitly ensure critical parameters are set
+    if (selectedTemple.value !== 'all') {
+      params.templeId = selectedTemple.value;
     }
-    console.log('- Time filter:', getTimeFilterLabel(activeFilter.value));
-    console.log('- Date range:', formatDate(startDate.value), 'to', formatDate(endDate.value));
-    console.log('- Status:', getStatusFilterLabel(activeStatus.value));
-    console.log('- Format:', getFormatLabel(selectedFormat.value));
+    
+    // Ensure tenant ID is explicitly passed for tenant users
+    if (!fromSuperadmin.value) {
+      params.entityId = tenantId.value;
+      
+      // Force tenant ID into headers for the API call
+      params.headers = {
+        'X-Tenant-ID': tenantId.value
+      };
+    }
+
+    console.log('Final download params:', JSON.stringify(params));
 
     // Call the service method
     const result = await ReportsService.downloadTempleRegisteredReport(params);
@@ -531,8 +575,22 @@ const downloadReport = async () => {
     
   } catch (error) {
     console.error('Download failed:', error);
-    errorMessage.value = error.message || 'Failed to download report. Please try again.';
-    showToast(`Download failed: ${error.message}`, 'error');
+    
+    // Improved error handling with more specific messages
+    let errorMsg = 'Failed to download report. Please try again.';
+    
+    if (error.message?.includes('network error')) {
+      errorMsg = 'Network error. Please check your connection and try again.';
+    } else if (error.response?.status === 404) {
+      errorMsg = 'Report endpoint not found. The report may not be available for this configuration.';
+    } else if (error.response?.status === 403) {
+      errorMsg = 'You do not have permission to download this report.';
+    } else if (error.response?.status === 400) {
+      errorMsg = 'Invalid report parameters. Please check your selections.';
+    }
+    
+    errorMessage.value = errorMsg;
+    showToast(`Download failed: ${errorMsg}`, 'error');
   } finally {
     isDownloading.value = false;
   }
@@ -563,7 +621,7 @@ const deduplicateTemplesByID = (temples) => {
   return uniqueTemples;
 };
 
-// Fetch temples for a specific tenant
+// Fetch temples for a specific tenant - UPDATED
 const fetchTemplesForTenant = async (tenantId) => {
   try {
     console.log(`Fetching temples for tenant ID: ${tenantId}`);
@@ -575,8 +633,35 @@ const fetchTemplesForTenant = async (tenantId) => {
       templeStore.temples = [];
     }
     
-    // Fetch temples for this tenant
-    await templeStore.fetchTemples(tenantId);
+    // CRITICAL: Force tenant ID in local storage temporarily to ensure proper API calls
+    const originalTenantId = localStorage.getItem('current_tenant_id');
+    localStorage.setItem('current_tenant_id', tenantId);
+    localStorage.setItem('X-Tenant-ID', tenantId);
+    
+    // Try the direct method first
+    console.log(`🔄 Trying direct method for tenant ${tenantId}`);
+    try {
+      await templeStore.fetchDirectByTenant(tenantId);
+      if (templeStore.temples.length > 0) {
+        console.log(`✅ Direct method returned ${templeStore.temples.length} temples`);
+      } else {
+        console.log(`⚠️ Direct method returned 0 temples, falling back to regular fetch`);
+        // Fall back to regular fetch
+        await templeStore.fetchTemples(tenantId);
+      }
+    } catch (directError) {
+      console.error(`Error with direct fetch: ${directError.message}, falling back to regular fetch`);
+      // Fall back to regular fetch
+      await templeStore.fetchTemples(tenantId);
+    }
+    
+    // Restore original tenant ID in localStorage
+    if (originalTenantId) {
+      localStorage.setItem('current_tenant_id', originalTenantId);
+    } else {
+      localStorage.removeItem('current_tenant_id');
+    }
+    localStorage.removeItem('X-Tenant-ID');
     
     console.log(`Fetched ${templeStore.temples.length} temples for tenant ${tenantId}`);
     
@@ -601,51 +686,119 @@ const fetchTemplesForTenant = async (tenantId) => {
   }
 };
 
+// Direct API fetch method - bypass store layer
+const fetchTemplesDirectly = async (tenantId) => {
+  console.log(`🔄 DIRECT API: Fetching temples directly for tenant ${tenantId}`);
+  
+  if (!tenantId) {
+    console.error('❌ DIRECT API: No tenant ID provided');
+    return [];
+  }
+  
+  try {
+    // Prepare headers with tenant ID and authorization
+    const headers = {
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+      'X-Tenant-ID': tenantId
+    };
+    
+    // API endpoint with query param for tenant filtering
+    const url = `/v1/entities?tenant_id=${tenantId}&_=${Date.now()}`;
+    console.log(`📡 DIRECT API: Calling ${url}`);
+    
+    // Make direct API call
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: headers
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log(`✅ DIRECT API: Received response:`, data);
+    
+    // Extract temples from response
+    let temples = Array.isArray(data) ? data : 
+                  data.data ? data.data :
+                  data.entities ? data.entities : 
+                  data.items ? data.items : [];
+    
+    console.log(`🏛️ DIRECT API: Extracted ${temples.length} temples`);
+    
+    // Filter by tenant ID to be safe
+    const filteredTemples = temples.filter(temple => {
+      const createdBy = String(temple.created_by || temple.createdBy || '');
+      const templeTenantId = String(temple.tenant_id || temple.tenantId || '');
+      return createdBy === tenantId || templeTenantId === tenantId;
+    });
+    
+    console.log(`🏛️ DIRECT API: After filtering ${filteredTemples.length} temples remain`);
+    
+    // Update the store directly
+    templeStore.temples = filteredTemples;
+    
+    return filteredTemples;
+  } catch (error) {
+    console.error(`❌ DIRECT API: Error fetching temples:`, error);
+    return [];
+  }
+};
+
 // Lifecycle hooks
 onMounted(async () => {
   // Initialize default dates
   initializeDates();
   
-  // Log tenant IDs from URL
-  if (route.query.tenants) {
-    console.log('Tenant IDs from URL:', route.query.tenants);
-    console.log('Parsed tenant IDs:', tenantIds.value);
-  }
+  console.log('🔍 Component mounted - trying direct API approach');
   
-  // Reset collections
-  allTemples.value = [];
+  // Get tenant ID for API calls
+  const currentTenantId = tenantIds.value[0];
+  console.log(`Current tenant ID: ${currentTenantId}`);
   
   if (fromSuperadmin.value && tenantIds.value.length > 1) {
+    // Multiple tenants case (Superadmin)
     console.log(`Fetching temples for ${tenantIds.value.length} tenants: ${tenantIds.value.join(', ')}`);
     
     let collectedTemples = [];
-    
-    // Fetch temples for each tenant sequentially
     for (const tid of tenantIds.value) {
-      const tenantTemples = await fetchTemplesForTenant(tid);
+      const tenantTemples = await fetchTemplesDirectly(tid);
       collectedTemples.push(...tenantTemples);
     }
     
     // Deduplicate temples by ID
     allTemples.value = deduplicateTemplesByID(collectedTemples);
-    
-    // Debug log deduplicated temples
-    console.log(`After deduplication: ${allTemples.value.length} unique temples`);
-    
-    // Log filtered temples (approved only)
-    console.log(`After filtering for approved status, found ${filteredTemples.value.length} temples`);
-  } else {
-    // Single tenant case
+    console.log(`Final temple count for dropdown: ${filteredTemples.value.length}`);
+  } 
+  else {
+    // Single tenant case - Try direct API fetch first
     try {
-      const singleTenantId = tenantIds.value[0];
-      console.log('Fetching temples for single tenant:', singleTenantId);
-      await fetchTemplesForTenant(singleTenantId);
+      if (!currentTenantId) {
+        console.error("❌ No tenant ID available!");
+        errorMessage.value = "Could not determine your tenant ID. Please refresh or contact support.";
+        return;
+      }
       
-      // Log filtered temples (approved only)
-      console.log(`After filtering for approved status, found ${filteredTemples.value.length} temples`);
+      console.log(`🔄 Single tenant mode - fetching temples for tenant ID: ${currentTenantId}`);
+      
+      // Make direct API call - bypass store
+      const directResult = await fetchTemplesDirectly(currentTenantId);
+      
+      // If direct fetch returned no results, try the store methods
+      if (directResult.length === 0) {
+        console.warn("⚠️ Direct fetch returned no temples. Trying store methods...");
+        await templeStore.fetchDirectByTenant(currentTenantId);
+      }
+      
+      console.log(`Final temple count after all attempts: ${filteredTemples.value.length}`);
+      
+      if (filteredTemples.value.length === 0) {
+        console.error("❌ All temple fetch methods failed!");
+        errorMessage.value = "Could not load temples for your tenant. Please try again later.";
+      }
     } catch (error) {
       console.error('Error loading temple data:', error);
-      showToast('Failed to load temple data. Please try again.', 'error');
       errorMessage.value = 'Failed to load temple data. Some features may not work correctly.';
     }
   }

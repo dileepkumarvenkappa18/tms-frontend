@@ -631,12 +631,24 @@ async downloadUserDetailsReport(params) {
     return response
   }
 
-  async downloadTempleRegisteredReport(params) {
+// Fix for reports.service.js downloadTempleRegisteredReport method
+
+// --- UPDATED downloadTempleRegisteredReport method for reports.service.js ---
+
+async downloadTempleRegisteredReport(params) {
   const { entityId, entityIds, templeId, status, dateRange = 'weekly', startDate, endDate, format, isSuperAdmin } = params;
 
   if ((!entityId && !entityIds) || !format) {
     throw new Error('Entity ID (or IDs) and format are required');
   }
+
+  console.log('🔍 Temple Register Report Params:', { 
+    entityId, 
+    entityIds, 
+    templeId,
+    isSuperAdmin,
+    format
+  });
 
   const queryParams = new URLSearchParams({
     date_range: dateRange,
@@ -652,51 +664,169 @@ async downloadUserDetailsReport(params) {
     queryParams.append('end_date', endDate);
   }
 
-  // Add templeId parameter if it's specified
-  if (templeId && templeId !== 'all') {
-    queryParams.append('temple_id', templeId);
+  // Standard auth headers - needed for all requests
+  const headers = {
+    'Accept': this.getAcceptHeader(format),
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+    'Cache-Control': 'no-cache'
+  };
+
+  // For tenant users, add tenant ID header
+  if (!isSuperAdmin && entityId) {
+    headers['X-Tenant-ID'] = entityId.toString();
   }
 
-  let url;
+  // For superadmins with multiple tenants, use first tenant in header
+  if (isSuperAdmin && entityIds && entityIds.length > 0) {
+    headers['X-Tenant-ID'] = entityIds[0].toString();
+  } else if (isSuperAdmin && entityId) {
+    headers['X-Tenant-ID'] = entityId.toString();
+  }
   
-  // Choose the right API endpoint based on user role and number of tenants
-  if (isSuperAdmin || entityIds?.length > 1) {
-    if (entityIds && entityIds.length > 1) {
-      // When multiple tenants are selected, use superadmin reports endpoint with tenants parameter
-      url = `/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`;
+  // Log headers for debugging
+  console.log('🔑 Using headers:', JSON.stringify(headers));
+
+  // Define URLs to try and their priority
+  const urlsToTry = [];
+  
+  // --- TENANT USER PATHS (keep existing working functionality) ---
+  if (!isSuperAdmin) {
+    if (templeId === 'all') {
+      // For "All Temples" - tenant users
+      urlsToTry.push(
+        // Primary URL - known to work for tenant users
+        `/api/v1/entities/all/reports/temple-registered?${queryParams}`
+      );
     } else {
-      url = `/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}`;
+      // For specific temple - tenant users
+      urlsToTry.push(
+        // Primary URL - known to work for tenant users
+        `/api/v1/entities/${templeId}/reports/temple-registered?${queryParams}`
+      );
     }
-  } else {
-    // Single tenant case
-    url = `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`;
-  }
-
-  console.log('🔄 Final report URL:', url);
-
-  try {
-    return await this.downloadReport(url, { format }, 'temple_registered_report', async () => {
-      // Fallback function for alternative URLs if the first one fails
-      if (isSuperAdmin || entityIds?.length > 1) {
-        // Try alternative patterns
-        const alternatives = [
-          entityIds && entityIds.length > 1 
-            ? `/v1/superadmin/temple-registered/report?${queryParams}&tenants=${entityIds.join(',')}`
-            : `/v1/superadmin/temple-registered/report?${queryParams}&tenant_id=${entityId}`,
-          
-          entityIds && entityIds.length > 1
-            ? `/v1/superadmin/entities/reports/temple-registered?${queryParams}&tenants=${entityIds.join(',')}`
-            : `/v1/entities/${entityId}/reports/temple-registered?${queryParams}`
-        ];
-        
-        return alternatives;
+  } 
+  // --- SUPERADMIN PATHS (specialized handling) ---
+  else {
+    // CRITICAL: For Superadmin with multiple tenants and "All Temples"
+    if (entityIds && entityIds.length > 0 && templeId === 'all') {
+      // For multiple tenants AND "All Temples" - superadmin
+      
+      // Add tenant_ids parameter for multiple tenants
+      const tenantsParam = entityIds.join(',');
+      
+      // Explicit option 1: Use report-all path with tenants list
+      urlsToTry.push(
+        `/api/v1/superadmin/reports/all-temples?${queryParams}&tenants=${tenantsParam}`,
+        `/api/v1/superadmin/reports/temple-registered/all?${queryParams}&tenants=${tenantsParam}`
+      );
+      
+      // Explicit option 2: Use standard path with all_temples flag
+      urlsToTry.push(
+        `/api/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${tenantsParam}&all_temples=true`,
+        `/api/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${tenantsParam}&temple_id=all`
+      );
+      
+      // Separate parameter format
+      urlsToTry.push(
+        `/api/v1/superadmin/temple-registered?${queryParams}&tenant_ids=${tenantsParam}&all=true`
+      );
+      
+      // Try without including temple_id parameter
+      urlsToTry.push(
+        `/api/v1/superadmin/reports/temple-registered?${queryParams}&tenants=${tenantsParam}`
+      );
+      
+      // Try individual tenant URLs with include_all flag
+      for (const tid of entityIds) {
+        urlsToTry.push(
+          `/api/v1/superadmin/tenants/${tid}/reports/temple-registered?${queryParams}&include_all=true`
+        );
       }
-      return null; // No alternatives for regular users
-    });
-  } catch (error) {
-    console.error('Error downloading temple-registered report:', error)
-    throw error
+    }
+    // For Superadmin with single tenant and "All Temples" or specific temple
+    else {
+      if (templeId === 'all') {
+        // For single tenant AND "All Temples" - superadmin
+        urlsToTry.push(
+          `/api/v1/superadmin/tenants/${entityId}/reports/all-temples?${queryParams}`,
+          `/api/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}&all=true`,
+          `/api/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}&temple_id=all`,
+          `/api/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}`
+        );
+      } else {
+        // For single tenant AND specific temple - superadmin (working case)
+        urlsToTry.push(
+          `/api/v1/superadmin/tenants/${entityId}/reports/temple-registered?${queryParams}&temple_id=${templeId}`,
+          `/api/v1/superadmin/tenants/${entityId}/temples/${templeId}/reports?${queryParams}`
+        );
+      }
+    }
   }
+  
+  // Common fallbacks as last resort
+  urlsToTry.push(
+    `/api/v1/reports/temple-registered?${queryParams}`,
+    `/api/v1/reports/temples?${queryParams}`,
+    `/api/v1/entities/all/reports/temple-registered?${queryParams}`
+  );
+  
+  console.log('🔄 URLs to try:', urlsToTry);
+  
+  // Try each URL until one succeeds
+  let response = null;
+  let successUrl = '';
+  
+  for (let i = 0; i < urlsToTry.length; i++) {
+    const url = urlsToTry[i];
+    console.log(`🔄 Attempt ${i+1}/${urlsToTry.length}: ${url}`);
+    
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers: headers
+      });
+      
+      if (response.ok) {
+        console.log(`✅ Success with URL: ${url}`);
+        successUrl = url;
+        break;
+      } else {
+        const errorText = await response.text().catch(() => 'Unable to get error text');
+        console.log(`❌ URL failed with status ${response.status}: ${errorText}`);
+      }
+    } catch (error) {
+      console.log(`❌ Error with URL: ${error.message}`);
+    }
+  }
+  
+  // Handle case where all attempts failed
+  if (!response || !response.ok) {
+    throw new Error('All download attempts failed. Please check your permissions or contact support.');
+  }
+  
+  // Check for empty response
+  const blob = await response.blob();
+  if (blob.size === 0) {
+    console.error('✅ Success but empty file (0 bytes) from URL:', successUrl);
+    throw new Error('No data available for the selected criteria. The server returned an empty file.');
+  }
+  
+  console.log(`✅ Successfully downloaded ${blob.size} bytes of data from URL: ${successUrl}`);
+  
+  // Create and trigger download
+  const timestamp = new Date().toISOString().split('T')[0];
+  const filename = `temple_register_report_${timestamp}.${format}`;
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => window.URL.revokeObjectURL(blobUrl), 1000);
+  
+  return { success: true, filename, size: blob.size };
 }
 
   async getTempleRegisteredPreview(params) {
