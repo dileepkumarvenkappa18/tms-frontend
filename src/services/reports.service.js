@@ -1382,6 +1382,7 @@ async downloadTempleRegisteredReport(params) {
     }
   }
 
+
   // AUDIT LOGS REPORT METHODS
   async getAuditLogsReport(params) {
     const {
@@ -1637,6 +1638,87 @@ async downloadTempleRegisteredReport(params) {
     } catch (error) {
       console.error('❌ Error getting audit logs preview:', error)
       throw error
+    }
+  }
+
+  // TEMPLE/ENTITY METHODS
+  async getTemples(params = {}) {
+    const { isSuperAdmin } = params
+    
+    try {
+      let url;
+      if (isSuperAdmin) {
+        url = '/v1/superadmin/tenants'
+      } else {
+        url = '/v1/entities'
+      }
+      
+      console.log('🔍 Making temples API request:', url)
+      const response = await api.get(url)
+      console.log('✅ Temples API Response received:', response)
+      
+      return response
+    } catch (error) {
+      console.error('❌ Error fetching temples:', error)
+      throw error
+    }
+  }
+
+  async getEntities(params = {}) {
+    const { isSuperAdmin } = params
+    
+    try {
+      let url;
+      let response;
+      
+      // Try multiple possible endpoints
+      const endpoints = [
+        isSuperAdmin ? '/v1/superadmin/tenants' : '/v1/entities',
+        isSuperAdmin ? '/v1/superadmin/entities' : '/v1/tenant/entities',
+        '/v1/temples',
+        '/v1/organizations'
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log('🔍 Trying entities endpoint:', endpoint)
+          response = await api.get(endpoint)
+          console.log('✅ Success with endpoint:', endpoint, response)
+          return response
+        } catch (error) {
+          console.log('❌ Failed endpoint:', endpoint, error.message)
+          continue
+        }
+      }
+      
+      throw new Error('Unable to fetch entities from any available endpoint')
+    } catch (error) {
+      console.error('❌ Error fetching entities:', error)
+      throw error
+    }
+  }
+
+  async getTenantEntities(params = {}) {
+    const { isSuperAdmin } = params
+    
+    try {
+      let url;
+      if (isSuperAdmin) {
+        url = '/v1/superadmin/entities'
+      } else {
+        url = '/v1/tenant/entities'
+      }
+      
+      console.log('🔍 Making tenant entities API request:', url)
+      const response = await api.get(url)
+      console.log('✅ Tenant entities API Response received:', response)
+      
+      return response
+    } catch (error) {
+      console.error('❌ Error fetching tenant entities:', error)
+      
+      // Fallback to getEntities if this endpoint doesn't exist
+      return this.getEntities(params)
     }
   }
 

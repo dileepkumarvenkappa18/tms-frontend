@@ -11,8 +11,10 @@
       <div class="mb-2 font-bold">Debug Information:</div>
       <div v-if="selectedTenant">Selected Tenant: ID={{ selectedTenant.id || selectedTenant.ID }}, Name={{ getTenantName(selectedTenant) }}</div>
       <div>Tenant Count: {{ Array.isArray(allTenants) ? allTenants.length : 0 }}</div>
+      <div>Pending: {{ pendingCount }}, Approved: {{ approvedCount }}, Rejected: {{ rejectedCount }}</div>
       <div class="mt-2 flex gap-2">
         <button @click="debugTenantData" class="px-3 py-1 bg-gray-200 rounded text-xs">Run API Debug</button>
+        <button @click="logAllTenantStatuses" class="px-3 py-1 bg-blue-200 rounded text-xs">Log All Statuses</button>
       </div>
     </div>
 
@@ -48,12 +50,12 @@
         </select>
         
         <!-- Debug Mode Toggle -->
-        <!-- <button 
+        <button 
           @click="debugMode = !debugMode" 
           class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm"
         >
           {{ debugMode ? 'Hide Debug' : 'Debug Mode' }}
-        </button> -->
+        </button>
       </div>
       
       <!-- Refresh Button -->
@@ -81,7 +83,9 @@
           <!-- Tenant ID Debug (remove in production) -->
           <div v-if="debugMode" class="bg-gray-100 p-2 mb-3 rounded text-xs">
             <span class="font-bold">ID:</span> {{ tenant.id || tenant.ID || 'Not available' }} |
-            <span class="font-bold">Status:</span> {{ tenant.status || tenant.Status || 'Not available' }}
+            <span class="font-bold">Raw Status:</span> {{ tenant.status || tenant.Status || 'Not available' }} |
+            <span class="font-bold">Normalized:</span> {{ normalizeStatus(tenant) }} |
+            <span class="font-bold">Is Pending:</span> {{ isStatusPending(tenant) }}
           </div>
           
           <!-- Header Row -->
@@ -420,7 +424,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useToast } from '@/composables/useToast'
 import superAdminService from '@/services/superadmin.service'
 import api from '@/services/api'
@@ -437,7 +441,7 @@ export default {
     const isProcessing = ref(false)
     
     // Debug mode
-    const debugMode = ref(false)
+    const debugMode = ref(true) // Enable by default for debugging
     const showApiDebugModal = ref(false)
     const apiDebugInfo = ref('')
     
@@ -450,15 +454,173 @@ export default {
     const showDetailsModal = ref(false)
     
     // Filters
-    const statusFilter = ref('')
+    const statusFilter = ref('') // Start with "View All"
     
     // Pagination
     const currentPage = ref(1)
     const itemsPerPage = ref(5)
     
-    // ==================== NEW TEMPLE DETAILS HELPERS ====================
+    // ==================== FIXED STATUS HELPERS ====================
     
-    // Helper methods for temple details - FIXED to access nested temple_details
+    // Improved status normalization
+    const normalizeStatus = (tenant) => {
+      if (!tenant) return 'pending';
+      
+      // Check multiple possible status fields
+      let status = tenant.status || 
+                   tenant.Status || 
+                   tenant.approval_status || 
+                   tenant.approvalStatus || 
+                   tenant.tenant_status ||
+                   tenant.user_status ||
+                   '';
+      
+      // Convert to string and normalize
+      status = String(status).toLowerCase().trim();
+      
+      // Handle empty/null/undefined
+      if (!status || status === 'null' || status === 'undefined') {
+        return 'pending';
+      }
+      
+      // Normalize variations
+      const statusMappings = {
+        'approved': 'approved',
+        'active': 'approved', 
+        'accepted': 'approved',
+        'confirm': 'approved',
+        'confirmed': 'approved',
+        'approved_active': 'approved',
+        
+        'rejected': 'rejected',
+        'declined': 'rejected',
+        'denied': 'rejected',
+        'cancelled': 'rejected',
+        'refused': 'rejected',
+        'inactive': 'rejected',
+        
+        'pending': 'pending',
+        'pending_approval': 'pending',
+        'waiting': 'pending',
+        'submitted': 'pending',
+        'under_review': 'pending',
+        'new': 'pending'
+      };
+      
+      return statusMappings[status] || 'pending';
+    };
+    
+    // Improved status check functions - FIXED LOGIC
+    const isStatusPending = (tenant) => {
+      const status = normalizeStatus(tenant);
+      return status === 'pending';
+    };
+    
+    const isStatusApproved = (tenant) => {
+      const status = normalizeStatus(tenant);
+      return status === 'approved';
+    };
+    
+    const isStatusRejected = (tenant) => {
+      const status = normalizeStatus(tenant);
+      return status === 'rejected';
+    };
+    
+    // ==================== COMPUTED PROPERTIES - FIXED ====================
+    
+    // FIXED: Force reactivity and proper counting
+    const pendingCount = computed(() => {
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      if (tenantsArray.length === 0) return 0;
+      
+      const count = tenantsArray.filter(tenant => {
+        const isPending = isStatusPending(tenant);
+        if (debugMode.value) {
+          console.log(`Tenant ${tenant.id || 'unknown'}: status="${normalizeStatus(tenant)}", isPending=${isPending}`);
+        }
+        return isPending;
+      }).length;
+      
+      if (debugMode.value) {
+        console.log(`🟡 PENDING COUNT: ${count} out of ${tenantsArray.length} total tenants`);
+      }
+      
+      return count;
+    });
+    
+    const approvedCount = computed(() => {
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      if (tenantsArray.length === 0) return 0;
+      
+      const count = tenantsArray.filter(tenant => {
+        const isApproved = isStatusApproved(tenant);
+        if (debugMode.value) {
+          console.log(`Tenant ${tenant.id || 'unknown'}: status="${normalizeStatus(tenant)}", isApproved=${isApproved}`);
+        }
+        return isApproved;
+      }).length;
+      
+      if (debugMode.value) {
+        console.log(`🟢 APPROVED COUNT: ${count} out of ${tenantsArray.length} total tenants`);
+      }
+      
+      return count;
+    });
+    
+    const rejectedCount = computed(() => {
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      if (tenantsArray.length === 0) return 0;
+      
+      const count = tenantsArray.filter(tenant => {
+        const isRejected = isStatusRejected(tenant);
+        if (debugMode.value) {
+          console.log(`Tenant ${tenant.id || 'unknown'}: status="${normalizeStatus(tenant)}", isRejected=${isRejected}`);
+        }
+        return isRejected;
+      }).length;
+      
+      if (debugMode.value) {
+        console.log(`🔴 REJECTED COUNT: ${count} out of ${tenantsArray.length} total tenants`);
+      }
+      
+      return count;
+    });
+    
+    // FIXED: Filtered tenants based on status
+    const filteredTenants = computed(() => {
+      const allTenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      
+      if (!statusFilter.value || statusFilter.value === '' || statusFilter.value === 'all') {
+        if (debugMode.value) {
+          console.log(`📋 SHOWING ALL TENANTS: ${allTenantsArray.length}`);
+        }
+        return allTenantsArray;
+      }
+      
+      let filtered = [];
+      switch (statusFilter.value.toLowerCase()) {
+        case 'pending':
+          filtered = allTenantsArray.filter(tenant => isStatusPending(tenant));
+          break;
+        case 'approved':
+          filtered = allTenantsArray.filter(tenant => isStatusApproved(tenant));
+          break;
+        case 'rejected':
+          filtered = allTenantsArray.filter(tenant => isStatusRejected(tenant));
+          break;
+        default:
+          filtered = allTenantsArray;
+      }
+      
+      if (debugMode.value) {
+        console.log(`📋 FILTERED TENANTS (${statusFilter.value}): ${filtered.length} out of ${allTenantsArray.length}`);
+      }
+      
+      return filtered;
+    });
+    
+    // ==================== TEMPLE DETAILS HELPERS ====================
+    
     const getTempleDetail = (tenant, field, fallback = 'Not provided') => {
       if (!tenant) return fallback;
       
@@ -517,7 +679,6 @@ export default {
       return 'No additional details provided.';
     };
 
-    // Add a debug method to see what data is available
     const debugTenantDetails = (tenant) => {
       if (!tenant) return;
       
@@ -541,128 +702,77 @@ export default {
       console.log('==================');
     };
     
-    // ===================================================================
-    
-    // Computed properties - FIXED with array checks
-    const pendingCount = computed(() => 
-      Array.isArray(allTenants.value) ? allTenants.value.filter(t => isStatusPending(t)).length : 0
-    )
-    
-    const approvedCount = computed(() => 
-      Array.isArray(allTenants.value) ? allTenants.value.filter(t => isStatusApproved(t)).length : 0
-    )
-    
-    const rejectedCount = computed(() => 
-      Array.isArray(allTenants.value) ? allTenants.value.filter(t => isStatusRejected(t)).length : 0
-    )
-    
-    // Status check helpers - Updated to check both uppercase and lowercase properties
-    const isStatusPending = (tenant) => {
-      if (!tenant) return false;
-      const status = (tenant.status || tenant.Status || '').toLowerCase();
-      return status === 'pending' || status === 'pending approval' || status === '';
-    }
-    
-    const isStatusApproved = (tenant) => {
-      if (!tenant) return false;
-      const status = (tenant.status || tenant.Status || '').toLowerCase();
-      return status === 'active' || status === 'approved';
-    }
-    
-    const isStatusRejected = (tenant) => {
-      if (!tenant) return false;
-      const status = (tenant.status || tenant.Status || '').toLowerCase();
-      return status === 'rejected' || status === 'declined';
-    }
-    
-    // Filtered tenants based on status - FIXED with array checks
-    const filteredTenants = computed(() => {
-      // Ensure we always work with arrays
-      const allTenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      
-      if (!statusFilter.value) {
-        return allTenantsArray; // Show all tenants when "View All" is selected
-      }
-      
-      switch (statusFilter.value.toLowerCase()) {
-        case 'pending':
-          return allTenantsArray.filter(tenant => isStatusPending(tenant));
-        case 'approved':
-          return allTenantsArray.filter(tenant => isStatusApproved(tenant));
-        case 'rejected':
-          return allTenantsArray.filter(tenant => isStatusRejected(tenant));
-        default:
-          return allTenantsArray;
-      }
-    })
+    // ==================== PAGINATION ====================
     
     // Paginated tenants - FIXED with array checks
     const paginatedTenants = computed(() => {
       const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      const start = (currentPage.value - 1) * itemsPerPage.value
-      const end = start + itemsPerPage.value
-      return filtered.slice(start, end)
-    })
+      const start = (currentPage.value - 1) * itemsPerPage.value;
+      const end = start + itemsPerPage.value;
+      return filtered.slice(start, end);
+    });
     
     // Pagination helpers - FIXED with array checks
     const totalPages = computed(() => {
       const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return Math.ceil(filtered.length / itemsPerPage.value) || 1
-    })
+      return Math.ceil(filtered.length / itemsPerPage.value) || 1;
+    });
     
     const paginationStart = computed(() => {
       const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
       return filtered.length === 0 
         ? 0 
-        : (currentPage.value - 1) * itemsPerPage.value + 1
-    })
+        : (currentPage.value - 1) * itemsPerPage.value + 1;
+    });
     
     const paginationEnd = computed(() => {
       const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return Math.min(currentPage.value * itemsPerPage.value, filtered.length)
-    })
+      return Math.min(currentPage.value * itemsPerPage.value, filtered.length);
+    });
     
     const displayedPageNumbers = computed(() => {
-      const maxDisplayed = 5
-      const pages = []
+      const maxDisplayed = 5;
+      const pages = [];
       
       if (totalPages.value <= maxDisplayed) {
         for (let i = 1; i <= totalPages.value; i++) {
-          pages.push(i)
+          pages.push(i);
         }
       } else {
-        pages.push(1)
+        pages.push(1);
         
-        let startPage = Math.max(2, currentPage.value - 1)
-        let endPage = Math.min(totalPages.value - 1, currentPage.value + 1)
+        let startPage = Math.max(2, currentPage.value - 1);
+        let endPage = Math.min(totalPages.value - 1, currentPage.value + 1);
         
         if (currentPage.value <= 2) {
-          endPage = 3
+          endPage = 3;
         }
         
         if (currentPage.value >= totalPages.value - 1) {
-          startPage = totalPages.value - 2
+          startPage = totalPages.value - 2;
         }
         
         if (startPage > 2) {
-          pages.push('...')
+          pages.push('...');
         }
         
         for (let i = startPage; i <= endPage; i++) {
-          pages.push(i)
+          pages.push(i);
         }
         
         if (endPage < totalPages.value - 1) {
-          pages.push('...')
+          pages.push('...');
         }
         
         if (totalPages.value > 1) {
-          pages.push(totalPages.value)
+          pages.push(totalPages.value);
         }
       }
       
-      return pages
-    })
+      return pages;
+    });
+    
+    // ==================== HELPER METHODS ====================
     
     // Helper methods for displaying tenant information
     const getTenantName = (tenant) => {
@@ -681,7 +791,7 @@ export default {
       
       // Return ID if available
       return (tenant.id || tenant.ID) ? `User ${tenant.id || tenant.ID}` : 'Unknown Tenant';
-    }
+    };
     
     const getTenantEmail = (tenant) => {
       if (!tenant) return 'No email provided';
@@ -692,7 +802,7 @@ export default {
       if (tenant.EmailAddress) return tenant.EmailAddress;
       
       return 'No email provided';
-    }
+    };
     
     const getTenantInitial = (tenant) => {
       if (!tenant) return 'T';
@@ -708,286 +818,341 @@ export default {
       }
       
       return 'T';
-    }
+    };
     
-    // Methods
     const getStatusBadgeClass = (status) => {
-      const statusLower = status?.toLowerCase() || 'pending'
+      const normalizedStatus = normalizeStatus({ status });
       const classes = {
         'pending': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-        'active': 'bg-green-100 text-green-800 border border-green-200',
         'approved': 'bg-green-100 text-green-800 border border-green-200',
-        'rejected': 'bg-red-100 text-red-800 border border-red-200',
-        'declined': 'bg-red-100 text-red-800 border border-red-200'
-      }
-      return classes[statusLower] || 'bg-gray-100 text-gray-800 border border-gray-200'
-    }
+        'rejected': 'bg-red-100 text-red-800 border border-red-200'
+      };
+      return classes[normalizedStatus] || 'bg-gray-100 text-gray-800 border border-gray-200';
+    };
     
     const formatDate = (dateString) => {
-      if (!dateString) return 'N/A'
+      if (!dateString) return 'N/A';
       try {
-        const date = new Date(dateString)
+        const date = new Date(dateString);
         return date.toLocaleDateString('en-IN', {
           year: 'numeric',
           month: 'short',
           day: 'numeric'
-        })
+        });
       } catch {
-        return 'N/A'
+        return 'N/A';
       }
-    }
+    };
     
     const goToPage = (page) => {
       if (page !== '...') {
-        currentPage.value = page
+        currentPage.value = page;
       }
-    }
+    };
     
-    // Updated filter function to properly apply filters
-    const applyFilters = () => {
-      // Reset to first page when filter changes
-      currentPage.value = 1
+    // ==================== FILTER FUNCTIONS ====================
+    
+    const applyFilters = (newFilter = null) => {
+      if (newFilter !== null) {
+        statusFilter.value = newFilter;
+      }
       
-      // If "View All" is selected, load all tenants
-      if (statusFilter.value === '') {
-        loadAllTenants()
-      }
-    }
+      // Reset to first page when filter changes
+      currentPage.value = 1;
+      
+      console.log(`Applied filter: ${statusFilter.value}`);
+      console.log(`Filtered tenants count: ${filteredTenants.value.length}`);
+    };
     
-    // Handle View Details button click - UPDATED WITH DEBUG
+    // ==================== MODAL HANDLERS ====================
+    
     const handleViewDetails = (tenant) => {
       selectedTenant.value = tenant;
       
       // Add debug logging
       console.log('Opening details for tenant:', tenant);
-      debugTenantDetails(tenant);
+      if (debugMode.value) {
+        debugTenantDetails(tenant);
+      }
       
       showDetailsModal.value = true;
-    }
+    };
     
-    // Handle Approve from Details modal
     const handleApproveFromDetails = () => {
       handleApprove(selectedTenant.value);
       showDetailsModal.value = false;
-    }
+    };
     
-    // Load pending tenants (default view)
-    const loadTenants = async () => {
-      loading.value = true
+    // ==================== DEBUG FUNCTIONS ====================
+    
+    const logAllTenantStatuses = () => {
+      console.log('=== ALL TENANT STATUSES ===');
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      
+      tenantsArray.forEach((tenant, index) => {
+        const rawStatus = tenant.status || tenant.Status || 'undefined';
+        const normalizedStatus = normalizeStatus(tenant);
+        const isPending = isStatusPending(tenant);
+        const isApproved = isStatusApproved(tenant);
+        const isRejected = isStatusRejected(tenant);
+        
+        console.log(`Tenant ${index + 1} (ID: ${tenant.id || tenant.ID || 'unknown'}):`, {
+          name: getTenantName(tenant),
+          rawStatus,
+          normalizedStatus,
+          isPending,
+          isApproved,
+          isRejected
+        });
+      });
+      
+      console.log(`\nSUMMARY:
+        Total: ${tenantsArray.length}
+        Pending: ${pendingCount.value}
+        Approved: ${approvedCount.value}
+        Rejected: ${rejectedCount.value}
+        Sum: ${pendingCount.value + approvedCount.value + rejectedCount.value}`);
+      console.log('==========================');
+    };
+    
+    // ==================== DATA LOADING ====================
+    
+    // ENHANCED: Load all tenants with better error handling and data normalization
+    const loadAllTenants = async () => {
+      loading.value = true;
       
       try {
-        console.log('Loading tenant data...')
+        console.log('🔄 Loading ALL tenant data from multiple endpoints...');
         
-        try {
-          // First try the correct API endpoint
-          const response = await fetch('/api/v1/superadmin/tenants?status=pending', {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            }
-          })
-          
-          if (!response.ok) {
-            throw new Error(`API returned ${response.status}: ${response.statusText}`)
-          }
-          
-          const data = await response.json()
-          console.log('API response:', data)
-          
-          if (data && data.data) {
-            // Ensure data.data is an array
-            const tenantsData = Array.isArray(data.data) ? data.data : [];
-            tenants.value = tenantsData
-            allTenants.value = tenantsData
-            console.log(`Loaded ${tenantsData.length} tenant applications from API`)
-            toast.success(`Loaded ${tenantsData.length} tenant applications`)
-          } else if (Array.isArray(data)) {
-            tenants.value = data
-            allTenants.value = data
-            console.log(`Loaded ${data.length} tenant applications from API`)
-            toast.success(`Loaded ${data.length} tenant applications`)
-          } else {
-            console.warn('API returned unexpected format:', data)
-            // Set empty arrays as fallback
-            tenants.value = []
-            allTenants.value = []
-            toast.error('Could not load tenant data: unexpected API response format')
-          }
-        } catch (apiError) {
-          console.error('Error calling API directly:', apiError)
-          
-          // Try using the service
+        let allTenantsData = [];
+        
+        // Try multiple approaches to get all tenants
+        const endpoints = [
+          '/api/v1/superadmin/tenants',
+          '/api/v1/superadmin/tenants?status=pending',
+          '/api/v1/superadmin/tenants?status=approved', 
+          '/api/v1/superadmin/tenants?status=active',
+          '/api/v1/superadmin/tenants?status=rejected'
+        ];
+        
+        for (const endpoint of endpoints) {
           try {
-            const serviceResponse = await superAdminService.getPendingTenants()
-            console.log('Service response:', serviceResponse)
+            console.log(`🔗 Trying endpoint: ${endpoint}`);
             
-            if (serviceResponse && serviceResponse.success && serviceResponse.data) {
-              // Check different possible structures from the service
-              let tenantsData = []
+            const response = await fetch(endpoint, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              }
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              let tenantData = [];
               
-              if (serviceResponse.data.pending_tenants) {
-                tenantsData = Array.isArray(serviceResponse.data.pending_tenants) ? serviceResponse.data.pending_tenants : [];
-                console.log('Found pending_tenants in service response')
-              } else if (Array.isArray(serviceResponse.data)) {
-                tenantsData = serviceResponse.data
-                console.log('Found array in service response')
-              } else {
-                console.warn('Unexpected service response format:', serviceResponse)
-                tenantsData = []
+              // Handle different response structures
+              if (data && data.data && Array.isArray(data.data)) {
+                tenantData = data.data;
+              } else if (Array.isArray(data)) {
+                tenantData = data;
+              } else if (data && Array.isArray(data.tenants)) {
+                tenantData = data.tenants;
               }
               
-              tenants.value = tenantsData
-              allTenants.value = tenantsData
-              
-              if (tenantsData.length > 0) {
-                toast.success(`Loaded ${tenantsData.length} tenant applications`)
-              } else {
-                toast.info('No pending tenant applications found')
+              if (tenantData.length > 0) {
+                console.log(`✅ Got ${tenantData.length} tenants from ${endpoint}`);
+                
+                // Merge with existing data, avoiding duplicates
+                tenantData.forEach(tenant => {
+                  const tenantId = tenant.id || tenant.ID;
+                  if (tenantId && !allTenantsData.find(existing => (existing.id || existing.ID) === tenantId)) {
+                    allTenantsData.push(tenant);
+                  }
+                });
               }
             } else {
-              console.warn('Service call failed or returned unexpected format')
-              tenants.value = []
-              allTenants.value = []
-              toast.error('Could not load tenant data from API')
+              console.log(`❌ Endpoint ${endpoint} returned ${response.status}`);
+            }
+          } catch (endpointError) {
+            console.error(`❌ Error with endpoint ${endpoint}:`, endpointError);
+          }
+        }
+        
+        // Fallback to service methods if direct API calls fail
+        if (allTenantsData.length === 0) {
+          console.log('🔧 Trying service methods as fallback...');
+          
+          try {
+            const serviceResponse = await superAdminService.getAllTenants();
+            
+            if (serviceResponse && serviceResponse.success && serviceResponse.data) {
+              if (Array.isArray(serviceResponse.data)) {
+                allTenantsData = serviceResponse.data;
+                console.log(`✅ Loaded ${allTenantsData.length} tenants from service`);
+              }
+            } else {
+              // Try pending tenants as last resort
+              const pendingResponse = await superAdminService.getPendingTenants();
+              if (pendingResponse && pendingResponse.success && pendingResponse.data) {
+                if (Array.isArray(pendingResponse.data)) {
+                  allTenantsData = pendingResponse.data;
+                  console.log(`⚠️ Loaded ${allTenantsData.length} pending tenants only`);
+                }
+              }
             }
           } catch (serviceError) {
-            console.error('Error calling service:', serviceError)
-            tenants.value = []
-            allTenants.value = []
-            toast.error('Could not load tenant data')
+            console.error('❌ Error with service methods:', serviceError);
           }
         }
-      } catch (error) {
-        console.error('Error in loadTenants:', error)
-        tenants.value = []
-        allTenants.value = []
-        toast.error('Error loading tenant data')
-      } finally {
-        loading.value = false
-      }
-    }
-    
-    // Load all tenants (for "View All" option)
-    const loadAllTenants = async () => {
-      loading.value = true
-      
-      try {
-        const response = await superAdminService.getAllTenants()
         
-        if (response && response.success && Array.isArray(response.data)) {
-          allTenants.value = response.data
-          toast.success(`Loaded ${response.data.length} total tenants`)
+        // CRITICAL: Force reactive update
+        allTenants.value = [...allTenantsData]; // Create new array reference
+        tenants.value = [...allTenantsData]; // Create new array reference
+        
+        // Force computed property recalculation
+        await nextTick();
+        
+        console.log(`📊 FINAL RESULT: ${allTenantsData.length} total tenants loaded`);
+        console.log(`📊 STATUS BREAKDOWN:
+          - Pending: ${allTenantsData.filter(t => isStatusPending(t)).length}
+          - Approved: ${allTenantsData.filter(t => isStatusApproved(t)).length}
+          - Rejected: ${allTenantsData.filter(t => isStatusRejected(t)).length}`);
+        
+        if (allTenantsData.length > 0) {
+          toast.success(`Loaded ${allTenantsData.length} total tenants`);
         } else {
-          // Fallback to pending tenants if getAllTenants fails
-          await loadTenants()
+          toast.warning('No tenant data found');
         }
+        
       } catch (error) {
-        console.error('Error loading all tenants:', error)
-        // Fallback to pending tenants if getAllTenants fails
-        await loadTenants()
-        toast.warning('Showing pending tenants only')
+        console.error('❌ Error in loadAllTenants:', error);
+        allTenants.value = [];
+        tenants.value = [];
+        toast.error('Error loading tenant data');
       } finally {
-        loading.value = false
+        loading.value = false;
       }
-    }
+    };
     
-    // Debug methods
+    // Load tenants (for backward compatibility)
+    const loadTenants = async () => {
+      await loadAllTenants();
+    };
+    
+    // ==================== DEBUG METHODS ====================
+    
     const debugTenantData = async () => {
-      apiDebugInfo.value = 'Loading API debug information...'
-      showApiDebugModal.value = true
+      apiDebugInfo.value = 'Loading API debug information...';
+      showApiDebugModal.value = true;
       
       try {
-        const debugInfo = []
-        debugInfo.push('==== TENANT DATA DEBUG ====\n')
+        const debugInfo = [];
+        debugInfo.push('==== TENANT DATA DEBUG ====\n');
         
-        // 1. Test direct API call to verify backend
-        debugInfo.push('Testing direct API call to /api/v1/superadmin/tenants?status=pending...')
-        try {
-          const response = await fetch('/api/v1/superadmin/tenants?status=pending', {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            }
-          })
-          
-          if (!response.ok) {
-            debugInfo.push(`API Error: ${response.status} ${response.statusText}`)
-            const errorText = await response.text()
-            debugInfo.push(`Error details: ${errorText}`)
-          } else {
-            const data = await response.json()
-            debugInfo.push(`API Response Status: ${response.status}`)
-            debugInfo.push(`API Response Data: ${JSON.stringify(data, null, 2)}`)
+        // Test multiple endpoints
+        const endpoints = [
+          '/api/v1/superadmin/tenants',
+          '/api/v1/superadmin/tenants?status=pending',
+          '/api/v1/superadmin/tenants?status=approved',
+          '/api/v1/superadmin/tenants?status=active',
+          '/api/v1/superadmin/tenants?status=rejected'
+        ];
+        
+        for (const endpoint of endpoints) {
+          debugInfo.push(`\nTesting endpoint: ${endpoint}`);
+          try {
+            const response = await fetch(endpoint, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              }
+            });
             
-            // Try to load the data if not already loaded
-            if ((!Array.isArray(allTenants.value) || allTenants.value.length === 0) && data && data.data) {
-              const tenantsData = Array.isArray(data.data) ? data.data : [];
-              tenants.value = tenantsData
-              allTenants.value = tenantsData
-              debugInfo.push(`\nAUTOMATICALLY LOADED ${tenantsData.length} TENANTS FROM API RESPONSE`)
-            } else if ((!Array.isArray(allTenants.value) || allTenants.value.length === 0) && Array.isArray(data)) {
-              tenants.value = data
-              allTenants.value = data
-              debugInfo.push(`\nAUTOMATICALLY LOADED ${data.length} TENANTS FROM API RESPONSE`)
+            debugInfo.push(`Response status: ${response.status} ${response.statusText}`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              let count = 0;
+              
+              if (data && data.data && Array.isArray(data.data)) {
+                count = data.data.length;
+                debugInfo.push(`Data structure: { data: [${count} items] }`);
+                if (count > 0) {
+                  debugInfo.push(`Sample item keys: ${Object.keys(data.data[0]).join(', ')}`);
+                  debugInfo.push(`Sample status values: ${data.data.slice(0, 3).map(t => t.status || t.Status || 'undefined').join(', ')}`);
+                }
+              } else if (Array.isArray(data)) {
+                count = data.length;
+                debugInfo.push(`Data structure: [${count} items]`);
+                if (count > 0) {
+                  debugInfo.push(`Sample item keys: ${Object.keys(data[0]).join(', ')}`);
+                  debugInfo.push(`Sample status values: ${data.slice(0, 3).map(t => t.status || t.Status || 'undefined').join(', ')}`);
+                }
+              } else {
+                debugInfo.push(`Unexpected data structure keys: ${Object.keys(data).join(', ')}`);
+              }
+            } else {
+              const errorText = await response.text();
+              debugInfo.push(`Error: ${errorText}`);
             }
-          }
-        } catch (error) {
-          debugInfo.push(`API Error: ${error.message}`)
-        }
-        
-        // 2. Check service methods
-        debugInfo.push('\n==== SERVICE METHODS DEBUG ====\n')
-        debugInfo.push(`superAdminService.baseURL: ${superAdminService.baseURL}`)
-        
-        // 3. Display tenant data
-        debugInfo.push('\n==== TENANT DATA ====\n')
-        debugInfo.push(`Total Tenants: ${Array.isArray(allTenants.value) ? allTenants.value.length : 0}`)
-        if (Array.isArray(allTenants.value) && allTenants.value.length > 0) {
-          const firstTenant = allTenants.value[0]
-          debugInfo.push(`First Tenant Data: ${JSON.stringify(firstTenant, null, 2)}`)
-          debugInfo.push(`First Tenant ID: ${firstTenant.id || firstTenant.ID || 'Not found'}`)
-          
-          // List all properties that could be used as ID
-          const potentialIds = ['ID', 'id', 'user_id', 'userId', '_id']
-          for (const idField of potentialIds) {
-            debugInfo.push(`${idField}: ${firstTenant[idField]}`)
+          } catch (error) {
+            debugInfo.push(`Error: ${error.message}`);
           }
         }
         
-        apiDebugInfo.value = debugInfo.join('\n')
+        // Current component state
+        debugInfo.push('\n==== COMPONENT STATE ====');
+        debugInfo.push(`Total tenants loaded: ${allTenants.value.length}`);
+        debugInfo.push(`Pending count: ${pendingCount.value}`);
+        debugInfo.push(`Approved count: ${approvedCount.value}`);
+        debugInfo.push(`Rejected count: ${rejectedCount.value}`);
+        debugInfo.push(`Current filter: ${statusFilter.value}`);
+        debugInfo.push(`Filtered tenants: ${filteredTenants.value.length}`);
+        
+        // Sample tenant status analysis
+        if (allTenants.value.length > 0) {
+          debugInfo.push('\n==== SAMPLE TENANT STATUS ANALYSIS ====');
+          allTenants.value.slice(0, 5).forEach((tenant, i) => {
+            const rawStatus = tenant.status || tenant.Status || 'undefined';
+            const normalized = normalizeStatus(tenant);
+            debugInfo.push(`Tenant ${i + 1}: raw="${rawStatus}" -> normalized="${normalized}"`);
+          });
+        }
+        
+        apiDebugInfo.value = debugInfo.join('\n');
       } catch (error) {
-        apiDebugInfo.value = `Error running debug: ${error.message}`
+        apiDebugInfo.value = `Error running debug: ${error.message}`;
       }
-    }
+    };
     
     // Direct API test for approval
     const testApprovalApi = async (tenant) => {
       if (!tenant) {
-        toast.error('No tenant selected for testing')
-        return
+        toast.error('No tenant selected for testing');
+        return;
       }
       
-      apiDebugInfo.value = `Testing API call for tenant ${tenant.id || tenant.ID || 'unknown'}...`
-      showApiDebugModal.value = true
+      apiDebugInfo.value = `Testing API call for tenant ${tenant.id || tenant.ID || 'unknown'}...`;
+      showApiDebugModal.value = true;
       
       try {
-        const debugInfo = []
-        debugInfo.push(`Testing API approval for tenant ${JSON.stringify(tenant, null, 2)}\n`)
+        const debugInfo = [];
+        debugInfo.push(`Testing API approval for tenant:\n${JSON.stringify(tenant, null, 2)}\n`);
         
         // Extract tenant ID with fallbacks
-        const tenantId = tenant.id || tenant.ID || tenant.user_id || tenant.userId
+        const tenantId = tenant.id || tenant.ID || tenant.user_id || tenant.userId;
         
         if (!tenantId) {
-          debugInfo.push('ERROR: No tenant ID found in tenant object!')
-          apiDebugInfo.value = debugInfo.join('\n')
-          return
+          debugInfo.push('ERROR: No tenant ID found in tenant object!');
+          apiDebugInfo.value = debugInfo.join('\n');
+          return;
         }
         
-        debugInfo.push(`Using tenant ID: ${tenantId}`)
+        debugInfo.push(`Using tenant ID: ${tenantId}`);
         
         // Test direct API call
-        debugInfo.push('\nTesting direct PATCH call to approve tenant...')
+        debugInfo.push('\nTesting direct PATCH call to approve tenant...');
         try {
-          const token = localStorage.getItem('auth_token')
-          debugInfo.push(`Auth token available: ${!!token}`)
+          const token = localStorage.getItem('auth_token');
+          debugInfo.push(`Auth token available: ${!!token}`);
           
           const response = await fetch(`/api/v1/superadmin/tenants/${tenantId}/approval`, {
             method: 'PATCH',
@@ -998,40 +1163,40 @@ export default {
             body: JSON.stringify({
               status: 'APPROVED'
             })
-          })
+          });
           
-          debugInfo.push(`API Response Status: ${response.status} ${response.statusText}`)
+          debugInfo.push(`API Response Status: ${response.status} ${response.statusText}`);
           
           if (response.ok) {
-            const responseData = await response.json()
-            debugInfo.push(`API Response Data: ${JSON.stringify(responseData, null, 2)}`)
-            debugInfo.push('\nSUCCESS: Direct API call worked! The backend endpoint is functional.')
-            toast.success('Test API call successful!')
+            const responseData = await response.json();
+            debugInfo.push(`API Response Data: ${JSON.stringify(responseData, null, 2)}`);
+            debugInfo.push('\nSUCCESS: Direct API call worked! The backend endpoint is functional.');
+            toast.success('Test API call successful!');
             
             // Refresh the tenant list to show the updated status
-            await loadTenants()
+            await loadAllTenants();
           } else {
-            const errorText = await response.text()
-            debugInfo.push(`Error response: ${errorText}`)
+            const errorText = await response.text();
+            debugInfo.push(`Error response: ${errorText}`);
           }
         } catch (error) {
-          debugInfo.push(`API Error: ${error.message}`)
+          debugInfo.push(`API Error: ${error.message}`);
         }
         
-        apiDebugInfo.value = debugInfo.join('\n')
+        apiDebugInfo.value = debugInfo.join('\n');
       } catch (error) {
-        apiDebugInfo.value = `Error running API test: ${error.message}`
+        apiDebugInfo.value = `Error running API test: ${error.message}`;
       }
-    }
+    };
     
-    // Updated to use id instead of ID - FIXED ENDPOINT
+    // ==================== APPROVAL/REJECTION HANDLERS ====================
+    
     const handleApprove = async (tenant) => {
       if (!tenant) {
         toast.error('Cannot approve: Missing tenant');
         return;
       }
       
-      // Use lowercase id first, fall back to uppercase ID
       const tenantId = tenant.id || tenant.ID;
       
       if (!tenantId) {
@@ -1040,10 +1205,9 @@ export default {
       }
       
       isProcessing.value = true;
-      console.log(`Attempting to approve tenant ${tenantId} with PATCH to /api/v1/superadmin/tenants/${tenantId}/approval`);
+      console.log(`🔄 Attempting to approve tenant ${tenantId}`);
       
       try {
-        // Make a direct API call to the approval endpoint - RESTORED CORRECT ENDPOINT
         const response = await fetch(`/api/v1/superadmin/tenants/${tenantId}/approval`, {
           method: 'PATCH',
           headers: {
@@ -1057,34 +1221,32 @@ export default {
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Approval successful:', data);
+          console.log('✅ Approval successful:', data);
           toast.success(`Tenant ${getTenantName(tenant)} approved successfully`);
           
           // Refresh the tenant list
-          loadTenants();
+          await loadAllTenants();
           emit('updated');
         } else {
-          console.error('Approval failed with status:', response.status);
+          console.error('❌ Approval failed with status:', response.status);
           const errorData = await response.text();
           console.error('Error response:', errorData);
           toast.error(`Failed to approve tenant: ${response.statusText}`);
         }
       } catch (error) {
-        console.error('Error in approval process:', error);
+        console.error('❌ Error in approval process:', error);
         toast.error('Error approving tenant: ' + (error.message || 'Unknown error'));
       } finally {
         isProcessing.value = false;
       }
     };
     
-    // Updated to use id instead of ID
     const handleRejectClick = (tenant) => {
       if (!tenant) {
         toast.error('Cannot reject: Missing tenant');
         return;
       }
       
-      // Use lowercase id first, fall back to uppercase ID
       const tenantId = tenant.id || tenant.ID;
       
       if (!tenantId) {
@@ -1097,7 +1259,6 @@ export default {
       showRejectModal.value = true;
     };
     
-    // Updated to use id instead of ID - FIXED ENDPOINT
     const confirmReject = async () => {
       const tenant = selectedTenant.value;
       
@@ -1107,7 +1268,6 @@ export default {
         return;
       }
       
-      // Use lowercase id first, fall back to uppercase ID
       const tenantId = tenant.id || tenant.ID;
       
       if (!tenantId) {
@@ -1124,7 +1284,6 @@ export default {
       isProcessing.value = true;
       
       try {
-        // Make a direct API call to the rejection endpoint - RESTORED CORRECT ENDPOINT
         const response = await fetch(`/api/v1/superadmin/tenants/${tenantId}/approval`, {
           method: 'PATCH',
           headers: {
@@ -1139,31 +1298,54 @@ export default {
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Rejection successful:', data);
+          console.log('✅ Rejection successful:', data);
           toast.success(`Tenant ${getTenantName(tenant)} rejected successfully`);
           showRejectModal.value = false;
           
           // Refresh the tenant list
-          loadTenants();
+          await loadAllTenants();
           emit('updated');
         } else {
-          console.error('Rejection failed with status:', response.status);
+          console.error('❌ Rejection failed with status:', response.status);
           const errorData = await response.text();
           console.error('Error response:', errorData);
           toast.error(`Failed to reject tenant: ${response.statusText}`);
         }
       } catch (error) {
-        console.error('Error in rejection process:', error);
+        console.error('❌ Error in rejection process:', error);
         toast.error('Error rejecting tenant: ' + (error.message || 'Unknown error'));
       } finally {
         isProcessing.value = false;
       }
     };
     
+    // ==================== WATCHERS ====================
+    
+    // Watch for status filter changes
+    watch(statusFilter, (newValue, oldValue) => {
+      if (newValue !== oldValue) {
+        console.log(`Status filter changed from ${oldValue} to ${newValue}`);
+        currentPage.value = 1; // Reset pagination
+      }
+    });
+    
+    // Watch allTenants for changes and log
+    watch(allTenants, (newTenants) => {
+      console.log(`🔄 allTenants changed: ${newTenants.length} tenants`);
+      if (debugMode.value && newTenants.length > 0) {
+        nextTick(() => {
+          logAllTenantStatuses();
+        });
+      }
+    }, { deep: true });
+    
+    // ==================== LIFECYCLE ====================
+    
     // Load data on mount
     onMounted(() => {
-      loadTenants()
-    })
+      console.log('🚀 Component mounted, loading tenants...');
+      loadAllTenants();
+    });
     
     return {
       loading,
@@ -1204,17 +1386,19 @@ export default {
       showDetailsModal,
       handleViewDetails,
       handleApproveFromDetails,
-      // NEW TEMPLE DETAILS HELPERS
+      // Temple details helpers
       getTempleDetail,
       getTempleDescription,
       debugTenantDetails,
-      // Debug & Mock data
+      // Debug & Status helpers
       debugMode,
       debugTenantData,
+      logAllTenantStatuses,
+      normalizeStatus,
       testApprovalApi,
       showApiDebugModal,
       apiDebugInfo
-    }
+    };
   }
-}
+};
 </script>

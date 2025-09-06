@@ -662,34 +662,69 @@ const testTempleCountsApi = async () => {
 }
 
 // UPDATED: Better date handling and API field mapping
+
 const loadPendingEntities = async () => {
   try {
     isLoading.value = true
     console.log('Loading pending entities...')
 
-    // Use superAdminService instead of apiClient
     const response = await superAdminService.getPendingEntities().catch(err => {
       console.error('Error fetching pending entities:', err)
       return null
     })
 
     if (response && response.success && response.data) {
-      // Log the response to see what we're working with
       console.log('Pending entities response:', response.data)
 
-      // Map API response to our applications array
       templeApplications.value = response.data.map(temple => {
-        // Convert Status field (uppercase) to status field (lowercase)
         const status = (temple.Status || temple.status || 'pending').toLowerCase()
 
-        // Better date handling - try multiple possible field names
         const submittedDate = temple.CreatedAt ||
                              temple.createdAt ||
                              temple.SubmittedAt ||
                              temple.submittedAt ||
                              temple.created_at ||
                              temple.submitted_at ||
-                             new Date().toISOString() // fallback to current date
+                             new Date().toISOString()
+
+        // FIXED: Better address construction logic
+        let fullAddress = ''
+        
+        // Try to get the complete address from various possible fields
+        if (temple.Address && temple.Address.trim()) {
+          fullAddress = temple.Address.trim()
+        } else if (temple.address && temple.address.trim()) {
+          fullAddress = temple.address.trim()
+        } else {
+          // Construct address from parts if complete address not available
+          const addressParts = []
+          
+          // Street address
+          const streetAddress = temple.StreetAddress || temple.streetAddress || temple.street_address
+          if (streetAddress && streetAddress.trim()) {
+            addressParts.push(streetAddress.trim())
+          }
+          
+          // City
+          const city = temple.City || temple.city
+          if (city && city.trim()) {
+            addressParts.push(city.trim())
+          }
+          
+          // State
+          const state = temple.State || temple.state
+          if (state && state.trim()) {
+            addressParts.push(state.trim())
+          }
+          
+          // Pincode/Postal code
+          const pincode = temple.Pincode || temple.pincode || temple.PostalCode || temple.postalCode || temple.zipcode
+          if (pincode && pincode.toString().trim()) {
+            addressParts.push(pincode.toString().trim())
+          }
+          
+          fullAddress = addressParts.filter(part => part && part.length > 0).join(', ')
+        }
 
         return {
           id: temple.ID || temple.id,
@@ -699,10 +734,9 @@ const loadPendingEntities = async () => {
           phone: temple.Phone || temple.phone,
           city: temple.City || temple.city,
           state: temple.State || temple.state,
-          address: temple.Address || temple.address ||
-                  `${temple.StreetAddress || temple.streetAddress || ''}, ${temple.City || temple.city || ''}, ${temple.State || temple.state || ''}`,
+          address: fullAddress || 'Address not provided', // Use the constructed address
           status: status,
-          submittedAt: submittedDate, // Use the better date handling
+          submittedAt: submittedDate,
           approvedAt: temple.ApprovedAt || temple.approvedAt,
           rejectedAt: temple.RejectedAt || temple.rejectedAt,
           notes: temple.Notes || temple.notes,
@@ -713,14 +747,12 @@ const loadPendingEntities = async () => {
 
       toast.success(`Loaded ${templeApplications.value.length} temple applications`)
     } else {
-      // If API fails, use mock data in development mode
       console.log('DEVELOPMENT: Using mock temple applications')
       templeApplications.value = [...MOCK_TEMPLE_APPLICATIONS]
     }
   } catch (error) {
     console.error('Failed to load pending temples:', error)
 
-    // In development, use mock data instead of showing error
     if (import.meta.env.DEV) {
       console.log('DEVELOPMENT: Using mock temple applications')
       templeApplications.value = [...MOCK_TEMPLE_APPLICATIONS]
@@ -731,7 +763,6 @@ const loadPendingEntities = async () => {
     isLoading.value = false
   }
 }
-
 const loadRecentActivities = async () => {
   try {
     isLoadingActivities.value = true
