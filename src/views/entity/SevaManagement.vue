@@ -1,9 +1,3 @@
-<!-- 
-  Key changes to the SevaManagement.vue file to display data from seva_bookings table:
-  1. Fixed field names to match case-sensitive API response (ID, SevaID, BookingTime)
-  2. Updated getters to handle both Pascal case and lowercase field names
-  3. Removed amount column as requested
--->
 
 <template>
   <div class="min-h-screen bg-gray-50/90">
@@ -18,6 +12,28 @@
             </p>
           </div>
           <div class="flex gap-3">
+            <!-- View Toggle Buttons -->
+            <div class="flex bg-gray-100 rounded-lg p-1">
+              <button
+                @click="currentView = 'bookings'"
+                :class="currentView === 'bookings' 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200"
+              >
+                Bookings
+              </button>
+              <button
+                @click="currentView = 'sevas'"
+                :class="currentView === 'sevas' 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-gray-500 hover:text-gray-700'"
+                class="px-4 py-2 text-sm font-medium rounded-md transition-all duration-200"
+              >
+                View Sevas
+              </button>
+            </div>
+            
             <button
               @click="showCreateForm = true"
               class="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
@@ -32,8 +48,9 @@
       </div>
     </div>
 
-    <!-- Stats Overview -->
-    <div class="px-6 py-6">
+    <!-- Bookings View (Default) -->
+    <div v-if="currentView === 'bookings'" class="px-6 py-6">
+      <!-- Stats Overview -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
           <div class="flex items-center">
@@ -180,148 +197,334 @@
         </svg>
       </div>
 
-      <!-- Seva List Component -->
+      <!-- Seva Bookings List -->
       <div v-else class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
-        <div class="bg-white rounded-xl shadow-md overflow-hidden">
-          <!-- Table Section -->
-          <div v-if="filteredSevas.length > 0" class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Booking Details
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Devotee
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date & Time
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
-                <tr
-                  v-for="booking in filteredSevas"
-                  :key="getId(booking)"
-                  class="hover:bg-gray-50 transition-colors duration-150"
-                >
-                  <!-- Booking Details Column -->
-                  <td class="px-6 py-4">
-                    <div class="text-sm font-medium text-gray-900">
-                      {{ getSevaName(booking) }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ getSevaType(booking) }}
-                    </div>
-                    <div class="text-xs text-gray-400 mt-1" v-if="getSpecialRequests(booking)">
-                      {{ getSpecialRequests(booking) }}
-                    </div>
-                  </td>
+        <div v-if="filteredSevas.length > 0" class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Booking Details
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Devotee
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date & Time
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr
+                v-for="booking in filteredSevas"
+                :key="getId(booking)"
+                class="hover:bg-gray-50 transition-colors duration-150"
+              >
+                <!-- Booking Details Column -->
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900">
+                    {{ getSevaName(booking) }}
+                  </div>
+                  <div class="text-sm text-gray-500">
+                    {{ getSevaType(booking) }}
+                  </div>
+                  <div class="text-xs text-gray-400 mt-1" v-if="getSpecialRequests(booking)">
+                    {{ getSpecialRequests(booking) }}
+                  </div>
+                </td>
 
-                  <!-- Devotee Column -->
-                  <td class="px-6 py-4">
-                    <div class="text-sm font-medium text-gray-900">{{ getDevoteeName(booking) }}</div>
-                    <div class="text-xs text-gray-500">{{ getDevoteePhone(booking) }}</div>
-                  </td>
+                <!-- Devotee Column -->
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900">{{ getDevoteeName(booking) }}</div>
+                  <div class="text-xs text-gray-500">{{ getDevoteePhone(booking) }}</div>
+                </td>
 
-                  <!-- Date & Time Column -->
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">{{ formatBookingDate(booking) }}</div>
-                    <div class="text-sm text-gray-500">
-                      {{ formatBookingTime(booking) }}
-                    </div>
-                  </td>
+                <!-- Date & Time Column -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ formatBookingDate(booking) }}</div>
+                  <div class="text-sm text-gray-500">
+                    {{ formatBookingTime(booking) }}
+                  </div>
+                </td>
 
-                  <!-- Status Column -->
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span 
-                      :class="getStatusClass(getStatus(booking))" 
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                <!-- Status Column -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span 
+                    :class="getStatusClass(getStatus(booking))" 
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  >
+                    <span :class="getStatusDotClass(getStatus(booking))" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
+                    {{ (getStatus(booking)).charAt(0).toUpperCase() + (getStatus(booking)).slice(1) }}
+                  </span>
+                </td>
+
+                <!-- Actions Column -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div class="flex items-center gap-2">
+                    <!-- View Button -->
+                    <button
+                      @click="viewSevaDetails(booking)"
+                      class="text-indigo-600 hover:text-indigo-900 transition-colors duration-150"
+                      title="View Details"
                     >
-                      <span :class="getStatusDotClass(getStatus(booking))" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
-                      {{ (getStatus(booking)).charAt(0).toUpperCase() + (getStatus(booking)).slice(1) }}
-                    </span>
-                  </td>
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                    </button>
 
-                  <!-- Actions Column -->
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div class="flex items-center gap-2">
-                      <!-- View Button -->
+                    <!-- Approve/Reject for Pending -->
+                    <template v-if="getStatus(booking) === 'pending'">
                       <button
-                        @click="viewSevaDetails(booking)"
-                        class="text-indigo-600 hover:text-indigo-900 transition-colors duration-150"
-                        title="View Details"
+                        @click="approveSeva(booking)"
+                        class="text-green-600 hover:text-green-900 transition-colors duration-150"
+                        title="Approve"
                       >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
                       </button>
-
-                      <!-- Approve/Reject for Pending -->
-                      <template v-if="getStatus(booking) === 'pending'">
-                        <button
-                          @click="approveSeva(booking)"
-                          class="text-green-600 hover:text-green-900 transition-colors duration-150"
-                          title="Approve"
-                        >
-                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                          </svg>
-                        </button>
-                        <button
-                          @click="rejectSeva(booking)"
-                          class="text-red-600 hover:text-red-900 transition-colors duration-150"
-                          title="Reject"
-                        >
-                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                          </svg>
-                        </button>
-                      </template>
-
-                      <!-- Complete Button for Approved -->
-                      <!-- <button
-                        v-if="getStatus(booking) === 'approved'"
-                        @click="completeSeva(booking)"
-                        class="text-blue-600 hover:text-blue-900 transition-colors duration-150"
-                        title="Mark Complete"
+                      <button
+                        @click="rejectSeva(booking)"
+                        class="text-red-600 hover:text-red-900 transition-colors duration-150"
+                        title="Reject"
                       >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
-                      </button> -->
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                      </button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-          <!-- Empty State -->
-          <div v-if="filteredSevas.length === 0" class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-            </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
-            <p class="mt-1 text-sm text-gray-500">Get started by creating a new seva.</p>
-            <div class="mt-6">
-              <button
-                @click="showCreateForm = true"
-                class="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
-              >
-                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                Add New Seva
-              </button>
+        <!-- Empty State -->
+        <div v-if="filteredSevas.length === 0" class="text-center py-12">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
+          <p class="mt-1 text-sm text-gray-500">Get started by creating a new seva.</p>
+          <div class="mt-6">
+            <button
+              @click="showCreateForm = true"
+              class="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
+            >
+              <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Add New Seva
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sevas Catalog View -->
+    <div v-if="currentView === 'sevas'" class="px-6 py-6">
+      <!-- Sevas Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+          <div class="flex items-center">
+            <div class="p-3 bg-purple-100 rounded-lg">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-5a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V6z" />
+              </svg>
             </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">Total Sevas</p>
+              <p class="text-2xl font-bold text-gray-900">{{ sevaCatalog.length }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+          <div class="flex items-center">
+            <div class="p-3 bg-green-100 rounded-lg">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">Active Sevas</p>
+              <p class="text-2xl font-bold text-gray-900">{{ sevaCatalog.filter(s => s.is_active || s.status === 'active').length }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+          <div class="flex items-center">
+            <div class="p-3 bg-blue-100 rounded-lg">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">Daily Sevas</p>
+              <p class="text-2xl font-bold text-gray-900">{{ sevaCatalog.filter(s => (s.seva_type || s.type) === 'daily').length }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+          <div class="flex items-center">
+            <div class="p-3 bg-yellow-100 rounded-lg">
+              <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-500">Special Sevas</p>
+              <p class="text-2xl font-bold text-gray-900">{{ sevaCatalog.filter(s => (s.seva_type || s.type) === 'special').length }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sevas Filters -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6 hover:shadow-md transition-all duration-200">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Search Sevas</label>
+            <div class="relative">
+              <input v-model="sevaSearchFilter" type="text" placeholder="Search by name or description..." class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200" />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Seva Type</label>
+            <select v-model="sevaTypeFilter" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+              <option value="">All Types</option>
+              <option value="daily">Daily</option>
+              <option value="special">Special</option>
+              <option value="festival">Festival</option>
+              <option value="personal">Personal</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select v-model="sevaStatusFilter" class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-between items-center mt-4">
+          <div class="text-sm text-gray-500">Showing {{ filteredSevaCatalog.length }} of {{ sevaCatalog.length }} sevas</div>
+          <button @click="clearSevaFilters" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors duration-200">Clear Filters</button>
+        </div>
+      </div>
+
+      <!-- Loading indicator for sevas -->
+      <div v-if="loadingSevaCatalog" class="flex justify-center items-center py-12">
+        <svg class="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+
+      <!-- Sevas Catalog List -->
+      <div v-else class="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200">
+        <div v-if="filteredSevaCatalog.length > 0" class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seva Details</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type & Price</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="seva in filteredSevaCatalog" :key="seva.id || seva.ID" class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium text-gray-900">{{ seva.name || seva.Name }}</div>
+                  <div class="text-sm text-gray-500 mt-1">{{ seva.description || seva.Description || 'No description' }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm text-gray-900">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {{ (seva.seva_type || seva.type || 'Unknown').charAt(0).toUpperCase() + (seva.seva_type || seva.type || 'Unknown').slice(1) }}
+                    </span>
+                  </div>
+                  <div class="text-sm text-gray-500 mt-1">₹{{ seva.price || '0' }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ formatDate(seva.date) }}</div>
+                  <div class="text-sm text-gray-500">{{ seva.start_time && seva.end_time ? `${formatTime(seva.start_time)} - ${formatTime(seva.end_time)}` : 'No time set' }}</div>
+                  <div class="text-xs text-gray-400" v-if="seva.duration">Duration: {{ seva.duration }}min</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="seva.is_active || seva.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    <span :class="seva.is_active || seva.status === 'active' ? 'bg-green-400' : 'bg-red-400'" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
+                    {{ seva.is_active || seva.status === 'active' ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div class="flex items-center gap-2">
+                    <button @click="editSeva(seva)" class="text-blue-600 hover:text-blue-900 transition-colors duration-150" title="Edit Seva">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button @click="confirmDeleteSeva(seva)" class="text-red-600 hover:text-red-900 transition-colors duration-150" title="Delete Seva">
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="text-center py-12">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14-5a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V6z"></path>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No sevas found</h3>
+          <p class="mt-1 text-sm text-gray-500">Get started by creating a new seva.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="sevaToDelete" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div class="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div class="p-6">
+          <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 text-center mb-2">Delete Seva</h3>
+          <p class="text-sm text-gray-500 text-center mb-6">
+            Are you sure you want to delete "{{ sevaToDelete.name || sevaToDelete.Name }}"? This action cannot be undone.
+          </p>
+          <div class="flex space-x-3">
+            <button @click="sevaToDelete = null" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200">Cancel</button>
+            <button @click="deleteSeva" :disabled="formLoading" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 shadow-sm">
+              <span v-if="formLoading" class="flex items-center justify-center">
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Deleting...
+              </span>
+              <span v-else>Delete</span>
+            </button>
           </div>
         </div>
       </div>
@@ -406,9 +609,9 @@
               <h3 class="text-md font-semibold text-gray-700 mb-3">Scheduling</h3>
               <div class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Date*</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Seva Date*</label>
                   <input
-                    v-model="sevaForm.availability_schedule"
+                    v-model="sevaForm.date"
                     type="date"
                     class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
                   />
@@ -636,11 +839,22 @@ const nextToastId = ref(1)
 const sevaList = ref([])
 const sevaCache = ref({}) // Cache for seva details
 
-// Filters - directly on component
+// View and filter states
+const currentView = ref('bookings') // 'bookings' or 'sevas'
+const loadingSevaCatalog = ref(false)
+const sevaCatalog = ref([])
+const sevaToDelete = ref(null)
+
+// Filters - for bookings
 const searchFilter = ref('')
 const statusFilter = ref('')
 const typeFilter = ref('')
 const dateRangeFilter = ref('')
+
+// Filters - for sevas catalog
+const sevaSearchFilter = ref('')
+const sevaTypeFilter = ref('')
+const sevaStatusFilter = ref('')
 
 // Hardcoded mapping of seva_id to seva name and type
 // This ensures we'll always have something to show, even if API doesn't return it
@@ -815,14 +1029,44 @@ const filteredSevas = computed(() => {
   return filtered
 })
 
-// Form data for create/edit with new fields - UPDATED to use availability_schedule instead of date
+// Computed filtered seva catalog
+const filteredSevaCatalog = computed(() => {
+  let filtered = [...sevaCatalog.value]
+  
+  if (sevaSearchFilter.value) {
+    const search = sevaSearchFilter.value.toLowerCase()
+    filtered = filtered.filter(seva => {
+      const name = (seva.name || seva.Name || '').toLowerCase()
+      const description = (seva.description || seva.Description || '').toLowerCase()
+      return name.includes(search) || description.includes(search)
+    })
+  }
+  
+  if (sevaTypeFilter.value) {
+    filtered = filtered.filter(seva => {
+      const type = seva.seva_type || seva.type || ''
+      return type.toLowerCase() === sevaTypeFilter.value.toLowerCase()
+    })
+  }
+  
+  if (sevaStatusFilter.value) {
+    filtered = filtered.filter(seva => {
+      const isActive = seva.is_active || seva.status === 'active'
+      return sevaStatusFilter.value === 'active' ? isActive : !isActive
+    })
+  }
+  
+  return filtered
+})
+
+// Form data for create/edit - FIXED to use correct field names
 const sevaForm = ref({
   name: '',
   type: '',
   description: '',
   price: 0,
   duration: 30,
-  availability_schedule: '', // CHANGED from date to availability_schedule
+  date: '', // Changed from availability_schedule to date
   startTime: '',
   endTime: '',
   max_bookings_per_day: 10,
@@ -855,12 +1099,15 @@ const getInitials = (name) => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase()
 }
 
+// FIXED formatDate function to handle empty strings
 const formatDate = (dateString) => {
-  if (!dateString) return 'No Date'
+  if (!dateString || dateString === '') return 'No Date Set'
   
   try {
-    // Check if it's just a date (YYYY-MM-DD) or a full timestamp
     const date = new Date(dateString)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    
     return date.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
@@ -868,7 +1115,7 @@ const formatDate = (dateString) => {
     })
   } catch (error) {
     console.error('Error formatting date:', error, dateString)
-    return dateString
+    return 'Invalid Date'
   }
 }
 
@@ -939,14 +1186,14 @@ const getStatusDotClass = (status) => {
   return classes[status] || 'bg-gray-400'
 }
 
-// API Integration Functions - UPDATED to use sevaService.getEntityBookings
+// API Integration Functions
 const loadSevas = async () => {
   console.log('Loading seva bookings for entity ID:', entityId)
   try {
     loading.value = true
     const result = await sevaService.getEntityBookings(entityId)
 
-    // ✅ Ensure sevaList is always an array
+    // Ensure sevaList is always an array
     const bookings = result?.data
     sevaList.value = Array.isArray(bookings) ? bookings : []
 
@@ -959,6 +1206,28 @@ const loadSevas = async () => {
     showToast('Failed to load seva bookings. Please try again.', 'error')
   } finally {
     loading.value = false
+  }
+}
+
+// Load seva catalog
+const loadSevaCatalog = async () => {
+  console.log('Loading seva catalog')
+  try {
+    loadingSevaCatalog.value = true
+    const result = await sevaService.getSevas({ limit: 1000 })
+    
+    if (result.success) {
+      sevaCatalog.value = result.data || []
+      console.log('Seva catalog loaded:', sevaCatalog.value)
+    } else {
+      console.error('Failed to load seva catalog:', result.error)
+      showToast('Failed to load seva catalog', 'error')
+    }
+  } catch (error) {
+    console.error('Error loading seva catalog:', error)
+    showToast('Failed to load seva catalog. Please try again.', 'error')
+  } finally {
+    loadingSevaCatalog.value = false
   }
 }
 
@@ -1027,29 +1296,65 @@ const completeSeva = async (booking) => {
   }
 }
 
-// Keep the seva creation functionality intact - UPDATED to use availability_schedule
+// CORRECTED Seva management functions
 const editSeva = (seva) => {
   console.log('Editing seva:', seva)
   
-  // Populate the form with the seva data - using availability_schedule
+  // Populate the form with the seva data using correct field names and handle variations
   sevaForm.value = {
-    name: seva.name,
-    type: seva.type,
-    description: seva.description || '',
-    price: seva.price || 0,
-    duration: seva.duration || 30,
-    availability_schedule: seva.availability_schedule || '', // Using consistent field name
-    startTime: seva.startTime || '',
-    endTime: seva.endTime || '',
-    max_bookings_per_day: seva.max_bookings_per_day || 10,
-    is_active: seva.is_active !== undefined ? seva.is_active : true
+    name: seva.name || seva.Name || '',
+    type: seva.seva_type || seva.type || seva.SevaType || '',
+    description: seva.description || seva.Description || '',
+    price: seva.price || seva.Price || 0,
+    duration: seva.duration || seva.Duration || 30,
+    date: seva.date || seva.Date || '', 
+    startTime: seva.start_time || seva.StartTime || '',
+    endTime: seva.end_time || seva.EndTime || '',
+    max_bookings_per_day: seva.max_bookings_per_day || seva.MaxBookingsPerDay || 10,
+    is_active: seva.is_active !== undefined ? seva.is_active : (seva.status === 'active' || true)
   }
   
   // Store the original for updating
   editingSeva.value = seva
 }
 
-// UPDATED saveSeva function with improved validation and error handling
+const confirmDeleteSeva = (seva) => {
+  sevaToDelete.value = seva
+}
+
+// CORRECTED Delete seva function
+const deleteSeva = async () => {
+  if (!sevaToDelete.value) return
+  
+  formLoading.value = true
+  
+  try {
+    const sevaId = sevaToDelete.value.id || sevaToDelete.value.ID
+    console.log('Deleting seva ID:', sevaId)
+    
+    const result = await sevaService.deleteSeva(sevaId)
+    
+    if (result && result.success) {
+      await loadSevaCatalog()
+      showToast(`Seva "${sevaToDelete.value.name || sevaToDelete.value.Name}" deleted successfully`, 'success')
+      sevaToDelete.value = null
+    } else {
+      console.error('Delete failed:', result)
+      showToast(result?.message || result?.error || 'Failed to delete seva', 'error')
+    }
+  } catch (error) {
+    console.error('Error deleting seva:', error)
+    if (error?.response) {
+      showToast(`Error (${error.response.status}): ${error.response.data?.message || 'Failed to delete seva'}`, 'error')
+    } else {
+      showToast('Failed to delete seva. Please try again.', 'error')
+    }
+  } finally {
+    formLoading.value = false
+  }
+}
+
+// IMPROVED saveSeva function with proper payload handling
 const saveSeva = async () => {
   // Validate form
   if (!sevaForm.value.name || !sevaForm.value.type || !sevaForm.value.description) {
@@ -1057,8 +1362,8 @@ const saveSeva = async () => {
     return
   }
   
-  // Validate entity ID
-  if (!entityId) {
+  // Validate entity ID for new seva creation
+  if (!editingSeva.value && !entityId) {
     showToast('Missing entity ID. Please try again.', 'error')
     return
   }
@@ -1066,98 +1371,103 @@ const saveSeva = async () => {
   formLoading.value = true
   
   try {
-    // Check if we have any existing sevas to inspect
-    console.log("🔍 Checking for existing sevas:", sevaList.value.length > 0 ? "Found some" : "None available")
+    // Build base payload
+    const payload = {
+      name: sevaForm.value.name.trim(),
+      seva_type: sevaForm.value.type,
+      description: sevaForm.value.description.trim(),
+      price: parseFloat(sevaForm.value.price) || 0,
+      duration: parseInt(sevaForm.value.duration) || 30,
+      max_bookings_per_day: parseInt(sevaForm.value.max_bookings_per_day) || 10,
+      status: "upcoming", // FIXED: Changed from "active" to "upcoming"
+      is_active: true
+    }
     
-    // Include all scheduling fields in the seva_catalog structure
-   const payload = {
-  entity_id: parseInt(entityId),
-  name: sevaForm.value.name,
-  seva_type: sevaForm.value.type,
-  description: sevaForm.value.description,
-  price: parseFloat(sevaForm.value.price),
-  duration: parseInt(sevaForm.value.duration),
-  availability_schedule: sevaForm.value.availability_schedule,
-  start_time: sevaForm.value.startTime,
-  end_time: sevaForm.value.endTime,
-  max_bookings_per_day: parseInt(sevaForm.value.max_bookings_per_day),
-  status: "active",
-  is_active: true
-}
+    // Add optional fields only if they have values
+    if (sevaForm.value.date && sevaForm.value.date.trim()) {
+      payload.date = sevaForm.value.date
+    }
+    if (sevaForm.value.startTime && sevaForm.value.startTime.trim()) {
+      payload.start_time = sevaForm.value.startTime
+    }
+    if (sevaForm.value.endTime && sevaForm.value.endTime.trim()) {
+      payload.end_time = sevaForm.value.endTime
+    }
     
-    console.log("🔍 COMPLETE PAYLOAD WITH SCHEDULING:", payload)
+    console.log("Base payload:", payload)
     
     if (editingSeva.value) {
-      console.log("Updating seva ID:", editingSeva.value.id)
+      // UPDATE OPERATION
+      const sevaId = editingSeva.value.id || editingSeva.value.ID
+      console.log("Updating seva ID:", sevaId)
       
-      const result = await sevaService.updateSeva(editingSeva.value.id, payload)
-      if (result.success) {
-        await loadSevas()
+      // For updates, only send fields that actually have values
+      const updatePayload = Object.fromEntries(
+        Object.entries(payload).filter(([key, value]) => {
+          return value !== null && value !== undefined && value !== ''
+        })
+      )
+      
+      console.log("Final update payload:", updatePayload)
+      
+      const result = await sevaService.updateSeva(sevaId, updatePayload)
+      
+      if (result && result.success) {
+        await Promise.all([loadSevas(), loadSevaCatalog()])
         showToast(`Seva "${sevaForm.value.name}" updated successfully`, 'success')
         closeForm()
       } else {
-        showToast(result.message || 'Failed to update seva', 'error')
+        console.error('Update failed:', result)
+        const errorMsg = result?.message || result?.error || 'Failed to update seva'
+        showToast(errorMsg, 'error')
       }
     } else {
-      console.log("🚀 Creating new seva with complete scheduling fields")
+      // CREATE OPERATION
+      console.log("Creating new seva")
       
-      try {
-        console.log("Before sevaService.createSeva call with payload:", payload)
-        const result = await sevaService.createSeva(payload)
-        console.log("After sevaService.createSeva call, result:", result)
+      // Add entity_id only for creation
+      payload.entity_id = parseInt(entityId)
+      console.log("Final create payload:", payload)
+      
+      const result = await sevaService.createSeva(payload)
+      
+      if (result && result.success) {
+        await Promise.all([loadSevas(), loadSevaCatalog()])
+        showToast(`Seva "${sevaForm.value.name}" created successfully`, 'success')
+        closeForm()
+      } else {
+        console.error('Create failed:', result)
         
-        // Detailed inspection of result
-        if (result) {
-          console.log("🔎 Result success:", result.success)
-          console.log("🔎 Result message:", result.message)
-          console.log("🔎 Result error:", result.error)
-          console.log("🔎 Result errors detail:", result.errors)
-          
-          if (result.success) {
-            await loadSevas()
-            showToast(`Seva "${sevaForm.value.name}" created successfully`, 'success')
-            closeForm()
-          } else {
-            // More specific error handling
-            if (result.errors && Object.keys(result.errors).length > 0) {
-              // Show the first validation error
-              const firstErrorField = Object.keys(result.errors)[0]
-              const errorMessage = result.errors[firstErrorField]
-              showToast(`Validation error: ${firstErrorField} - ${errorMessage}`, 'error')
-            } else {
-              showToast(result.message || result.error || 'Failed to create seva', 'error')
-            }
-          }
+        if (result?.errors && Object.keys(result.errors).length > 0) {
+          const firstErrorField = Object.keys(result.errors)[0]
+          const errorMessage = result.errors[firstErrorField]
+          showToast(`Validation error: ${firstErrorField} - ${errorMessage}`, 'error')
         } else {
-          showToast('Unexpected response from server', 'error')
-        }
-      } catch (serviceError) {
-        console.error("❌ SERVICE ERROR:", serviceError)
-        
-        // Try to extract more details
-        if (serviceError.response) {
-          console.error("Response status:", serviceError.response.status)
-          console.error("Response data:", serviceError.response.data)
-          
-          // Try to log the raw response
-          try {
-            console.error("Raw response:", JSON.stringify(serviceError.response))
-          } catch (e) {
-            console.error("Could not stringify response")
-          }
-          
-          showToast(`API Error (${serviceError.response.status}): ${serviceError.response.data?.message || 'Server error'}`, 'error')
-        } else {
-          showToast(`Error: ${serviceError.message}`, 'error')
+          const errorMsg = result?.message || result?.error || 'Failed to create seva'
+          showToast(errorMsg, 'error')
         }
       }
     }
   } catch (error) {
-    console.error('❌ TOP LEVEL ERROR:', error)
-    if (error.response) {
-      console.error('Response data:', error.response.data)
-      console.error('Response status:', error.response.status)
-      showToast(`Error (${error.response.status}): ${error.response.data?.message || 'Failed to save seva'}`, 'error')
+    console.error('Error saving seva:', error)
+    
+    if (error?.response) {
+      const status = error.response.status
+      const data = error.response.data
+      console.error('API Error Response:', data)
+      
+      let errorMessage = `Error (${status})`
+      if (data?.message) {
+        errorMessage += `: ${data.message}`
+      } else if (data?.error) {
+        errorMessage += `: ${data.error}`
+      } else {
+        errorMessage += ': Failed to save seva'
+      }
+      
+      showToast(errorMessage, 'error')
+    } else if (error?.message) {
+      showToast(`Error: ${error.message}`, 'error')
     } else {
       showToast('Failed to save seva. Please try again.', 'error')
     }
@@ -1171,19 +1481,19 @@ const viewSevaDetails = (booking) => {
   selectedSeva.value = booking
 }
 
-// UPDATED to use availability_schedule
+// CORRECTED closeForm function
 const closeForm = () => {
   showCreateForm.value = false
   editingSeva.value = null
   
-  // Reset form with consistent field names
+  // Reset form with correct field names
   sevaForm.value = {
     name: '',
     type: '',
     description: '',
     price: 0,
     duration: 30,
-    availability_schedule: '',
+    date: '',
     startTime: '',
     endTime: '',
     max_bookings_per_day: 10,
@@ -1198,14 +1508,17 @@ const clearFilters = () => {
   dateRangeFilter.value = ''
 }
 
-const exportSevas = () => {
-  showToast('Export feature is not implemented yet', 'info')
+const clearSevaFilters = () => {
+  sevaSearchFilter.value = ''
+  sevaTypeFilter.value = ''
+  sevaStatusFilter.value = ''
 }
 
-// Lifecycle
+// MOUNTED lifecycle hook
 onMounted(() => {
-  console.log('SevaManagement component mounted')
+  console.log('SevaManagement component mounted for entity:', entityId)
   loadSevas()
+  loadSevaCatalog()
 })
 </script>
 

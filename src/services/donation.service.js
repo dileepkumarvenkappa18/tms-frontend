@@ -1,5 +1,6 @@
 // src/services/donation.service.js
 import api from '@/plugins/axios'
+import axios from 'axios'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 
@@ -7,10 +8,20 @@ const { logout } = useAuth()
 const { showToast } = useToast()
 
 export const donationService = {
-  // Create a new donation (initiate payment process)
+  // Create a new donation (initiate payment process) - UPDATED: Entity-based
   async createDonation(donationData) {
     try {
       console.log('Creating donation with data:', donationData)
+      
+      // NEW: Get entity ID using the same resolution logic as events
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      if (!entityId) {
+        throw new Error('No entity ID available for donation creation')
+      }
+      
+      console.log(`Creating donation for entity ID: ${entityId}, tenant ID: ${tenantId}`)
       
       // Map frontend field names to backend expected field names (PascalCase)
       const payload = {
@@ -26,7 +37,19 @@ export const donationService = {
 
       console.log('Sending donation payload:', payload)
 
-      const response = await api.post('/v1/donations', payload)
+      // NEW: Include proper headers with current tenant and entity ID
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+
+      // NEW: Use entity-based URL structure like events
+      const url = `/api/v1/donations?entity_id=${entityId}`
+      const response = await axios.post(url, payload, headers)
 
       console.log('Create donation response:', response.data)
       console.log('Full response structure:', JSON.stringify(response.data, null, 2))
@@ -50,7 +73,7 @@ export const donationService = {
     }
   },
 
-  // Verify payment after successful Razorpay transaction
+  // Verify payment after successful Razorpay transaction - UNCHANGED
   async verifyDonation(paymentData) {
     try {
       console.log('Verifying donation with payment data:', paymentData)
@@ -80,11 +103,30 @@ export const donationService = {
     }
   },
 
-  // Get my donations (user's own donations)
+  // Get my donations (user's own donations) - UPDATED: Entity-based filtering
   async getMyDonations() {
     try {
       console.log('Calling getMyDonations API...')
-      const response = await api.get('/v1/donations/my')
+      
+      // NEW: Get entity ID and include in request
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      console.log(`Fetching my donations for entity ID: ${entityId}, tenant ID: ${tenantId}`)
+      
+      // NEW: Build URL and headers with entity filtering
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      const url = entityId ? `/api/v1/donations/my?entity_id=${entityId}` : '/api/v1/donations/my'
+      const response = await axios.get(url, headers)
+      
       console.log('My donations raw response:', response)
       console.log('My donations response data:', response.data)
 
@@ -119,11 +161,30 @@ export const donationService = {
     }
   },
 
-  // Get recent donations for the current user
+  // Get recent donations for the current user - UPDATED: Entity-based
   async getMyRecentDonations() {
     try {
       console.log('Calling getMyRecentDonations API...')
-      const response = await api.get('/v1/donations/recent')
+      
+      // NEW: Get entity ID and include in request
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      console.log(`Fetching my recent donations for entity ID: ${entityId}, tenant ID: ${tenantId}`)
+      
+      // NEW: Build headers with entity context
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      const url = entityId ? `/api/v1/donations/recent?entity_id=${entityId}` : '/api/v1/donations/recent'
+      const response = await axios.get(url, headers)
+      
       console.log('Recent donations raw response:', response)
       console.log('Recent donations response data:', response.data)
 
@@ -180,10 +241,27 @@ export const donationService = {
     }
   },
 
-  // Get donation dashboard stats for entity admin
+  // Get donation dashboard stats for entity admin - UPDATED: Entity-based
   async getDonationStats() {
     try {
-      const response = await api.get('/v1/donations/dashboard')
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      console.log(`Fetching donation stats for entity ID: ${entityId}, tenant ID: ${tenantId}`)
+      
+      // NEW: Include entity context in headers
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      const url = entityId ? `/api/v1/donations/dashboard?entity_id=${entityId}` : '/api/v1/donations/dashboard'
+      const response = await axios.get(url, headers)
+      
       console.log('Dashboard stats response:', response.data)
       return response.data
     } catch (error) {
@@ -200,21 +278,38 @@ export const donationService = {
     }
   },
 
-  // Get recent donations for dashboard
+  // Get recent donations for dashboard - UPDATED: Entity-based
   async getRecentDonations(limit = 5) {
     try {
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      // NEW: Build entity-aware request
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
       // First try to get recent donations from the specific endpoint
       try {
-        const recentResponse = await this.getMyRecentDonations()
-        return recentResponse.slice(0, limit)
+        const url = entityId ? `/api/v1/donations/recent?entity_id=${entityId}&limit=${limit}` : `/api/v1/donations/recent?limit=${limit}`
+        const recentResponse = await axios.get(url, headers)
+        
+        if (recentResponse.data && recentResponse.data.recent_donations) {
+          return recentResponse.data.recent_donations.slice(0, limit)
+        }
       } catch (recentError) {
         console.warn('Recent donations endpoint failed, falling back to general endpoint:', recentError)
       }
 
       // Fallback to the general donations endpoint with limit
-      const response = await api.get('/v1/donations/', {
-        params: { limit, page: 1 },
-      })
+      const fallbackUrl = entityId ? `/api/v1/donations?entity_id=${entityId}&limit=${limit}&page=1` : `/api/v1/donations?limit=${limit}&page=1`
+      const response = await axios.get(fallbackUrl, headers)
+      
       console.log('Recent donations response:', response.data)
       return response.data?.data || []
     } catch (error) {
@@ -228,12 +323,19 @@ export const donationService = {
     }
   },
 
-  // Get all donations with pagination and filtering (for admin)
+  // Get all donations with pagination and filtering - UPDATED: Entity-based
   async getDonations(filters = {}) {
     try {
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      console.log(`Fetching donations for entity ID: ${entityId}, tenant ID: ${tenantId}`)
+      
       const params = {
         page: filters.page || 1,
         limit: filters.limit || 20,
+        // NEW: Include entity_id in query parameters
+        ...(entityId ? { entity_id: entityId } : {}),
         ...(filters.status && filters.status !== 'all' ? { status: filters.status } : {}),
         ...(filters.type && filters.type !== 'all' ? { type: filters.type } : {}),
         ...(filters.method && filters.method !== 'all' ? { method: filters.method } : {}),
@@ -245,8 +347,18 @@ export const donationService = {
         ...(filters.dateRange && filters.dateRange !== 'all' ? { dateRange: filters.dateRange } : {}),
       }
 
+      // NEW: Include entity headers
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+
       console.log('Fetching donations with params:', params)
-      const response = await api.get('/v1/donations/', { params })
+      const response = await axios.get('/api/v1/donations/', { params, ...headers })
 
       console.log('Get donations response:', response.data)
       return response.data
@@ -267,10 +379,24 @@ export const donationService = {
     }
   },
 
-  // Get donation dashboard data (for admin)
+  // Get donation dashboard data - UPDATED: Entity-based
   async getDashboard() {
     try {
-      const response = await api.get('/v1/donations/dashboard')
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      const url = entityId ? `/api/v1/donations/dashboard?entity_id=${entityId}` : '/api/v1/donations/dashboard'
+      const response = await axios.get(url, headers)
+      
       console.log('Dashboard data response:', response.data)
       return response.data
     } catch (error) {
@@ -287,10 +413,27 @@ export const donationService = {
     }
   },
 
-  // Get top donors
+  // Get top donors - UPDATED: Entity-based
   async getTopDonors(limit = 5) {
     try {
-      const response = await api.get('/v1/donations/top-donors', { params: { limit } })
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      const params = { 
+        limit,
+        ...(entityId ? { entity_id: entityId } : {})
+      }
+      
+      const response = await axios.get('/api/v1/donations/top-donors', { params, ...headers })
       console.log('Top donors response:', response.data)
       return response.data
     } catch (error) {
@@ -304,10 +447,27 @@ export const donationService = {
     }
   },
 
-  // Get donation analytics
+  // Get donation analytics - UPDATED: Entity-based
   async getAnalytics(days = 30) {
     try {
-      const response = await api.get('/v1/donations/analytics', { params: { days } })
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      const params = { 
+        days,
+        ...(entityId ? { entity_id: entityId } : {})
+      }
+      
+      const response = await axios.get('/api/v1/donations/analytics', { params, ...headers })
       console.log('Analytics response:', response.data)
       return response.data
     } catch (error) {
@@ -321,10 +481,25 @@ export const donationService = {
     }
   },
 
-  // Generate donation receipt
+  // Generate donation receipt - UPDATED: Entity-based
   async generateReceipt(donationId) {
     try {
-      const response = await api.get(`/v1/donations/${donationId}/receipt`)
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+      
+      // NEW: Include entity context in URL if needed
+      const url = entityId ? `/api/v1/donations/${donationId}/receipt?entity_id=${entityId}` : `/api/v1/donations/${donationId}/receipt`
+      const response = await axios.get(url, headers)
+      
       console.log('Receipt response:', response.data)
       return response.data
     } catch (error) {
@@ -340,11 +515,16 @@ export const donationService = {
     }
   },
 
-  // Export donations to CSV or other format
+  // Export donations - UPDATED: Entity-based
   async exportDonations(filters = {}, format = 'csv') {
     try {
+      const entityId = this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
       const params = {
         format,
+        // NEW: Include entity_id in export params
+        ...(entityId ? { entity_id: entityId } : {}),
         ...(filters.status && filters.status !== 'all' ? { status: filters.status } : {}),
         ...(filters.type && filters.type !== 'all' ? { type: filters.type } : {}),
         ...(filters.method && filters.method !== 'all' ? { method: filters.method } : {}),
@@ -353,8 +533,17 @@ export const donationService = {
         ...(filters.to ? { to: filters.to } : {}),
       }
 
-      const response = await api.get('/v1/donations/export', {
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': entityId
+        }
+      }
+
+      const response = await axios.get('/api/v1/donations/export', {
         params,
+        ...headers,
         responseType: 'blob',
       })
 
@@ -379,7 +568,70 @@ export const donationService = {
     }
   },
 
-  // Donation types for dropdowns and filters
+  // NEW: Helper method to get current entity ID - SAME LOGIC AS EVENTS
+  getCurrentEntityId() {
+    // Priority 1: Check URL path for entity ID
+    const currentPath = window.location.pathname
+    const entityMatch = currentPath.match(/\/entity\/(\d+)/)
+    if (entityMatch) {
+      const entityId = entityMatch[1]
+      console.log(`Entity ID from URL path: ${entityId}`)
+      return entityId
+    }
+
+    // Priority 2: Check localStorage
+    const storedEntityId = localStorage.getItem('current_entity_id')
+    if (storedEntityId && storedEntityId !== 'null' && storedEntityId !== 'undefined') {
+      console.log(`Entity ID from localStorage: ${storedEntityId}`)
+      return storedEntityId
+    }
+
+    // Priority 3: For role-based fallback, try to get from user info
+    const userInfo = this.getUserInfo()
+    if (userInfo) {
+      switch (userInfo.role) {
+        case 'templeadmin':
+          if (userInfo.entityId) {
+            console.log(`TempleAdmin entity ID: ${userInfo.entityId}`)
+            return userInfo.entityId.toString()
+          }
+          break
+        
+        case 'standarduser':
+        case 'monitoringuser':
+          if (userInfo.assignedTenantId) {
+            console.log(`StandardUser/MonitoringUser assigned tenant ID: ${userInfo.assignedTenantId}`)
+            return userInfo.assignedTenantId.toString()
+          }
+          break
+      }
+    }
+
+    console.warn('Could not resolve entity ID')
+    return null
+  },
+
+  // NEW: Helper method to get user info from localStorage or token - SAME AS EVENTS
+  getUserInfo() {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        // Decode JWT token to get user info
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        return {
+          userId: payload.user_id,
+          role: payload.role || payload.role_name,
+          entityId: payload.entity_id,
+          assignedTenantId: payload.assigned_tenant_id
+        }
+      }
+    } catch (error) {
+      console.warn('Error parsing user info from token:', error)
+    }
+    return null
+  },
+
+  // Donation types for dropdowns and filters - UNCHANGED
   getDonationTypes() {
     return [
       { value: 'general', label: 'General Donation' },

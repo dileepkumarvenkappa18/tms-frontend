@@ -75,7 +75,7 @@ export default [
   {
     path: 'reports/temple-register',
     name: 'SuperadminTempleRegister',
-    component: () => import('@/views/tenant/reports/TempleRegisterReport.vue'),
+    component: () => import('@/views/superadmin/reports/TempleRegisterReport.vue'),
     meta: {
       requiresAuth: true,
       role: 'superadmin',
@@ -85,7 +85,7 @@ export default [
   {
     path: 'reports/temple-activities',
     name: 'SuperadminTempleActivities',
-    component: () => import('@/views/tenant/reports/TempleActivitiesReport.vue'),
+    component: () => import('@/views/superadmin/reports/TempleActivitiesReport.vue'),
     meta: {
       requiresAuth: true,
       role: 'superadmin',
@@ -95,7 +95,7 @@ export default [
   {
     path: 'reports/birthdays',
     name: 'SuperadminBirthdays',
-    component: () => import('@/views/tenant/reports/BirthdaysReport.vue'),
+    component: () => import('@/views/superadmin/reports/BirthdaysReport.vue'),
     meta: {
       requiresAuth: true,
       role: 'superadmin',

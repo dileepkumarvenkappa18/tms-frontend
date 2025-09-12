@@ -105,9 +105,9 @@
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <!-- <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
-              </th> -->
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
@@ -137,7 +137,7 @@
                   {{ formatStatus(booking.status || booking.Status) }}
                 </span>
               </td>
-              <!-- <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button 
                   @click="viewBookingDetails(booking)"
                   class="text-indigo-600 hover:text-indigo-900 mr-3"
@@ -151,7 +151,7 @@
                 >
                   Cancel
                 </button>
-              </td> -->
+              </td>
             </tr>
           </tbody>
         </table>
@@ -164,7 +164,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"/>
       </svg>
       <h3 class="mt-2 text-lg font-medium text-gray-900">No seva bookings found</h3>
-      <p class="mt-1 text-sm text-gray-500">You haven't booked any sevas yet.</p>
+      <p class="mt-1 text-sm text-gray-500">You haven't booked any sevas yet for this temple.</p>
       <div class="mt-6">
         <router-link 
           :to="`/entity/${route.params.id}/devotee/seva-booking`"
@@ -267,7 +267,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSevaStore } from '@/stores/seva'
 import { useToast } from '@/composables/useToast'
@@ -290,6 +290,9 @@ const filters = ref({
 const selectedBooking = ref(null)
 const showBookingDetailsModal = ref(false)
 const showCancelConfirmModal = ref(false)
+
+// Get current entity ID from route
+const currentEntityId = computed(() => route.params.id)
 
 // Format helpers
 const formatDate = (dateTime) => {
@@ -344,12 +347,24 @@ const getStatusClass = (status) => {
   return statusMap[status.toLowerCase()] || 'bg-gray-100 text-gray-800'
 }
 
-// Computed
+// Computed - Filter bookings by current entity
 const filteredBookings = computed(() => {
   let result = sevaStore.recentSevas || []
   
-  // Log the data for debugging
-  console.log('Seva bookings data:', result);
+  console.log('All seva bookings before entity filtering:', result)
+  console.log('Current entity ID:', currentEntityId.value)
+  
+  // First filter by current entity ID
+  result = result.filter(booking => {
+    const bookingEntityId = booking.entity_id || booking.EntityID || booking.seva?.entity_id
+    const currentEntity = parseInt(currentEntityId.value)
+    
+    console.log(`Booking entity ID: ${bookingEntityId}, Current entity: ${currentEntity}`)
+    
+    return parseInt(bookingEntityId) === currentEntity
+  })
+  
+  console.log('Bookings after entity filtering:', result)
   
   // Filter by status
   if (filters.value.status !== 'all') {
@@ -410,10 +425,12 @@ const fetchSevaBookings = async () => {
   error.value = null
   
   try {
-    // The store method now handles both fetching bookings and mapping seva names
-    await sevaStore.fetchRecentSevas()
+    console.log('Fetching seva bookings for entity:', currentEntityId.value)
     
-    console.log("Fetched seva bookings with names:", sevaStore.recentSevas)
+    // Pass entity ID to the store method
+    await sevaStore.fetchRecentSevas(currentEntityId.value)
+    
+    console.log("Fetched seva bookings with entity filtering:", sevaStore.recentSevas)
   } catch (err) {
     console.error('Error fetching seva bookings:', err)
     error.value = err.message || 'Failed to load seva bookings'
@@ -456,6 +473,14 @@ const confirmCancelBooking = async () => {
   }
 }
 
+// Watch for route changes to refetch data
+watch(() => route.params.id, (newEntityId, oldEntityId) => {
+  if (newEntityId && newEntityId !== oldEntityId) {
+    console.log('Entity changed from', oldEntityId, 'to', newEntityId)
+    fetchSevaBookings()
+  }
+})
+
 // Lifecycle hooks
 onMounted(async () => {
   await fetchSevaBookings()
@@ -465,7 +490,8 @@ onMounted(async () => {
     recentSevas: sevaStore.recentSevas,
     sevaCatalog: sevaStore.sevaCatalog,
     loadingRecentSevas: sevaStore.loadingRecentSevas,
-    loadingCatalog: sevaStore.loadingCatalog
+    loadingCatalog: sevaStore.loadingCatalog,
+    currentEntityId: currentEntityId.value
   })
 })
 </script>

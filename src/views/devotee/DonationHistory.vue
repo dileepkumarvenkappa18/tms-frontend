@@ -269,6 +269,9 @@ const donationHistory = ref([])
 const loading = ref(true)
 const submittingDonation = ref(false)
 
+// User context for entity association
+const userContext = ref(null)
+
 // Filters
 const filters = ref({
   dateRange: 'all',
@@ -451,6 +454,29 @@ const parseRazorpayResponse = (response) => {
   return { order_id, razorpay_key, amount }
 }
 
+// FIXED: Get user context with entity/temple ID
+const getUserContext = async () => {
+  try {
+    console.log('Getting user context for entity association...')
+    const context = await donationService.getCurrentUserContext()
+    
+    if (context.success && context.data) {
+      userContext.value = context.data
+      console.log('User context loaded:', {
+        user_id: context.data.id,
+        user_type: context.data.user_type,
+        temple_id: context.data.temple_id,
+        entity_id: context.data.entity_id,
+        temple_name: context.data.temple_name || context.data.entity_name
+      })
+    } else {
+      console.warn('Failed to get user context:', context)
+    }
+  } catch (error) {
+    console.error('Error getting user context:', error)
+  }
+}
+
 // Methods
 const formatDate = (date) => {
   if (!date) return 'N/A'
@@ -505,6 +531,11 @@ const submitDonation = async () => {
       return
     }
 
+    // Ensure we have user context
+    if (!userContext.value) {
+      await getUserContext()
+    }
+
     // Load Razorpay script
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded) {
@@ -512,18 +543,34 @@ const submitDonation = async () => {
       return;
     }
 
-    // Create donation using service layer
-    console.log('Creating donation with data:', {
+    // FIXED: Pass entity/temple ID in donation data
+    const donationData = {
       amount: Number(donationForm.value.amount),
       donationType: donationForm.value.type,
       note: donationForm.value.purpose,
-    })
+    }
 
-    const response = await donationService.createDonation({
-      amount: Number(donationForm.value.amount),
-      donationType: donationForm.value.type,
-      note: donationForm.value.purpose,
-    })
+    // Add entity/temple ID if available from user context
+    if (userContext.value) {
+      // Try different field names for entity ID
+      if (userContext.value.entity_id) {
+        donationData.entityId = userContext.value.entity_id
+        donationData.entity_id = userContext.value.entity_id
+      } else if (userContext.value.temple_id) {
+        donationData.templeId = userContext.value.temple_id
+        donationData.temple_id = userContext.value.temple_id
+        donationData.entityId = userContext.value.temple_id
+        donationData.entity_id = userContext.value.temple_id
+      }
+      
+      console.log('Donation data with entity context:', donationData)
+    } else {
+      console.warn('No user context available - donation may not be associated with correct temple')
+    }
+
+    console.log('Creating donation with data:', donationData)
+
+    const response = await donationService.createDonation(donationData)
 
     // Debug the response structure
     debugDonationResponse(response)
@@ -569,7 +616,7 @@ Please check backend implementation or contact support.`
             razorpay_signature: response.razorpay_signature,
           });
 
-          alert("🎉 Donation successful! Thank you for your generosity.");
+          alert("Donation successful! Thank you for your generosity.");
           showDonationForm.value = false;
           
           // Reset form
@@ -582,13 +629,13 @@ Please check backend implementation or contact support.`
           // Refresh donation history
           await fetchDonationHistory();
         } catch (verifyError) {
-          console.error("❌ Verification failed:", verifyError);
+          console.error("Verification failed:", verifyError);
           alert("Payment verification failed. Please contact support if amount was deducted.");
         }
       },
       prefill: {
-        name: localStorage.getItem("user_name") || "Donor",
-        email: localStorage.getItem("user_email") || "donor@example.com",
+        name: localStorage.getItem("user_name") || userContext.value?.name || "Donor",
+        email: localStorage.getItem("user_email") || userContext.value?.email || "donor@example.com",
       },
       theme: {
         color: "#6366f1",
@@ -604,7 +651,7 @@ Please check backend implementation or contact support.`
     const rzp = new window.Razorpay(options);
     rzp.open();
   } catch (error) {
-    console.error("❌ Donation Flow Error:", error);
+    console.error("Donation Flow Error:", error);
     
     const errorMessage = error.response?.data?.error || 
                         error.response?.data?.message || 
@@ -626,6 +673,18 @@ const fetchDonationHistory = async () => {
     
     console.log('Donation history response:', response)
     donationHistory.value = Array.isArray(response) ? response : []
+    
+    // Log temple filtering validation
+    if (donationHistory.value.length > 0 && userContext.value) {
+      const userTempleId = userContext.value.temple_id || userContext.value.entity_id
+      const donationTempleIds = [...new Set(donationHistory.value.map(d => d.temple_id || d.entity_id).filter(Boolean))]
+      
+      console.log('Temple filtering validation:', {
+        user_temple_id: userTempleId,
+        donation_temple_ids: donationTempleIds,
+        all_donations_count: donationHistory.value.length
+      })
+    }
   } catch (error) {
     console.error('Error fetching donation history:', error)
     donationHistory.value = []
@@ -640,7 +699,9 @@ const fetchDonationHistory = async () => {
 }
 
 // Lifecycle
-onMounted(() => {
-  fetchDonationHistory()
+onMounted(async () => {
+  // Get user context first, then fetch donations
+  await getUserContext()
+  await fetchDonationHistory()
 })
 </script>

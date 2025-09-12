@@ -1,4 +1,5 @@
-// src/stores/seva.js
+// src/stores/seva.js - Updated to match backend routes with fixed delete
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { sevaService } from '@/services/seva.service'
@@ -17,11 +18,13 @@ export const useSevaStore = defineStore('seva', () => {
   })
   const selectedSeva = ref(null)
   
-  // New state for recent sevas
+  // New state for recent sevas and booking counts
   const recentSevas = ref([])
   const loadingRecentSevas = ref(false)
+  const bookingCounts = ref({})
+  const loadingBookingCounts = ref(false)
   
-  // New state for seva catalog (all available sevas)
+  // State for seva catalog (all available sevas)
   const sevaCatalog = ref([])
   const loadingCatalog = ref(false)
   
@@ -59,12 +62,17 @@ export const useSevaStore = defineStore('seva', () => {
   }))
   
   // Actions - Connect to backend API
+  
+  /**
+   * Fetch sevas for temple admin view - uses /entity-sevas endpoint
+   * @param {Object} params - Query parameters
+   * @returns {Array} Seva list
+   */
   const fetchSevas = async (params = {}) => {
     loading.value = true
     error.value = null
     
     try {
-      // Only pass filtering parameters
       const response = await sevaService.getSevas({
         page: params.page || 1,
         limit: params.limit || 10,
@@ -88,7 +96,70 @@ export const useSevaStore = defineStore('seva', () => {
     }
   }
   
-  // New method to fetch seva catalog (all sevas for mapping)
+  /**
+   * Fetch sevas for devotee view - uses / endpoint with devotee middleware
+   * @param {Object} params - Query parameters
+   * @returns {Array} Seva list
+   */
+  const fetchDevoteeSevas = async (params = {}) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await sevaService.getDevoteeSevas({
+        page: params.page || 1,
+        limit: params.limit || 10,
+        seva_type: params.seva_type || '',
+        search: params.search || ''
+      })
+      
+      if (response.success) {
+        sevas.value = response.data || []
+        return sevas.value
+      } else {
+        error.value = response.error
+        return []
+      }
+    } catch (err) {
+      console.error('Error fetching devotee sevas:', err)
+      error.value = err.message || 'Failed to fetch sevas'
+      return []
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * Fetch booking counts - uses /booking-counts endpoint
+   * @returns {Object} Booking statistics
+   */
+  const fetchBookingCounts = async () => {
+    loadingBookingCounts.value = true
+    
+    try {
+      const response = await sevaService.getBookingCounts()
+      
+      if (response.success) {
+        bookingCounts.value = response.data || {}
+        return bookingCounts.value
+      } else {
+        console.error('Failed to fetch booking counts:', response.error)
+        bookingCounts.value = {}
+        return {}
+      }
+    } catch (error) {
+      console.error('Error fetching booking counts:', error)
+      bookingCounts.value = {}
+      return {}
+    } finally {
+      loadingBookingCounts.value = false
+    }
+  }
+  
+  /**
+   * Fetch seva catalog for mapping purposes
+   * @returns {Array} Complete seva catalog
+   */
   const fetchSevaCatalog = async () => {
     loadingCatalog.value = true
     try {
@@ -116,83 +187,132 @@ export const useSevaStore = defineStore('seva', () => {
     }
   }
   
-  const fetchEntityBookings = async () => {
+  /**
+   * Fetch entity bookings - uses /entity-bookings endpoint
+   * @param {string} entityId - Optional entity ID filter
+   * @returns {Array} Booking list
+   */
+  const fetchEntityBookings = async (entityId = null) => {
     loading.value = true
     error.value = null
     
     try {
-      const response = await sevaService.getEntityBookings()
-      sevaBookings.value = response.data || []
-      return sevaBookings.value
+      const response = await sevaService.getEntityBookings(entityId)
+      
+      if (response.success) {
+        sevaBookings.value = response.data || []
+        return sevaBookings.value
+      } else {
+        error.value = response.error
+        sevaBookings.value = []
+        return []
+      }
     } catch (err) {
       console.error('Error fetching seva bookings:', err)
       error.value = err.response?.data?.error || 'Failed to fetch bookings'
+      sevaBookings.value = []
       return []
     } finally {
       loading.value = false
     }
   }
   
-  // Fetch recent sevas for the devotee dashboard with seva names
-  // Update the fetchRecentSevas method in the seva.store.js file
-const fetchRecentSevas = async () => {
-  loadingRecentSevas.value = true;
-  try {
-    // Always fetch the catalog first, regardless of whether we have bookings
-    await fetchSevaCatalog();
+  /**
+   * Fetch single booking by ID - uses /bookings/:id endpoint
+   * @param {string} bookingId - Booking ID
+   * @returns {Object|null} Booking details
+   */
+  const fetchBookingById = async (bookingId) => {
+    loading.value = true
+    error.value = null
     
-    // Then get the bookings
-    const response = await sevaService.getMyBookings();
-    
-    if (response.success) {
-      let bookings = response.data || [];
+    try {
+      const response = await sevaService.getBookingById(bookingId)
       
-      // Map seva names to bookings using the catalog
-      bookings = bookings.map(booking => {
-        const sevaId = booking.seva_id || booking.SevaID;
-        const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
-        
-        return {
-          ...booking,
-          seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
-          seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
-          seva_description: seva?.description || seva?.Description || '',
-          seva: seva ? {
-            id: seva.id || seva.ID,
-            name: seva.name || seva.Name,
-            type: seva.type || seva.Type || seva.seva_type,
-            description: seva.description || seva.Description
-          } : null
-        };
-      });
-      
-      console.log('Bookings with seva names:', bookings);
-      
-      // Sort by booking time, newest first
-      const sorted = [...bookings].sort((a, b) => {
-        const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
-        const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
-        return dateB - dateA;
-      });
-      
-      recentSevas.value = sorted;
-    } else {
-      recentSevas.value = [];
+      if (response.success) {
+        return response.data
+      } else {
+        error.value = response.error
+        return null
+      }
+    } catch (err) {
+      console.error('Error fetching booking:', err)
+      error.value = err.response?.data?.error || 'Failed to fetch booking'
+      return null
+    } finally {
+      loading.value = false
     }
-  } catch (error) {
-    console.error('Failed to fetch recent sevas:', error);
-    recentSevas.value = [];
-  } finally {
-    loadingRecentSevas.value = false;
   }
-}
   
+  /**
+   * Fetch recent sevas for devotee dashboard - uses /my-bookings endpoint
+   * @returns {Array} Recent bookings with seva details
+   */
+  const fetchRecentSevas = async () => {
+    loadingRecentSevas.value = true;
+    try {
+      // Always fetch the catalog first, regardless of whether we have bookings
+      await fetchSevaCatalog();
+      
+      // Then get the bookings
+      const response = await sevaService.getMyBookings();
+      
+      if (response.success) {
+        let bookings = response.data || [];
+        
+        // Map seva names to bookings using the catalog
+        bookings = bookings.map(booking => {
+          const sevaId = booking.seva_id || booking.SevaID;
+          const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
+          
+          return {
+            ...booking,
+            seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
+            seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
+            seva_description: seva?.description || seva?.Description || '',
+            seva: seva ? {
+              id: seva.id || seva.ID,
+              name: seva.name || seva.Name,
+              type: seva.type || seva.Type || seva.seva_type,
+              description: seva.description || seva.Description
+            } : null
+          };
+        });
+        
+        console.log('Bookings with seva names:', bookings);
+        
+        // Sort by booking time, newest first
+        const sorted = [...bookings].sort((a, b) => {
+          const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
+          const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
+          return dateB - dateA;
+        });
+        
+        recentSevas.value = sorted;
+        return recentSevas.value;
+      } else {
+        recentSevas.value = [];
+        return [];
+      }
+    } catch (error) {
+      console.error('Failed to fetch recent sevas:', error);
+      recentSevas.value = [];
+      return [];
+    } finally {
+      loadingRecentSevas.value = false;
+    }
+  }
+  
+  /**
+   * Create new seva - uses POST / endpoint
+   * @param {Object} sevaData - Seva creation data
+   * @returns {Object} Operation result
+   */
   const createSeva = async (sevaData) => {
     loading.value = true
     error.value = null
     
     try {
-      // Map the form data to match the Go backend model
       console.log('Creating seva with data:', sevaData)
       
       const response = await sevaService.createSeva(sevaData)
@@ -221,6 +341,12 @@ const fetchRecentSevas = async () => {
     }
   }
   
+  /**
+   * Update existing seva - uses PUT /:id endpoint
+   * @param {string} sevaId - Seva ID to update
+   * @param {Object} sevaData - Updated seva data
+   * @returns {Object} Operation result
+   */
   const updateSeva = async (sevaId, sevaData) => {
     loading.value = true
     error.value = null
@@ -259,27 +385,39 @@ const fetchRecentSevas = async () => {
     }
   }
   
+  /**
+   * Delete seva - PERMANENT DELETE (not soft delete) - uses DELETE /:id endpoint
+   * @param {string} sevaId - Seva ID to delete permanently
+   * @returns {Object} Operation result
+   */
   const deleteSeva = async (sevaId) => {
     loading.value = true
     error.value = null
     
     try {
+      console.log('Permanently deleting seva with ID:', sevaId)
+      
       const response = await sevaService.deleteSeva(sevaId)
       
       if (response.success) {
-        // Remove the seva from the list
-        sevas.value = sevas.value.filter(s => s.id !== sevaId)
-        // Also remove from catalog
-        sevaCatalog.value = sevaCatalog.value.filter(s => s.id !== sevaId)
+        // Remove the seva from ALL local arrays (complete removal)
+        sevas.value = sevas.value.filter(s => (s.id || s.ID) !== sevaId)
+        sevaCatalog.value = sevaCatalog.value.filter(s => (s.id || s.ID) !== sevaId)
+        
+        // Also remove any related bookings from local state
+        sevaBookings.value = sevaBookings.value.filter(b => (b.seva_id || b.SevaID) !== sevaId)
+        recentSevas.value = recentSevas.value.filter(b => (b.seva_id || b.SevaID) !== sevaId)
+        
+        console.log('Seva permanently removed from all local state')
       }
       
       return { 
         success: response.success, 
-        message: response.message || 'Seva deleted successfully' 
+        message: response.message || 'Seva permanently deleted successfully' 
       }
     } catch (err) {
-      console.error('Error deleting seva:', err)
-      error.value = err.response?.data?.error || 'Failed to delete seva'
+      console.error('Error permanently deleting seva:', err)
+      error.value = err.response?.data?.error || 'Failed to permanently delete seva'
       return { 
         success: false, 
         message: error.value 
@@ -289,32 +427,140 @@ const fetchRecentSevas = async () => {
     }
   }
   
-  const updateSevaStatus = async (sevaId, status) => {
+  /**
+   * Alternative method to deactivate seva (soft delete) if needed
+   * @param {string} sevaId - Seva ID to deactivate
+   * @returns {Object} Operation result
+   */
+  const deactivateSeva = async (sevaId) => {
     loading.value = true
     error.value = null
     
     try {
-      const response = await sevaService.updateBookingStatus(sevaId, status)
+      console.log('Deactivating seva with ID:', sevaId)
+      
+      const response = await sevaService.deactivateSeva(sevaId)
       
       if (response.success) {
-        // Update the seva status in the list
-        const index = sevas.value.findIndex(s => s.id === sevaId)
-        if (index !== -1) {
-          sevas.value[index].status = status
+        // Update the seva status in local state
+        const sevaIndex = sevas.value.findIndex(s => (s.id || s.ID) === sevaId)
+        if (sevaIndex !== -1) {
+          sevas.value[sevaIndex].is_active = false
+          sevas.value[sevaIndex].status = 'inactive'
+        }
+        
+        const catalogIndex = sevaCatalog.value.findIndex(s => (s.id || s.ID) === sevaId)
+        if (catalogIndex !== -1) {
+          sevaCatalog.value[catalogIndex].is_active = false
+          sevaCatalog.value[catalogIndex].status = 'inactive'
+        }
+      }
+      
+      return {
+        success: response.success,
+        message: response.message || 'Seva deactivated successfully'
+      }
+    } catch (err) {
+      console.error('Error deactivating seva:', err)
+      error.value = err.response?.data?.error || 'Failed to deactivate seva'
+      return {
+        success: false,
+        message: error.value
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * Book a seva for devotees - uses POST /bookings endpoint
+   * @param {number} sevaId - Seva ID to book
+   * @returns {Object} Operation result
+   */
+  const bookSeva = async (sevaId) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await sevaService.bookSeva(sevaId)
+      
+      return {
+        success: response.success,
+        message: response.message || 'Seva booked successfully',
+        data: response.data
+      }
+    } catch (err) {
+      console.error('Error booking seva:', err)
+      error.value = err.response?.data?.error || 'Failed to book seva'
+      return {
+        success: false,
+        message: error.value
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * Update booking status - uses PATCH /bookings/:id/status endpoint
+   * @param {string} bookingId - Booking ID
+   * @param {string} status - New status
+   * @returns {Object} Operation result
+   */
+  const updateBookingStatus = async (bookingId, status) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await sevaService.updateBookingStatus(bookingId, status)
+      
+      if (response.success) {
+        // Update the booking status in the list if we have it
+        const bookingIndex = sevaBookings.value.findIndex(b => (b.id || b.ID) === bookingId)
+        if (bookingIndex !== -1) {
+          sevaBookings.value[bookingIndex].status = status
+          sevaBookings.value[bookingIndex].Status = status // Handle both cases
         }
       }
       
       return { 
         success: response.success, 
-        message: response.message || `Seva ${status} successfully` 
+        message: response.message || `Booking ${status} successfully` 
       }
     } catch (err) {
-      console.error('Error updating seva status:', err)
-      error.value = err.response?.data?.error || 'Failed to update seva status'
+      console.error('Error updating booking status:', err)
+      error.value = err.response?.data?.error || 'Failed to update booking status'
       return { 
         success: false, 
         message: error.value 
       }
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  /**
+   * Get seva by ID - uses /:id endpoint
+   * @param {string} sevaId - Seva ID
+   * @returns {Object|null} Seva details
+   */
+  const getSevaById = async (sevaId) => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const response = await sevaService.getSevaById(sevaId)
+      
+      if (response.success) {
+        return response.data
+      } else {
+        error.value = response.error
+        return null
+      }
+    } catch (err) {
+      console.error('Error fetching seva:', err)
+      error.value = err.response?.data?.error || 'Failed to fetch seva'
+      return null
     } finally {
       loading.value = false
     }
@@ -355,6 +601,8 @@ const fetchRecentSevas = async () => {
     loadingRecentSevas,
     sevaCatalog,
     loadingCatalog,
+    bookingCounts,
+    loadingBookingCounts,
     
     // Getters
     filteredSevas,
@@ -362,13 +610,19 @@ const fetchRecentSevas = async () => {
     
     // Actions
     fetchSevas,
+    fetchDevoteeSevas,
+    fetchBookingCounts,
     fetchSevaCatalog,
     fetchEntityBookings,
+    fetchBookingById,
     fetchRecentSevas,
     createSeva,
     updateSeva,
     deleteSeva,
-    updateSevaStatus,
+    deactivateSeva,
+    bookSeva,
+    updateBookingStatus,
+    getSevaById,
     setSearchQuery,
     setFilters,
     clearFilters,
