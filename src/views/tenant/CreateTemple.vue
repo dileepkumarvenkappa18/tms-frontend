@@ -218,7 +218,6 @@
                   <option value="Uttar Pradesh">Uttar Pradesh</option>
                   <option value="West Bengal">West Bengal</option>
                   <option value="Odisha">Odisha</option>
-                  <!-- Add more states as needed -->
                 </select>
               </div>
 
@@ -299,14 +298,34 @@
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Registration Certificate *</h3>
                   <p class="text-gray-600 mb-4">Upload temple registration certificate</p>
-                  <div class="flex justify-center">
+                  <div class="flex flex-col items-center gap-2">
                     <label class="cursor-pointer bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
                       <span>Choose File</span>
-                      <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" @change="handleFileUpload($event, 'registration')" />
+                      <input 
+                        type="file" 
+                        class="hidden" 
+                        accept=".pdf,.jpg,.jpeg,.png" 
+                        @change="handleFileUpload($event, 'registration')" 
+                      />
                     </label>
+                    <button
+                      v-if="form.documents.registration && !uploadingFiles.registration"
+                      type="button"
+                      @click="uploadSingleFile('registration')"
+                      :disabled="uploadingFiles.registration"
+                      class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors duration-200"
+                    >
+                      Upload Now
+                    </button>
+                    <div v-if="uploadingFiles.registration" class="text-sm text-blue-600">
+                      Uploading...
+                    </div>
                   </div>
                   <p v-if="form.documents.registration" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.registration.name }}
+                  </p>
+                  <p v-if="uploadedFiles.registration" class="text-sm text-blue-600 mt-1">
+                    ✅ Uploaded successfully!
                   </p>
                 </div>
               </div>
@@ -319,14 +338,34 @@
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Trust Deed *</h3>
                   <p class="text-gray-600 mb-4">Upload temple trust deed document</p>
-                  <div class="flex justify-center">
+                  <div class="flex flex-col items-center gap-2">
                     <label class="cursor-pointer bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
                       <span>Choose File</span>
-                      <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" @change="handleFileUpload($event, 'trustDeed')" />
+                      <input 
+                        type="file" 
+                        class="hidden" 
+                        accept=".pdf,.jpg,.jpeg,.png" 
+                        @change="handleFileUpload($event, 'trustDeed')" 
+                      />
                     </label>
+                    <button
+                      v-if="form.documents.trustDeed && !uploadingFiles.trustDeed"
+                      type="button"
+                      @click="uploadSingleFile('trustDeed')"
+                      :disabled="uploadingFiles.trustDeed"
+                      class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors duration-200"
+                    >
+                      Upload Now
+                    </button>
+                    <div v-if="uploadingFiles.trustDeed" class="text-sm text-blue-600">
+                      Uploading...
+                    </div>
                   </div>
                   <p v-if="form.documents.trustDeed" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.trustDeed.name }}
+                  </p>
+                  <p v-if="uploadedFiles.trustDeed" class="text-sm text-blue-600 mt-1">
+                    ✅ Uploaded successfully!
                   </p>
                 </div>
               </div>
@@ -340,14 +379,34 @@
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Property Documents</h3>
                   <p class="text-gray-600 mb-4">Upload property ownership documents (Optional)</p>
-                  <div class="flex justify-center">
+                  <div class="flex flex-col items-center gap-2">
                     <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
                       <span>Choose File</span>
-                      <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" @change="handleFileUpload($event, 'property')" />
+                      <input 
+                        type="file" 
+                        class="hidden" 
+                        accept=".pdf,.jpg,.jpeg,.png" 
+                        @change="handleFileUpload($event, 'property')" 
+                      />
                     </label>
+                    <button
+                      v-if="form.documents.property && !uploadingFiles.property"
+                      type="button"
+                      @click="uploadSingleFile('property')"
+                      :disabled="uploadingFiles.property"
+                      class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors duration-200"
+                    >
+                      Upload Now
+                    </button>
+                    <div v-if="uploadingFiles.property" class="text-sm text-blue-600">
+                      Uploading...
+                    </div>
                   </div>
                   <p v-if="form.documents.property" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.property.name }}
+                  </p>
+                  <p v-if="uploadedFiles.property" class="text-sm text-blue-600 mt-1">
+                    ✅ Uploaded successfully!
                   </p>
                 </div>
               </div>
@@ -360,19 +419,53 @@
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Additional Documents</h3>
                   <p class="text-gray-600 mb-4">Upload any additional supporting documents (Optional)</p>
-                  <div class="flex justify-center">
+                  <div class="flex flex-col items-center gap-2">
                     <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
                       <span>Choose Files</span>
-                      <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple @change="handleFileUpload($event, 'additional')" />
+                      <input 
+                        type="file" 
+                        class="hidden" 
+                        accept=".pdf,.jpg,.jpeg,.png" 
+                        multiple 
+                        @change="handleFileUpload($event, 'additional')" 
+                      />
                     </label>
+                    <button
+                      v-if="form.documents.additional.length > 0 && !uploadingFiles.additional"
+                      type="button"
+                      @click="uploadSingleFile('additional')"
+                      :disabled="uploadingFiles.additional"
+                      class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 transition-colors duration-200"
+                    >
+                      Upload All ({{ form.documents.additional.length }})
+                    </button>
+                    <div v-if="uploadingFiles.additional" class="text-sm text-blue-600">
+                      Uploading {{ form.documents.additional.length }} files...
+                    </div>
                   </div>
-                  <div v-if="form.documents.additional && form.documents.additional.length > 0" class="mt-2">
+                  <div v-if="form.documents.additional.length > 0" class="mt-2">
                     <p v-for="(file, index) in form.documents.additional" :key="index" class="text-sm text-green-600">
                       ✓ {{ file.name }}
                     </p>
                   </div>
+                  <p v-if="uploadedFiles.additional" class="text-sm text-blue-600 mt-1">
+                    ✅ All files uploaded successfully!
+                  </p>
                 </div>
               </div>
+            </div>
+
+            <!-- Upload All Files Button -->
+            <div class="mt-8 text-center">
+              <button
+                type="button"
+                @click="uploadAllFiles"
+                :disabled="!hasFilesToUpload || uploadingAllFiles"
+                class="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              >
+                <span v-if="uploadingAllFiles">Uploading All Files...</span>
+                <span v-else>Upload All Files</span>
+              </button>
             </div>
 
             <!-- Terms and Conditions -->
@@ -484,6 +577,23 @@ const currentStep = ref(1)
 const isSubmitting = ref(false)
 const error = ref(null)
 
+// File upload state
+const uploadingFiles = reactive({
+  registration: false,
+  trustDeed: false,
+  property: false,
+  additional: false
+})
+
+const uploadedFiles = reactive({
+  registration: false,
+  trustDeed: false,
+  property: false,
+  additional: false
+})
+
+const uploadingAllFiles = ref(false)
+
 // Form data with snake_case field names to EXACTLY match backend
 const form = reactive({
   name: '',
@@ -507,6 +617,14 @@ const form = reactive({
     additional: []
   },
   acceptTerms: false
+})
+
+// Computed property to check if there are files to upload
+const hasFilesToUpload = computed(() => {
+  return form.documents.registration || 
+         form.documents.trustDeed || 
+         form.documents.property || 
+         form.documents.additional.length > 0
 })
 
 // Methods
@@ -568,18 +686,140 @@ const validateCurrentStep = () => {
       toast.error('PIN Code must be a 6-digit number')
       return false
     }
+  } else if (currentStep.value === 3) {
+    // Validate required documents
+    if (!form.documents.registration) {
+      toast.error('Registration Certificate is required')
+      return false
+    }
+    
+    if (!form.documents.trustDeed) {
+      toast.error('Trust Deed document is required')
+      return false
+    }
+    
+    if (!form.acceptTerms) {
+      toast.error('Please accept the terms and conditions')
+      return false
+    }
   }
   
   return true
 }
 
+// Enhanced file upload handler
 const handleFileUpload = (event, type) => {
   const files = Array.from(event.target.files)
   
+  // Validate file size (limit to 5MB per file)
+  const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+  for (const file of files) {
+    if (file.size > maxSize) {
+      toast.error(`File ${file.name} is too large. Maximum size is 5MB.`)
+      return
+    }
+  }
+  
+  // Validate file types
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+  for (const file of files) {
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(`File ${file.name} has an unsupported format. Please use PDF, JPEG, or PNG.`)
+      return
+    }
+  }
+  
   if (type === 'additional') {
     form.documents.additional = files
+    uploadedFiles.additional = false // Reset upload status when new files are selected
   } else {
     form.documents[type] = files[0]
+    uploadedFiles[type] = false // Reset upload status when new file is selected
+  }
+  
+  toast.success(`File(s) selected for ${type}`)
+}
+
+// Upload individual file function
+const uploadSingleFile = async (type) => {
+  if (!form.documents[type]) {
+    toast.error('No file selected')
+    return
+  }
+
+  uploadingFiles[type] = true
+
+  try {
+    const formData = new FormData()
+    
+    if (type === 'additional') {
+      // Handle multiple files for additional documents
+      for (let i = 0; i < form.documents.additional.length; i++) {
+        formData.append('files', form.documents.additional[i])
+      }
+    } else {
+      // Handle single file
+      formData.append('file', form.documents[type])
+    }
+
+    // Add document type for backend processing
+    formData.append('document_type', type)
+
+    const response = await api.post('http://localhost:8080/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+
+    console.log(`${type} uploaded successfully:`, response.data)
+    uploadedFiles[type] = true
+    toast.success(`${type} uploaded successfully!`)
+
+  } catch (error) {
+    console.error(`Error uploading ${type}:`, error)
+    toast.error(`Error uploading ${type}. Please try again.`)
+  } finally {
+    uploadingFiles[type] = false
+  }
+}
+
+// Upload all files function
+const uploadAllFiles = async () => {
+  if (!hasFilesToUpload.value) {
+    toast.error('No files selected for upload')
+    return
+  }
+
+  uploadingAllFiles.value = true
+
+  try {
+    const uploadPromises = []
+
+    // Upload each file type that has files
+    if (form.documents.registration && !uploadedFiles.registration) {
+      uploadPromises.push(uploadSingleFile('registration'))
+    }
+    
+    if (form.documents.trustDeed && !uploadedFiles.trustDeed) {
+      uploadPromises.push(uploadSingleFile('trustDeed'))
+    }
+    
+    if (form.documents.property && !uploadedFiles.property) {
+      uploadPromises.push(uploadSingleFile('property'))
+    }
+    
+    if (form.documents.additional.length > 0 && !uploadedFiles.additional) {
+      uploadPromises.push(uploadSingleFile('additional'))
+    }
+
+    await Promise.all(uploadPromises)
+    toast.success('All files uploaded successfully!')
+
+  } catch (error) {
+    console.error('Error uploading files:', error)
+    toast.error('Some files failed to upload. Please try again.')
+  } finally {
+    uploadingAllFiles.value = false
   }
 }
 
@@ -589,9 +829,17 @@ const handleSubmit = async () => {
   try {
     isSubmitting.value = true
 
-    // CRITICAL CHANGE: We'll now directly create the payload and call the API without going through the temple service
-    // This will help us ensure exactly what data is being sent
+    // Check if required documents are uploaded
+    if (!uploadedFiles.registration) {
+      toast.error('Please upload the Registration Certificate before submitting')
+      return
+    }
     
+    if (!uploadedFiles.trustDeed) {
+      toast.error('Please upload the Trust Deed before submitting')
+      return
+    }
+
     console.log('🔍 FORM DATA AT SUBMISSION:')
     console.log('Street address value:', form.street_address)
     console.log('Main deity value:', form.main_deity)
@@ -606,7 +854,7 @@ const handleSubmit = async () => {
       phone: form.phone ? form.phone.replace(/[^0-9]/g, '') : "",
       email: form.email || "",
       description: form.description || '',
-      street_address: form.street_address || '', // CRITICAL field we're having issues with
+      street_address: form.street_address || '',
       city: form.city || "",
       district: form.district || "",
       state: form.state || "",
@@ -614,11 +862,17 @@ const handleSubmit = async () => {
       landmark: form.landmark || '',
       map_link: form.map_link || '',
       accepted_terms: true,
-      status: 'pending'
+      status: 'pending',
+      // Add document upload status
+      documents_uploaded: {
+        registration: uploadedFiles.registration,
+        trust_deed: uploadedFiles.trustDeed,
+        property: uploadedFiles.property,
+        additional: uploadedFiles.additional
+      }
     }
 
-    console.log('📦 Final direct payload:', payload)
-    console.log('🧪 Checking street_address once more:', payload.street_address)
+    console.log('📦 Final payload with documents:', payload)
 
     // Make a direct API call to create the temple
     const response = await api.post('/v1/entities', payload)

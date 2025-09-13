@@ -21,20 +21,17 @@
             <h1 class="text-2xl font-bold text-gray-900">Devotee Reports</h1>
             <p class="text-gray-600 mt-1">
               Download devotee data for your temples
-              <span v-if="fromSuperadmin && safeTenantIds.length > 1" class="text-indigo-600 font-medium">
-                (Multiple Tenants Selected: {{ safeTenantIds.length }})
+              <span v-if="fromSuperadmin && tenantIds.length > 1" class="text-indigo-600 font-medium">
+                (Multiple Tenants Selected: {{ tenantIds.length }})
               </span>
-              <span v-else-if="fromSuperadmin && safeTenantIds.length === 1" class="text-indigo-600 font-medium">
-                (Tenant ID: {{ safeTenantIds[0] }})
-              </span>
-              <span v-else-if="safeTenantId" class="text-indigo-600 font-medium">
-                (Tenant ID: {{ safeTenantId }})
+              <span v-else-if="effectiveTenantId" class="text-indigo-600 font-medium">
+                (Tenant ID: {{ effectiveTenantId }})
               </span>
             </p>
           </div>
           <div class="flex items-center space-x-4">
             <div class="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
-              <span class="text-indigo-800 font-medium">{{ safeUserName }}</span>
+              <span class="text-indigo-800 font-medium">{{ userStore.user?.name || 'Tenant User' }}</span>
               <span class="text-indigo-600 text-sm ml-2">{{ fromSuperadmin ? '(Super Admin)' : '(Tenant)' }}</span>
             </div>
           </div>
@@ -42,10 +39,17 @@
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Error Display -->
-      <div v-if="safeError" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+    <!-- Loading Overlay -->
+    <div v-if="isGeneralLoading || isDownloadLoading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+        <span class="text-gray-900 font-medium">{{ isDownloadLoading ? 'Downloading...' : 'Loading data...' }}</span>
+      </div>
+    </div>
+
+    <!-- Error Display -->
+    <div v-if="safeError" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div class="bg-red-50 border border-red-200 rounded-lg p-4">
         <div class="flex">
           <div class="flex-shrink-0">
             <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -68,14 +72,17 @@
           </div>
         </div>
       </div>
+    </div>
 
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Report Type Selector -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
         <div class="p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">Select Report Type</h3>
           <div class="flex space-x-4 flex-wrap">
             <button 
-              @click="activeReportType = 'birthdays'"
+              @click="setReportType('birthdays')"
               :class="[
                 'px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200',
                 activeReportType === 'birthdays' 
@@ -86,7 +93,7 @@
               Devotee Birthdays
             </button>
             <button 
-              @click="activeReportType = 'devotees'"
+              @click="setReportType('devotees')"
               :class="[
                 'px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200',
                 activeReportType === 'devotees' 
@@ -97,7 +104,7 @@
               Devotee List
             </button>
             <button 
-              @click="activeReportType = 'statusActive'"
+              @click="setReportType('statusActive')"
               :class="[
                 'px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200',
                 activeReportType === 'statusActive' 
@@ -108,7 +115,7 @@
               Active Devotees  
             </button>
             <button 
-              @click="activeReportType = 'statusInactive'"
+              @click="setReportType('statusInactive')"
               :class="[
                 'px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200',
                 activeReportType === 'statusInactive' 
@@ -119,7 +126,7 @@
               Inactive Devotees
             </button>
             <button 
-              @click="activeReportType = 'profile'"
+              @click="setReportType('profile')"
               :class="[
                 'px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200',
                 activeReportType === 'profile' 
@@ -153,13 +160,19 @@
                 v-model="selectedTemple" 
                 :disabled="isLoading"
                 class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                @change="onTempleChange"
               >
                 <option value="all">All Temples</option>
                 <option v-for="temple in safeTemples" :key="temple.id" :value="temple.id">
                   {{ temple.name }}
                 </option>
               </select>
-              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"></div>
+            </div>
+            <div v-if="safeTemples.length === 0 && !isLoading" class="mt-2 text-sm text-amber-600">
+              No temples found for tenant ID {{ effectiveTenantId }}. Please verify tenant access.
+            </div>
+            <div v-else class="mt-2 text-sm text-gray-500">
+              Found {{ safeTemples.length }} temples for tenant {{ effectiveTenantId }}
             </div>
           </div>
 
@@ -222,7 +235,6 @@
                     <option value="inactive">Inactive</option>
                     <option value="new">New Members</option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"></div>
                 </div>
               </div>
               
@@ -239,7 +251,6 @@
           </div>
 
           <div v-else-if="activeReportType === 'profile'">
-            <!-- For profile, you may show different filters or info as needed -->
             <p class="text-gray-600 mb-6">This report includes detailed profile information for devotees.</p>
           </div>
 
@@ -286,7 +297,6 @@
                       {{ format.label }}
                     </option>
                   </select>
-                  <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"></div>
                 </div>
 
                 <!-- Download Button -->
@@ -311,7 +321,7 @@
       </div>
 
       <!-- Current Applied Filters -->
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
         <div class="p-6">
           <h3 class="text-lg font-medium text-gray-900 mb-4">Applied Filters</h3>
           
@@ -327,14 +337,14 @@
               <span class="font-medium mr-1">
                 {{ fromSuperadmin ? 'Tenant(s):' : 'Tenant:' }}
               </span>
-              <span v-if="fromSuperadmin && safeTenantIds.length > 1">
-                {{ safeTenantIds.length }} selected
+              <span v-if="fromSuperadmin && tenantIds.length > 1">
+                {{ tenantIds.length }} selected
               </span>
-              <span v-else-if="fromSuperadmin && safeTenantIds.length === 1">
-                {{ safeTenantIds[0] }}
+              <span v-else-if="fromSuperadmin && tenantIds.length === 1">
+                {{ tenantIds[0] }}
               </span>
               <span v-else>
-                {{ safeTenantId }}
+                {{ effectiveTenantId }}
               </span>
             </div>
             
@@ -364,6 +374,12 @@
               <span class="font-medium mr-1">Format:</span>
               {{ getFormatLabel(selectedFormat) }}
             </div>
+
+            <!-- Current Tenant ID Display -->
+            <div class="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-green-100 text-green-800">
+              <span class="font-medium mr-1">Tenant ID:</span>
+              {{ effectiveTenantId }}
+            </div>
           </div>
           
           <p class="mt-4 text-sm text-gray-600">
@@ -372,19 +388,8 @@
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="isGeneralLoading" class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div class="flex items-center justify-center">
-          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span class="text-gray-600">Loading report data...</span>
-        </div>
-      </div>
-
-      <!-- Report Preview (if available) -->
-      <div v-if="hasValidReportData" class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <!-- Report Preview -->
+      <div v-if="hasValidReportData" class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
         <div class="p-6 border-b border-gray-200">
           <h3 class="text-lg font-medium text-gray-900">Report Preview</h3>
           <p class="text-sm text-gray-600 mt-1">
@@ -426,6 +431,8 @@ import { useTempleStore } from '@/stores/temple';
 import { useAuthStore } from '@/stores/auth';
 import { useReportsStore } from '@/stores/reports';
 import { useToast } from '@/composables/useToast';
+import templeService from '@/services/temple.service';
+import api from '@/plugins/axios';
 
 // Composables
 const route = useRoute();
@@ -436,13 +443,13 @@ const reportsStore = useReportsStore();
 const { showToast } = useToast();
 
 // Reactive state
-const activeReportType = ref('birthdays'); // 'birthdays', 'devotees', 'statusActive', 'statusInactive', 'profile'
+const activeReportType = ref('birthdays');
 const selectedTemple = ref('all');
 const activeFilter = ref('monthly');
 const selectedFormat = ref('pdf');
 const startDate = ref(new Date().toISOString().split('T')[0]);
 const endDate = ref(new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0]);
-const devoteeStatus = ref('all'); // For Devotee List report
+const devoteeStatus = ref('all');
 
 // Filter options
 const timeFilters = [
@@ -465,58 +472,55 @@ const devoteeStatusOptions = [
   { label: 'New Members', value: 'new' },
 ];
 
+// Check for tenants parameter from superadmin
+const fromSuperadmin = computed(() => route.query.from === 'superadmin');
+
+const tenantIds = computed(() => {
+  if (route.query.tenants) {
+    return route.query.tenants.split(',').filter(id => id && id.trim());
+  }
+  return [];
+});
+
+// Fix the effective tenant ID computation
+const effectiveTenantId = computed(() => {
+  // Priority 1: If coming from superadmin with single tenant
+  if (fromSuperadmin.value && tenantIds.value.length === 1) {
+    return tenantIds.value[0];
+  }
+  
+  // Priority 2: Current route tenant parameter
+  if (route.params.tenantId) {
+    return route.params.tenantId;
+  }
+  
+  // Priority 3: User's assigned tenant from auth store
+  if (userStore.user?.assignedTenantId) {
+    return userStore.user.assignedTenantId.toString();
+  }
+  
+  // Priority 4: Extract from localStorage tenant header
+  const currentTenantId = localStorage.getItem('current_tenant_id');
+  if (currentTenantId) {
+    return currentTenantId;
+  }
+  
+  // Priority 5: Extract from axios default headers
+  if (api.defaults.headers.common['X-Tenant-ID']) {
+    const headerTenantId = api.defaults.headers.common['X-Tenant-ID'];
+    return headerTenantId.toString();
+  }
+  
+  // Priority 6: User ID as fallback (based on your working activities report)
+  if (userStore.user?.id) {
+    return userStore.user.id.toString();
+  }
+  
+  console.warn('No tenant ID found, using fallback');
+  return null;
+});
+
 // Enhanced safe computed properties with comprehensive null safety
-const safeTenantId = computed(() => {
-  try {
-    return route?.params?.tenantId || 
-           route?.query?.tenantId ||
-           userStore?.user?.tenantId || 
-           userStore?.user?.id || 
-           (typeof localStorage !== 'undefined' ? localStorage.getItem('current_tenant_id') : null) || 
-           '';
-  } catch (error) {
-    console.error('Error getting safe tenant ID:', error);
-    return '';
-  }
-});
-
-const fromSuperadmin = computed(() => {
-  try {
-    return route?.query?.from === 'superadmin';
-  } catch (error) {
-    console.error('Error checking superadmin flag:', error);
-    return false;
-  }
-});
-
-const safeTenantIds = computed(() => {
-  try {
-    if (fromSuperadmin.value && route?.query?.tenants) {
-      const tenants = route.query.tenants.split(',').filter(id => id && id.trim());
-      return tenants.length > 0 ? tenants : [];
-    } else if (fromSuperadmin.value && route?.query?.tenantId) {
-      return [route.query.tenantId];
-    } else if (fromSuperadmin.value && route?.params?.tenantId) {
-      return [route.params.tenantId];
-    } else {
-      const currentTenantId = safeTenantId.value;
-      return currentTenantId ? [currentTenantId] : [];
-    }
-  } catch (error) {
-    console.error('Error getting safe tenant IDs:', error);
-    return [];
-  }
-});
-
-const safeUserName = computed(() => {
-  try {
-    return userStore?.user?.name || userStore?.user?.username || 'Tenant User';
-  } catch (error) {
-    console.error('Error getting safe user name:', error);
-    return 'User';
-  }
-});
-
 const safeError = computed(() => {
   try {
     return reportsStore?.error || null;
@@ -528,7 +532,15 @@ const safeError = computed(() => {
 
 const safeTemples = computed(() => {
   try {
-    return templeStore?.temples || [];
+    if (!templeStore?.temples || !Array.isArray(templeStore.temples)) {
+      return [];
+    }
+    // Filter for approved/active temples only
+    return templeStore.temples.filter(temple => {
+      if (!temple) return false;
+      const status = (temple.status || '').toLowerCase();
+      return status === 'approved' || status === 'active';
+    });
   } catch (error) {
     console.error('Error getting safe temples:', error);
     return [];
@@ -608,6 +620,34 @@ const clearError = () => {
   }
 };
 
+const setReportType = async (type) => {
+  try {
+    activeReportType.value = type;
+    
+    if (reportsStore && typeof reportsStore.clearReportData === 'function') {
+      reportsStore.clearReportData();
+    }
+
+    if (type === 'statusActive' || type === 'statusInactive') {
+      devoteeStatus.value = 'all';
+    }
+
+    await fetchPreview();
+  } catch (error) {
+    console.error('Error setting report type:', error);
+    showToast('Failed to switch report type. Please try again.', 'error');
+  }
+};
+
+const onTempleChange = async () => {
+  try {
+    clearError();
+    await fetchPreview();
+  } catch (error) {
+    console.error('Error handling temple change:', error);
+  }
+};
+
 const getReportTypeTitle = () => {
   try {
     switch (activeReportType.value) {
@@ -670,8 +710,7 @@ const getActiveDevoteeStatusLabel = () => {
   }
 };
 
-// Set active filter and auto-fetch preview
-const setActiveFilter = (filter) => {
+const setActiveFilter = async (filter) => {
   try {
     activeFilter.value = filter;
 
@@ -687,9 +726,8 @@ const setActiveFilter = (filter) => {
       startDate.value = new Date(currentYear, 0, 1).toISOString().split('T')[0];
       endDate.value = new Date(currentYear, 11, 31).toISOString().split('T')[0];
     }
-    // For custom, leave dates as is
 
-    fetchPreview();
+    await fetchPreview();
   } catch (error) {
     console.error('Error setting active filter:', error);
     showToast('Failed to set filter. Please try again.', 'error');
@@ -755,43 +793,42 @@ const formatDate = (dateString) => {
   }
 };
 
-// Updated buildReportParams fixed for trim on non-string ids
+// Build robust parameters for ReportsService
 const buildReportParams = () => {
   try {
+    if (!effectiveTenantId.value) {
+      throw new Error('No valid tenant ID available for report generation');
+    }
+
     const params = {
       dateRange: activeFilter.value || 'monthly',
       startDate: startDate.value,
       endDate: endDate.value,
-      format: selectedFormat.value || 'pdf'
+      format: selectedFormat.value || 'pdf',
+      isSuperAdmin: fromSuperadmin.value,
+      tenantId: effectiveTenantId.value // Always include tenant context
     };
 
-    // Handle entity IDs with safe string conversion
+    // Set entity ID properly based on context
     if (fromSuperadmin.value) {
-      if (safeTenantIds.value && safeTenantIds.value.length > 1) {
-        params.entityIds = safeTenantIds.value.filter(id => id && String(id).trim());
-        params.isSuperAdmin = true;
-        if (params.entityIds.length === 0) {
-          throw new Error('No valid tenants selected for report generation');
-        }
-      } else if (safeTenantIds.value && safeTenantIds.value.length === 1) {
-        params.entityId = safeTenantIds.value[0];
-        params.isSuperAdmin = true;
-        if (!params.entityId || !String(params.entityId).trim()) {
-          throw new Error('Invalid tenant ID for report generation');
-        }
+      if (tenantIds.value.length > 1) {
+        // Multiple tenants - use the tenant IDs
+        params.entityIds = tenantIds.value;
+        params.entityId = 'multiple';
       } else {
-        throw new Error('No tenants selected for report generation');
+        // Single tenant from superadmin - use temple selection or tenant context
+        params.entityId = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
       }
     } else {
-      if (!safeTenantId.value || !String(safeTenantId.value).trim()) {
-        throw new Error('Tenant ID is required for report generation');
-      }
-      params.entityId = safeTenantId.value;
+      // Regular tenant user - use temple selection or tenant context
+      params.entityId = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
     }
 
     // Temple selection
     if (selectedTemple.value && selectedTemple.value !== 'all') {
       params.templeId = selectedTemple.value.toString();
+    } else {
+      params.templeId = 'all';
     }
 
     // Devotee status
@@ -803,10 +840,7 @@ const buildReportParams = () => {
       params.status = devoteeStatus.value;
     }
 
-    console.log('Built report params:', params);
-    console.log('Entity ID(s):', params.entityId || params.entityIds);
-    console.log('Format:', params.format);
-
+    console.log('Built devotee report params:', params);
     return params;
   } catch (error) {
     console.error('Error building report params:', error);
@@ -814,14 +848,119 @@ const buildReportParams = () => {
   }
 };
 
+const fetchTemples = async () => {
+  try {
+    if (!effectiveTenantId.value) {
+      throw new Error('No tenant ID available to fetch temples');
+    }
+
+    console.log('Fetching temples for tenant ID:', effectiveTenantId.value);
+    
+    // Clear existing temples first
+    templeStore.clearTempleData();
+    
+    // For superadmin with multiple tenants
+    if (fromSuperadmin.value && tenantIds.value.length > 1) {
+      console.log(`Fetching temples for ${tenantIds.value.length} tenants:`, tenantIds.value);
+      const allTemples = [];
+      
+      for (const tenantId of tenantIds.value) {
+        try {
+          const temples = await fetchTemplesForTenant(tenantId);
+          allTemples.push(...temples);
+        } catch (err) {
+          console.warn(`Failed to fetch temples for tenant ${tenantId}:`, err);
+        }
+      }
+      
+      templeStore.temples = allTemples;
+      console.log(`Set ${templeStore.temples.length} total temples for ${tenantIds.value.length} tenants`);
+    } 
+    // Single tenant case
+    else {
+      const tenantId = effectiveTenantId.value;
+      console.log(`Fetching temples for single tenant ${tenantId}`);
+      
+      try {
+        const response = await api.get(`/v1/entities`);
+        let allEntities = [];
+        
+        if (response.data && Array.isArray(response.data)) {
+          allEntities = response.data;
+        } else if (response.data && Array.isArray(response.data.data)) {
+          allEntities = response.data.data;
+        }
+        
+        // Filter entities by the correct tenant ID
+        const filteredTemples = allEntities.filter(temple => {
+          return String(temple.created_by) === String(tenantId) || 
+                 String(temple.tenant_id) === String(tenantId);
+        });
+        
+        console.log(`Filtered ${filteredTemples.length} temples from ${allEntities.length} total entities for tenant ${tenantId}`);
+        
+        // Set the filtered temples in the store
+        templeStore.temples = filteredTemples.map(temple => templeService.normalizeTempleData(temple));
+        
+      } catch (apiError) {
+        console.error('Error fetching entities directly:', apiError);
+        
+        // Fallback to store method
+        console.log('Using store method as fallback');
+        if (fromSuperadmin.value) {
+          await templeStore.fetchTemplesForSuperAdmin(tenantId);
+        } else {
+          await templeStore.fetchTemples(tenantId);
+        }
+      }
+    }
+    
+    console.log(`Successfully loaded ${templeStore.temples.length} temples for tenant ${effectiveTenantId.value}`);
+    
+  } catch (err) {
+    console.error('Error in fetchTemples:', err);
+    showToast(`Failed to load temple data: ${err.message}`, 'error');
+  }
+};
+
+// Helper function to fetch temples for a single tenant
+const fetchTemplesForTenant = async (tenantId) => {
+  try {
+    console.log(`Fetching temples for tenant ${tenantId}`);
+    
+    const response = await api.get('/v1/entities');
+    let allEntities = [];
+    
+    if (response.data && Array.isArray(response.data)) {
+      allEntities = response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      allEntities = response.data.data;
+    }
+    
+    // Filter entities by tenant ID using multiple possible fields
+    const temples = allEntities.filter(temple => 
+      String(temple.created_by) === String(tenantId) || 
+      String(temple.tenant_id) === String(tenantId)
+    );
+    
+    console.log(`Found ${temples.length} temples for tenant ${tenantId}`);
+    return temples.map(temple => templeService.normalizeTempleData(temple));
+    
+  } catch (err) {
+    console.error(`Error fetching temples for tenant ${tenantId}:`, err);
+    return [];
+  }
+};
+
 const fetchPreview = async () => {
   try {
-    if (!fromSuperadmin.value && !safeTenantId.value) {
+    if (!effectiveTenantId.value) {
       console.warn('No tenant ID available for preview');
       showToast('Tenant information is missing. Please refresh the page.', 'error');
       return;
     }
-    if (fromSuperadmin.value && (!safeTenantIds.value || safeTenantIds.value.length === 0)) {
+
+    if (fromSuperadmin.value && (!tenantIds.value || tenantIds.value.length === 0)) {
       console.warn('No tenant IDs available for superadmin preview');
       showToast('No tenants selected. Please go back and select tenants.', 'error');
       return;
@@ -848,12 +987,6 @@ const fetchPreview = async () => {
       case 'birthdays':
         if (typeof reportsStore.getDevoteeBirthdaysPreview === 'function') {
           result = await reportsStore.getDevoteeBirthdaysPreview(previewParams);
-          if (result && (result.devotees || result.data)) {
-            console.log('Birthday preview loaded successfully');
-          } else {
-            console.warn('No devotee birthday data returned');
-            showToast('No birthday data found for selected criteria', 'info');
-          }
         } else {
           console.error('getDevoteeBirthdaysPreview method not found in reports store');
           showToast('Birthday reports preview is not available', 'error');
@@ -865,12 +998,6 @@ const fetchPreview = async () => {
       case 'statusInactive':
         if (typeof reportsStore.getDevoteeListPreview === 'function') {
           result = await reportsStore.getDevoteeListPreview(previewParams);
-          if (result && (result.devotees || result.data)) {
-            console.log('Devotee list preview loaded successfully');
-          } else {
-            console.warn('No devotee list data returned');
-            showToast('No devotee data found for selected criteria', 'info');
-          }
         } else {
           console.error('getDevoteeListPreview method not found in reports store');
           showToast('Devotee list preview is not available', 'error');
@@ -880,12 +1007,6 @@ const fetchPreview = async () => {
       case 'profile':
         if (typeof reportsStore.getDevoteeProfilePreview === 'function') {
           result = await reportsStore.getDevoteeProfilePreview(previewParams);
-          if (result && (result.devotees || result.data || result.profile)) {
-            console.log('Profile preview loaded successfully');
-          } else {
-            console.warn('No devotee profile data returned');
-            showToast('No profile data found for selected criteria', 'info');
-          }
         } else {
           console.warn('getDevoteeProfilePreview method not available in reports store');
           showToast('Devotee profile preview is not available yet', 'warning');
@@ -899,16 +1020,8 @@ const fetchPreview = async () => {
     }
   } catch (error) {
     console.error('Error fetching preview:', error);
-
     const errorMessage = error?.message || 'Unknown error';
-
-    if (errorMessage.includes('devotees') || errorMessage.includes('null') || errorMessage.toLowerCase().includes('cannot read properties')) {
-      showToast('Error loading devotee data. Please check your permissions or adjust your filters.', 'error');
-    } else if (errorMessage.includes('Entity ID') || errorMessage.includes('tenants')) {
-      showToast('Invalid tenant configuration. Please refresh the page or contact support.', 'error');
-    } else {
-      showToast(`Failed to fetch report preview: ${errorMessage}`, 'error');
-    }
+    showToast(`Failed to fetch report preview: ${errorMessage}`, 'error');
   }
 };
 
@@ -916,12 +1029,12 @@ const downloadReport = async () => {
   try {
     clearError();
 
-    if (!fromSuperadmin.value && !safeTenantId.value) {
+    if (!effectiveTenantId.value) {
       showToast('Tenant information is missing. Please refresh the page.', 'error');
       return;
     }
 
-    if (fromSuperadmin.value && (!safeTenantIds.value || safeTenantIds.value.length === 0)) {
+    if (fromSuperadmin.value && (!tenantIds.value || tenantIds.value.length === 0)) {
       showToast('Tenant selection is required. Please go back and select tenants.', 'error');
       return;
     }
@@ -995,12 +1108,7 @@ const downloadReport = async () => {
       }
     } catch (downloadError) {
       console.error('Download error details:', downloadError);
-      const errorMessage = downloadError?.message || 'Unknown error';
-      if (errorMessage.includes('devotees') || errorMessage.includes('null') || errorMessage.toLowerCase().includes('cannot read properties')) {
-        throw new Error('Error accessing devotee data. Please check your permissions and try again.');
-      } else {
-        throw downloadError;
-      }
+      throw downloadError;
     }
 
     const reportTypeName = getReportTypeTitle();
@@ -1013,139 +1121,16 @@ const downloadReport = async () => {
   } catch (error) {
     console.error('Error downloading report:', error);
     const errorMessage = error?.message || 'Unknown error';
-
-    if (errorMessage.includes('Entity ID') || errorMessage.includes('format')) {
-      showToast('Required parameters are missing. Please try again or contact support.', 'error');
-    } else if (errorMessage.includes('devotees') || errorMessage.includes('null') || errorMessage.toLowerCase().includes('cannot read properties')) {
-      showToast('Error accessing devotee data. Please check your permissions and try again.', 'error');
-    } else if (errorMessage.includes('functionality is not available')) {
-      showToast(errorMessage, 'warning');
-    } else if (errorMessage.includes('tenants') || errorMessage.includes('Entity')) {
-      showToast('Tenant configuration error. Please refresh the page or contact support.', 'error');
-    } else {
-      showToast(`Failed to download report: ${errorMessage}`, 'error');
-    }
+    showToast(`Failed to download report: ${errorMessage}`, 'error');
   }
-};
-
-const loadTemplesForTenants = async () => {
-  try {
-    console.log('Starting simplified temple loading for tenants');
-    
-    if (!templeStore) {
-      console.error('Temple store is not available');
-      return;
-    }
-
-    // Clear existing temples
-    templeStore.clearTempleData();
-
-    // Determine tenant ID(s) to use
-    const tenantIds = fromSuperadmin.value && safeTenantIds.value.length > 0 
-      ? safeTenantIds.value 
-      : [safeTenantId.value];
-    
-    console.log('Loading temples for tenant IDs:', tenantIds);
-
-    // Direct API import
-    const api = await import('@/plugins/axios').then(m => m.default);
-    
-    // Direct approach: Get all entities and strictly filter by created_by
-    try {
-      const response = await api.get('/v1/entities');
-      let allEntities = [];
-      
-      // Extract entities array from response
-      if (response.data && Array.isArray(response.data)) {
-        allEntities = response.data;
-      } else if (response.data && Array.isArray(response.data.data)) {
-        allEntities = response.data.data;
-      }
-      
-      console.log(`Total entities found: ${allEntities.length}`);
-      
-      // STRICT filtering: Only include entities where created_by EXACTLY matches a tenant ID
-      const strictlyFilteredTemples = allEntities.filter(entity => 
-        tenantIds.some(tenantId => 
-          String(entity.created_by) === String(tenantId)
-        )
-      );
-      
-      console.log(`STRICTLY filtered to ${strictlyFilteredTemples.length} temples matching tenant IDs exactly`);
-
-      // Set the temples in store
-      if (strictlyFilteredTemples.length > 0) {
-        // Basic normalization
-        templeStore.temples = strictlyFilteredTemples.map(temple => ({
-          id: temple.id,
-          name: temple.name || temple.temple_name || temple.templeName || 'Unknown Temple',
-          status: temple.status || 'active'
-        }));
-        
-        console.log(`Successfully loaded ${templeStore.temples.length} temples for selected tenant(s)`);
-        return;
-      }
-      
-      // If strict filtering yielded no results, show an empty list
-      console.warn('No temples found for the selected tenant(s) after strict filtering');
-      templeStore.temples = [];
-      
-    } catch (err) {
-      console.error('Error fetching and filtering temples:', err);
-      templeStore.temples = [];
-      showToast('Failed to load temples for the selected tenant(s)', 'error');
-    }
-  } catch (error) {
-    console.error('Overall error in loadTemplesForTenants:', error);
-    templeStore.temples = [];
-    showToast('Failed to load temple data', 'error');
-  }
-};
-
-const checkReportsStoreHealth = () => {
-  console.log('Checking reports store health...');
-
-  if (!reportsStore) {
-    console.error('Reports store is null or undefined');
-    showToast('Reports store is not available. Please refresh the page.', 'error');
-    return false;
-  }
-
-  const requiredMethods = [
-    'getDevoteeBirthdaysPreview',
-    'downloadDevoteeBirthdaysReport', 
-    'getDevoteeListPreview',
-    'downloadDevoteeListReport',
-    'clearError',
-    'clearReportData'
-  ];
-
-  const missingMethods = requiredMethods.filter(method =>
-    typeof reportsStore[method] !== 'function'
-  );
-
-  if (missingMethods.length > 0) {
-    console.error('Missing methods in reports store:', missingMethods);
-    showToast(`Reports functionality is incomplete. Missing: ${missingMethods.join(', ')}`, 'error');
-    return false;
-  }
-
-  console.log('Reports store health check passed');
-  return true;
 };
 
 // Watchers
 watch(activeReportType, () => {
   console.log('Report type changed to:', activeReportType.value);
-
   if (reportsStore && typeof reportsStore.clearReportData === 'function') {
     reportsStore.clearReportData();
   }
-
-  if (activeReportType.value === 'statusActive' || activeReportType.value === 'statusInactive') {
-    devoteeStatus.value = 'all';
-  }
-
   fetchPreview();
 });
 
@@ -1154,25 +1139,40 @@ watch([selectedTemple, devoteeStatus], () => {
   fetchPreview();
 });
 
-watch(activeFilter, () => {
-  console.log('Active filter changed to:', activeFilter.value);
-  // fetchPreview is called inside setActiveFilter
+watch(effectiveTenantId, async (newVal, oldVal) => {
+  if (newVal !== oldVal && newVal) {
+    console.log('Tenant ID changed, refetching temples:', newVal);
+    templeStore.clearTempleData();
+    await fetchTemples();
+    await fetchPreview();
+  }
 });
 
-watch(safeTenantIds, (newIds, oldIds) => {
-  console.log('Tenant IDs changed from:', oldIds, 'to:', newIds);
-  if (newIds && newIds.length > 0) {
-    loadTemplesForTenants();
-    fetchPreview();
+watch(() => route.params.tenantId, async (newTenantId, oldTenantId) => {
+  if (newTenantId !== oldTenantId && newTenantId) {
+    console.log('Route tenant ID changed:', newTenantId);
+    templeStore.clearTempleData();
+    await fetchTemples();
+    await fetchPreview();
   }
-}, { deep: true });
+});
+
+watch(() => route.query.tenants, async (newTenants, oldTenants) => {
+  if (newTenants !== oldTenants && newTenants) {
+    console.log('Query tenants changed:', newTenants);
+    templeStore.clearTempleData();
+    await fetchTemples();
+    selectedTemple.value = 'all';
+    await fetchPreview();
+  }
+});
 
 // Lifecycle hook
 onMounted(async () => {
-  console.log('Component mounted');
-  console.log('From superadmin:', fromSuperadmin.value);
-  console.log('Tenant ID:', safeTenantId.value);
-  console.log('Tenant IDs:', safeTenantIds.value);
+  console.log('Devotee Reports mounted');
+  console.log('fromSuperadmin:', fromSuperadmin.value);
+  console.log('Tenant ID:', effectiveTenantId.value);
+  console.log('Tenant IDs:', tenantIds.value);
   console.log('Route params:', route.params);
   console.log('Route query:', route.query);
 
@@ -1189,20 +1189,21 @@ onMounted(async () => {
     return;
   }
 
-  const storeHealthy = checkReportsStoreHealth();
-  if (!storeHealthy) {
-    return; // Error already handled
-  }
-
   if (typeof reportsStore.clearReportData === 'function') {
     reportsStore.clearReportData();
   }
 
-  try {
-    await loadTemplesForTenants();
+  // Validate tenant ID before proceeding
+  if (!effectiveTenantId.value) {
+    showToast('No valid tenant ID found. Please check your access permissions.', 'error');
+    return;
+  }
 
-    if ((fromSuperadmin.value && safeTenantIds.value && safeTenantIds.value.length > 0) ||
-        (!fromSuperadmin.value && safeTenantId.value)) {
+  try {
+    await fetchTemples();
+
+    if ((fromSuperadmin.value && tenantIds.value && tenantIds.value.length > 0) ||
+        (!fromSuperadmin.value && effectiveTenantId.value)) {
       console.log('Fetching initial preview...');
       await fetchPreview();
     } else {
