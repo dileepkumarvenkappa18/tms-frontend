@@ -307,9 +307,24 @@
 
           <!-- Step 3: Documents Upload -->
           <div v-show="currentStep === 3" class="p-8">
-            <div class="mb-6">
-              <h2 class="text-xl font-bold text-gray-900 mb-2">Update Documents</h2>
-              <p class="text-gray-600">Upload or update temple verification documents</p>
+            <div class="mb-6 flex items-center justify-between">
+              <div>
+                <h2 class="text-xl font-bold text-gray-900 mb-2">Update Documents</h2>
+                <p class="text-gray-600">Upload or update temple verification documents</p>
+              </div>
+              <!-- View Documents Button -->
+              <button
+                type="button"
+                @click="showDocumentsModal = true"
+                class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                v-if="hasExistingDocuments"
+              >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                View Stored Documents
+              </button>
             </div>
 
             <div class="space-y-6">
@@ -330,9 +345,17 @@
                   <p v-if="form.documents.registration" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.registration.name }}
                   </p>
-                  <p v-else-if="existingFiles.registration" class="text-sm text-gray-600 mt-2">
-                    Current: {{ existingFiles.registration }}
-                  </p>
+                  <div v-else-if="existingFiles.registration" class="flex items-center justify-center mt-2">
+                    <p class="text-sm text-gray-600">Current: {{ existingFiles.registration }}</p>
+                    <button
+                      type="button"
+                      @click="viewDocument(documentUrls.registration, 'Registration Certificate')"
+                      class="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                      v-if="documentUrls.registration"
+                    >
+                      View
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -353,9 +376,17 @@
                   <p v-if="form.documents.trustDeed" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.trustDeed.name }}
                   </p>
-                  <p v-else-if="existingFiles.trustDeed" class="text-sm text-gray-600 mt-2">
-                    Current: {{ existingFiles.trustDeed }}
-                  </p>
+                  <div v-else-if="existingFiles.trustDeed" class="flex items-center justify-center mt-2">
+                    <p class="text-sm text-gray-600">Current: {{ existingFiles.trustDeed }}</p>
+                    <button
+                      type="button"
+                      @click="viewDocument(documentUrls.trustDeed, 'Trust Deed')"
+                      class="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                      v-if="documentUrls.trustDeed"
+                    >
+                      View
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -377,9 +408,17 @@
                   <p v-if="form.documents.property" class="text-sm text-green-600 mt-2">
                     ✓ {{ form.documents.property.name }}
                   </p>
-                  <p v-else-if="existingFiles.property" class="text-sm text-gray-600 mt-2">
-                    Current: {{ existingFiles.property }}
-                  </p>
+                  <div v-else-if="existingFiles.property" class="flex items-center justify-center mt-2">
+                    <p class="text-sm text-gray-600">Current: {{ existingFiles.property }}</p>
+                    <button
+                      type="button"
+                      @click="viewDocument(documentUrls.property, 'Property Documents')"
+                      class="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                      v-if="documentUrls.property"
+                    >
+                      View
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -403,9 +442,17 @@
                     </p>
                   </div>
                   <div v-if="existingFiles.additional && existingFiles.additional.length > 0" class="mt-2">
-                    <p v-for="(file, index) in existingFiles.additional" :key="'existing-'+index" class="text-sm text-gray-600">
-                      Current: {{ file }}
-                    </p>
+                    <div v-for="(file, index) in existingFiles.additional" :key="'existing-'+index" class="flex items-center justify-center mt-1">
+                      <p class="text-sm text-gray-600">Current: {{ file }}</p>
+                      <button
+                        type="button"
+                        @click="viewDocument(documentUrls.additional[index], `Additional Document ${index + 1}`)"
+                        class="ml-2 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                        v-if="documentUrls.additional && documentUrls.additional[index]"
+                      >
+                        View
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -499,6 +546,187 @@
         </div>
       </div>
     </div>
+
+    <!-- Documents Modal -->
+    <div v-if="showDocumentsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Temple Documents</h3>
+          <button
+            @click="closeDocumentsModal"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="p-6 overflow-y-auto max-h-[70vh]">
+          <div class="space-y-6">
+            <!-- Registration Certificate -->
+            <div v-if="documentUrls.registration" class="border border-gray-200 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-md font-medium text-gray-900">Registration Certificate</h4>
+                <div class="flex space-x-2">
+                  <button
+                    @click="viewDocument(documentUrls.registration, 'Registration Certificate')"
+                    class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors"
+                  >
+                    View
+                  </button>
+                  <button
+                    @click="downloadDocument(documentUrls.registration, 'registration-certificate')"
+                    class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600">{{ existingFiles.registration }}</p>
+            </div>
+
+            <!-- Trust Deed -->
+            <div v-if="documentUrls.trustDeed" class="border border-gray-200 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-md font-medium text-gray-900">Trust Deed</h4>
+                <div class="flex space-x-2">
+                  <button
+                    @click="viewDocument(documentUrls.trustDeed, 'Trust Deed')"
+                    class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors"
+                  >
+                    View
+                  </button>
+                  <button
+                    @click="downloadDocument(documentUrls.trustDeed, 'trust-deed')"
+                    class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600">{{ existingFiles.trustDeed }}</p>
+            </div>
+
+            <!-- Property Documents -->
+            <div v-if="documentUrls.property" class="border border-gray-200 rounded-lg p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h4 class="text-md font-medium text-gray-900">Property Documents</h4>
+                <div class="flex space-x-2">
+                  <button
+                    @click="viewDocument(documentUrls.property, 'Property Documents')"
+                    class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors"
+                  >
+                    View
+                  </button>
+                  <button
+                    @click="downloadDocument(documentUrls.property, 'property-documents')"
+                    class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors"
+                  >
+                    Download
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600">{{ existingFiles.property }}</p>
+            </div>
+
+            <!-- Additional Documents -->
+            <div v-if="documentUrls.additional && documentUrls.additional.length > 0">
+              <h4 class="text-md font-medium text-gray-900 mb-3">Additional Documents</h4>
+              <div class="space-y-3">
+                <div
+                  v-for="(url, index) in documentUrls.additional"
+                  :key="'additional-doc-' + index"
+                  class="border border-gray-200 rounded-lg p-4"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <h5 class="text-sm font-medium text-gray-800">Additional Document {{ index + 1 }}</h5>
+                    <div class="flex space-x-2">
+                      <button
+                        @click="viewDocument(url, `Additional Document ${index + 1}`)"
+                        class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        View
+                      </button>
+                      <button
+                        @click="downloadDocument(url, `additional-document-${index + 1}`)"
+                        class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors"
+                      >
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-600">{{ existingFiles.additional[index] }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Documents Message -->
+            <div v-if="!hasExistingDocuments" class="text-center py-8">
+              <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
+              <p class="text-gray-600">No documents have been uploaded for this temple yet.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="border-t border-gray-200 px-6 py-4">
+          <div class="flex justify-end">
+            <button
+              @click="closeDocumentsModal"
+              class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Viewer Modal -->
+    <div v-if="showDocumentViewer" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-6xl w-full max-h-[95vh] overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">{{ currentDocumentTitle }}</h3>
+          <div class="flex items-center space-x-2">
+            <button
+              @click="downloadDocument(currentDocumentUrl, currentDocumentTitle.toLowerCase().replace(/\s+/g, '-'))"
+              class="text-sm bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200 transition-colors"
+            >
+              Download
+            </button>
+            <button
+              @click="closeDocumentViewer"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-4 overflow-auto max-h-[85vh]">
+          <!-- PDF Viewer -->
+          <iframe
+            v-if="isDocumentPdf"
+            :src="currentDocumentUrl"
+            class="w-full h-[75vh] border border-gray-300 rounded"
+            type="application/pdf"
+          ></iframe>
+          
+          <!-- Image Viewer -->
+          <img
+            v-else
+            :src="currentDocumentUrl"
+            :alt="currentDocumentTitle"
+            class="max-w-full h-auto mx-auto rounded border border-gray-300"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -525,23 +753,27 @@ export default defineComponent({
    const isSubmitting = ref(false);
    const isLoading = ref(true);
    const loadError = ref(null);
+   const showDocumentsModal = ref(false);
+   const showDocumentViewer = ref(false);
+   const currentDocumentUrl = ref('');
+   const currentDocumentTitle = ref('');
 
    // Form data - FIXED FIELD NAMES to match backend structure
    const form = reactive({
      name: '',
-     mainDeity: '', // Changed from deity to mainDeity
-     templeType: '', // Changed from type to templeType
+     mainDeity: '',
+     templeType: '',
      establishedYear: '',
      phone: '',
      email: '',
      description: '',
-     streetAddress: '', // Changed from address to streetAddress
+     streetAddress: '',
      city: '',
      state: '',
      district: '',
-     pincode: '', // Changed from pinCode to pincode
+     pincode: '',
      landmark: '',
-     mapLink: '', // Changed from googleMapsLink to mapLink
+     mapLink: '',
      documents: {
        registration: null,
        trustDeed: null,
@@ -561,6 +793,14 @@ export default defineComponent({
      additional: []
    });
 
+   // Track document URLs for viewing
+   const documentUrls = reactive({
+     registration: '',
+     trustDeed: '',
+     property: '',
+     additional: []
+   });
+
    // Helper function to safely show toast messages
    const showToast = (message, type = 'success') => {
      try {
@@ -569,13 +809,11 @@ export default defineComponent({
        } else if (type === 'error' && toast.error) {
          toast.error(message);
        } else if (toast.addToast) {
-         // Alternative API using addToast
          toast.addToast({
            content: message,
            type: type
          });
        } else {
-         // Fallback to console and alert for errors
          console.log(`${type.toUpperCase()}: ${message}`);
          if (type === 'error') {
            alert(message);
@@ -606,17 +844,65 @@ export default defineComponent({
      }
    });
 
+   const hasExistingDocuments = computed(() => {
+     return documentUrls.registration || 
+            documentUrls.trustDeed || 
+            documentUrls.property || 
+            (documentUrls.additional && documentUrls.additional.length > 0);
+   });
+
+   const isDocumentPdf = computed(() => {
+     return currentDocumentUrl.value.toLowerCase().includes('.pdf') || 
+            currentDocumentUrl.value.toLowerCase().includes('pdf');
+   });
+
+   // Document handling methods
+   const viewDocument = (url, title) => {
+     if (!url) {
+       showToast('Document URL not available', 'error');
+       return;
+     }
+     
+     currentDocumentUrl.value = url;
+     currentDocumentTitle.value = title;
+     showDocumentViewer.value = true;
+   };
+
+   const downloadDocument = (url, filename) => {
+     if (!url) {
+       showToast('Document URL not available', 'error');
+       return;
+     }
+
+     const link = document.createElement('a');
+     link.href = url;
+     link.download = filename || 'document';
+     link.target = '_blank';
+     document.body.appendChild(link);
+     link.click();
+     document.body.removeChild(link);
+   };
+
+   const closeDocumentsModal = () => {
+     showDocumentsModal.value = false;
+   };
+
+   const closeDocumentViewer = () => {
+     showDocumentViewer.value = false;
+     currentDocumentUrl.value = '';
+     currentDocumentTitle.value = '';
+   };
+
    // Fetch temple data
    const fetchTempleData = async () => {
      isLoading.value = true;
      loadError.value = null;
      
      try {
-       // Get the temple data from API
        const response = await templeService.getTempleById(templeId.value);
        const templeData = response.data || response;
        
-       // Populate form with temple data - USING CORRECT FIELD NAMES
+       // Populate form with temple data
        form.name = templeData.name || '';
        form.mainDeity = templeData.main_deity || '';
        form.templeType = templeData.temple_type || '';
@@ -639,31 +925,52 @@ export default defineComponent({
        form.rejectionReason = templeData.rejection_reason || '';
        form.adminNotes = templeData.admin_notes || '';
        
-       // Document information
+       // Document information with URLs
        if (templeData.registration_cert_url) {
          existingFiles.registration = templeData.registration_cert_url.split('/').pop() || 'registration.pdf';
+         documentUrls.registration = templeData.registration_cert_url;
        }
        
        if (templeData.trust_deed_url) {
          existingFiles.trustDeed = templeData.trust_deed_url.split('/').pop() || 'trust_deed.pdf';
+         documentUrls.trustDeed = templeData.trust_deed_url;
        }
        
        if (templeData.property_docs_url) {
          existingFiles.property = templeData.property_docs_url.split('/').pop() || 'property.pdf';
+         documentUrls.property = templeData.property_docs_url;
        }
        
        if (templeData.additional_docs_urls) {
          try {
-           // Try to parse if it's a JSON string
-           const additionalDocs = JSON.parse(templeData.additional_docs_urls);
-           if (Array.isArray(additionalDocs)) {
-             existingFiles.additional = additionalDocs.map(url => url.split('/').pop());
-           } else {
-             existingFiles.additional = Object.values(additionalDocs).map(url => url.split('/').pop());
+           let additionalDocs = [];
+           let additionalUrls = [];
+           
+           if (typeof templeData.additional_docs_urls === 'string') {
+             // Try to parse if it's a JSON string
+             try {
+               const parsed = JSON.parse(templeData.additional_docs_urls);
+               if (Array.isArray(parsed)) {
+                 additionalUrls = parsed;
+               } else {
+                 additionalUrls = Object.values(parsed);
+               }
+             } catch (e) {
+               // If not JSON, handle as comma-separated string
+               additionalUrls = templeData.additional_docs_urls.split(',').map(url => url.trim());
+             }
+           } else if (Array.isArray(templeData.additional_docs_urls)) {
+             additionalUrls = templeData.additional_docs_urls;
            }
+           
+           additionalDocs = additionalUrls.map(url => url.split('/').pop());
+           
+           existingFiles.additional = additionalDocs;
+           documentUrls.additional = additionalUrls;
          } catch (e) {
-           // If not JSON, handle as a comma-separated string
-           existingFiles.additional = templeData.additional_docs_urls.split(',').map(url => url.trim().split('/').pop());
+           console.warn('Could not parse additional documents:', e);
+           existingFiles.additional = [];
+           documentUrls.additional = [];
          }
        }
        
@@ -739,54 +1046,50 @@ export default defineComponent({
      }
    };
 
-   // Form submission - COMPLETELY REWRITTEN to properly format data
-  const handleSubmit = async () => {
-  if (!validateCurrentStep()) return;
+   // Form submission
+   const handleSubmit = async () => {
+     if (!validateCurrentStep()) return;
 
-  try {
-    isSubmitting.value = true;
+     try {
+       isSubmitting.value = true;
 
-    // Ensure the established year is a valid number
-    let establishedYear = null;
-    if (form.establishedYear && !isNaN(parseInt(form.establishedYear))) {
-      establishedYear = parseInt(form.establishedYear);
-    }
+       let establishedYear = null;
+       if (form.establishedYear && !isNaN(parseInt(form.establishedYear))) {
+         establishedYear = parseInt(form.establishedYear);
+       }
 
-    // Prepare data in the format expected by the backend
-    const payload = {
-      id: parseInt(templeId.value),
-      name: form.name.trim(),
-      main_deity: form.mainDeity.trim(),
-      temple_type: form.templeType,
-      established_year: establishedYear,
-      phone: form.phone.trim(),
-      email: form.email.trim(),
-      description: form.description.trim(),
-      street_address: form.streetAddress.trim(),
-      city: form.city.trim(),
-      state: form.state.trim(),
-      district: form.district.trim(),
-      pincode: form.pincode.trim(),
-      landmark: form.landmark.trim(),
-      map_link: form.mapLink.trim()
-    };
+       const payload = {
+         id: parseInt(templeId.value),
+         name: form.name.trim(),
+         main_deity: form.mainDeity.trim(),
+         temple_type: form.templeType,
+         established_year: establishedYear,
+         phone: form.phone.trim(),
+         email: form.email.trim(),
+         description: form.description.trim(),
+         street_address: form.streetAddress.trim(),
+         city: form.city.trim(),
+         state: form.state.trim(),
+         district: form.district.trim(),
+         pincode: form.pincode.trim(),
+         landmark: form.landmark.trim(),
+         map_link: form.mapLink.trim()
+       };
 
-    console.log('Submitting update with data:', payload);
-    
-    await templeService.updateTemple(templeId.value, payload);
+       console.log('Submitting update with data:', payload);
+       
+       await templeService.updateTemple(templeId.value, payload);
 
-    showToast('Temple information updated successfully!');
-    
-    // Use the same routing as create temple - redirect to tenant dashboard
-    router.push('/tenant/dashboard');
-  } catch (error) {
-    console.error('Failed to update temple:', error);
-    const errorMessage = typeof error === 'object' ? (error.message || 'Failed to update temple information. Please try again.') : 'Failed to update temple information. Please try again.';
-    showToast(errorMessage, 'error');
-  } finally {
-    isSubmitting.value = false;
-  }
-};
+       showToast('Temple information updated successfully!');
+       router.push('/tenant/dashboard');
+     } catch (error) {
+       console.error('Failed to update temple:', error);
+       const errorMessage = typeof error === 'object' ? (error.message || 'Failed to update temple information. Please try again.') : 'Failed to update temple information. Please try again.';
+       showToast(errorMessage, 'error');
+     } finally {
+       isSubmitting.value = false;
+     }
+   };
 
    // Initialize component
    onMounted(() => {
@@ -799,20 +1102,31 @@ export default defineComponent({
      isSubmitting,
      isLoading,
      loadError,
+     showDocumentsModal,
+     showDocumentViewer,
+     currentDocumentUrl,
+     currentDocumentTitle,
      
      // Form data
      form,
      existingFiles,
+     documentUrls,
      
      // Computed
      statusClass,
+     hasExistingDocuments,
+     isDocumentPdf,
      
      // Methods
      fetchTempleData,
      nextStep,
      previousStep,
      handleFileUpload,
-     handleSubmit
+     handleSubmit,
+     viewDocument,
+     downloadDocument,
+     closeDocumentsModal,
+     closeDocumentViewer
    };
  }
 });

@@ -213,6 +213,84 @@ async getTemples(searchParams = {}) {
   }
 },
 
+// NEW METHOD: Get temple by ID with full details including documents
+async getTempleById(id) {
+  try {
+    console.log(`📡 Fetching temple details for ID: ${id}`)
+    
+    const timestamp = Date.now()
+    const response = await api.get(`/v1/entities/${id}?_=${timestamp}`)
+    
+    console.log('📥 Temple details response:', response)
+    
+    const templeData = response.data || response
+    return this.normalizeTempleData(templeData)
+  } catch (error) {
+    console.error(`❌ Error fetching temple ID ${id}:`, error)
+    console.error('Error response:', error.response?.data)
+    throw error
+  }
+},
+
+// NEW METHOD: Get temple documents
+async getTempleDocuments(id) {
+  try {
+    console.log(`📄 Fetching documents for temple ID: ${id}`)
+    
+    const timestamp = Date.now()
+    const response = await api.get(`/v1/entities/${id}/documents?_=${timestamp}`)
+    
+    console.log('📥 Temple documents response:', response)
+    
+    const documents = response.data || response
+    return documents
+  } catch (error) {
+    console.error(`❌ Error fetching temple documents for ID ${id}:`, error)
+    console.error('Error response:', error.response?.data)
+    throw error
+  }
+},
+
+// NEW METHOD: Download document
+async downloadDocument(templeId, documentType) {
+  try {
+    console.log(`📥 Downloading ${documentType} for temple ID: ${templeId}`)
+    
+    const response = await api.get(`/v1/entities/${templeId}/documents/${documentType}/download`, {
+      responseType: 'blob'
+    })
+    
+    // Create blob URL for download
+    const blob = new Blob([response.data])
+    const url = window.URL.createObjectURL(blob)
+    
+    // Extract filename from response headers or use default
+    const contentDisposition = response.headers['content-disposition']
+    let filename = `${documentType}_${templeId}.pdf`
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+      if (filenameMatch) {
+        filename = filenameMatch[1]
+      }
+    }
+    
+    // Trigger download
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    console.log(`✅ Downloaded ${documentType} as ${filename}`)
+    return { success: true, filename }
+  } catch (error) {
+    console.error(`❌ Error downloading ${documentType} for temple ID ${templeId}:`, error)
+    throw error
+  }
+},
 
 // Add this as a new method to temple.service.js
 async getSuperAdminTemplesStrict(tenantId) {
@@ -484,69 +562,147 @@ async getTemplesForStandardUser() {
     })
   },
 
-  async createTemple(templeData) {
-    try {
-      console.log('📡 Creating new temple entity')
-      console.log('📋 Raw form data received:', templeData)
+// FIXED: Updated createTemple method to properly handle files
+async createTemple(templeData) {
+  try {
+    console.log('📡 Creating new temple entity');
+    console.log('📋 Temple data received:', templeData);
 
-      // CRITICAL: Pass the data exactly as it is
-      // Don't transform or create a new object
-      console.log('🚨 DIRECT API CALL WITH ORIGINAL DATA')
-      console.log('Street address check:', templeData.street_address)
+    // Check if we have files in the documents object
+    const hasFiles = templeData.documents && (
+      templeData.documents.registration || 
+      templeData.documents.trustDeed || 
+      templeData.documents.property || 
+      (templeData.documents.additional && templeData.documents.additional.length > 0)
+    );
+
+    let payload;
+    let headers = {};
+
+    if (hasFiles) {
+      // Create FormData for file upload - MATCH BACKEND FIELD NAMES
+      console.log('📦 Creating FormData with files');
+      const formData = new FormData();
       
-      // Make sure the field exists
-      if (!templeData.street_address) {
-        console.warn('⚠️ street_address missing in form data!')
+      // Basic temple information - EXACT FIELD NAMES BACKEND EXPECTS
+      formData.append('name', templeData.name || '');
+      formData.append('main_deity', templeData.main_deity || templeData.mainDeity || '');
+      formData.append('temple_type', templeData.temple_type || templeData.templeType || templeData.category || '');
+      formData.append('established_year', templeData.established_year ? templeData.established_year.toString() : '');
+      formData.append('phone', templeData.phone || '');
+      formData.append('email', templeData.email || '');
+      formData.append('description', templeData.description || '');
+      
+      // Address information - EXACT FIELD NAMES BACKEND EXPECTS
+      formData.append('street_address', templeData.street_address || templeData.address?.street || templeData.streetAddress || '');
+      formData.append('city', templeData.city || templeData.address?.city || '');
+      formData.append('district', templeData.district || '');
+      formData.append('state', templeData.state || templeData.address?.state || '');
+      formData.append('pincode', templeData.pincode || templeData.address?.pincode || '');
+      formData.append('landmark', templeData.landmark || '');
+      formData.append('map_link', templeData.map_link || templeData.mapLink || '');
+      
+      // Status (will be set to pending by backend)
+      formData.append('status', 'pending');
+
+      // Add files with EXACT FIELD NAMES BACKEND EXPECTS
+      if (templeData.documents.registration) {
+        formData.append('registration_cert', templeData.documents.registration);
+        console.log('📄 Added registration certificate:', templeData.documents.registration.name);
+      }
+      
+      if (templeData.documents.trustDeed) {
+        formData.append('trust_deed', templeData.documents.trustDeed);
+        console.log('📄 Added trust deed:', templeData.documents.trustDeed.name);
+      }
+      
+      if (templeData.documents.property) {
+        formData.append('property_docs', templeData.documents.property);
+        console.log('📄 Added property documents:', templeData.documents.property.name);
+      }
+      
+      if (templeData.documents.additional && templeData.documents.additional.length > 0) {
+        templeData.documents.additional.forEach((file, index) => {
+          formData.append(`additional_docs_${index}`, file);
+          console.log(`📄 Added additional document ${index}:`, file.name);
+        });
       }
 
-      // Just pass the data directly to the API
-      const response = await api.post('/v1/entities', templeData)
-      console.log('✅ Direct API response:', response)
+      payload = formData;
+      // Don't set Content-Type header - let browser set it with boundary
       
-      return response.data || response
-    } catch (error) {
-      console.error('❌ Error creating temple:', error)
-      throw error
+      // Log FormData contents for debugging
+      console.log('📄 FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
+        } else {
+          console.log(`${key}: ${value}`);
+        }
+      }
+
+    } else {
+      // No files, send as JSON with EXACT FIELD NAMES BACKEND EXPECTS
+      console.log('📦 Creating JSON payload (no files)');
+      payload = {
+        name: templeData.name || '',
+        main_deity: templeData.main_deity || templeData.mainDeity || '',
+        temple_type: templeData.temple_type || templeData.templeType || templeData.category || '',
+        established_year: templeData.established_year ? parseInt(templeData.established_year) : null,
+        phone: templeData.phone || '',
+        email: templeData.email || '',
+        description: templeData.description || '',
+        street_address: templeData.street_address || templeData.address?.street || templeData.streetAddress || '',
+        city: templeData.city || templeData.address?.city || '',
+        district: templeData.district || '',
+        state: templeData.state || templeData.address?.state || '',
+        pincode: templeData.pincode || templeData.address?.pincode || '',
+        landmark: templeData.landmark || '',
+        map_link: templeData.map_link || templeData.mapLink || '',
+        status: 'pending'
+      };
+      
+      headers['Content-Type'] = 'application/json';
+      console.log('📦 JSON payload:', payload);
     }
-  },
 
-  async getTempleById(id) {
-    try {
-      console.log(`📡 Fetching temple with ID: ${id}`)
-
-      const response = await api.get(`/v1/entities/${id}`)
-      console.log('📥 Temple by ID response:', response)
-
-      return this.normalizeTempleData(response.data || response)
-    } catch (error) {
-      console.error(`❌ Error fetching temple ID ${id}:`, error)
-      console.error('Error response:', error.response?.data)
-      throw error
-    }
-  },
+    console.log('🚀 Making API request to /v1/entities');
+    console.log('🚀 Headers:', headers);
+    
+    const response = await api.post('/v1/entities', payload, { headers });
+    
+    console.log('✅ Temple created successfully:', response.data);
+    return response.data || response;
+  } catch (error) {
+    console.error('❌ Error creating temple:', error);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error config:', error.config);
+    throw error;
+  }
+},
 
   async updateTemple(id, updates) {
     try {
       console.log(`📡 Updating temple with ID: ${id}`);
       console.log('📦 Update data:', updates);
 
-      // For updates, we also use the direct field names
+      // Convert frontend field names to backend field names
       const payload = {
         id: parseInt(id),
         name: updates.name || '',
-        main_deity: updates.main_deity || '',
-        temple_type: updates.temple_type || '',
-        established_year: parseInt(updates.established_year || 0),
-        phone: updates.phone || '',
-        email: updates.email || '',
+        main_deity: updates.mainDeity || updates.main_deity || '',
+        temple_type: updates.templeType || updates.temple_type || updates.category || '',
+        established_year: updates.establishedYear ? parseInt(updates.establishedYear) : null,
+        phone: updates.contact?.phone || updates.phone || '',
+        email: updates.contact?.email || updates.email || '',
         description: updates.description || '',
-        street_address: updates.street_address || '',
-        city: updates.city || '',
+        street_address: updates.address?.street || updates.streetAddress || updates.addressLine1 || updates.street_address || '',
+        city: updates.address?.city || updates.city || '',
         district: updates.district || '',
-        state: updates.state || '',
-        pincode: updates.pincode || '',
+        state: updates.address?.state || updates.state || '',
+        pincode: updates.address?.pincode || updates.pincode || '',
         landmark: updates.landmark || '',
-        map_link: updates.map_link || ''
+        map_link: updates.mapLink || updates.map_link || ''
       };
       
       console.log('📦 Final update payload:', payload);
@@ -663,6 +819,12 @@ async getTemplesForStandardUser() {
       // Add tenant/creator information for filtering
       createdBy: temple.created_by || temple.CreatedBy || null,
       tenantId: temple.tenant_id || temple.TenantId || temple.created_by || temple.CreatedBy || null,
+
+      // Document information
+      registrationCertUrl: temple.registration_cert_url || temple.RegistrationCertUrl || null,
+      trustDeedUrl: temple.trust_deed_url || temple.TrustDeedUrl || null,
+      propertyDocsUrl: temple.property_docs_url || temple.PropertyDocsUrl || null,
+      additionalDocsUrls: temple.additional_docs_urls || temple.AdditionalDocsUrls || null,
 
       address: {
         street: temple.street_address || temple.StreetAddress || '',

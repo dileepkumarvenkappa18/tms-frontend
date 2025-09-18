@@ -818,155 +818,158 @@ async batchFetchTenantDetails(tenantIds) {
   // ==========================================
   // TEMPLE MANAGEMENT - EXISTING
   // ==========================================
+// Replace inside class SuperAdminService
 
-  async getPendingEntities() {
-    try {
-      console.log('Fetching pending entities from API...')
-      
-      // Updated to use query parameter instead of /pending path
-      const response = await api.get(`${this.baseURL}/entities?status=PENDING`)
-      console.log('API response for pending entities:', response)
-      
-      // Handle the response format properly based on the backend structure
-      if (response && response.pending_entities !== undefined) {
-        // Backend returns {pending_entities: [...]}
-        return {
-          success: true,
-          data: response.pending_entities || [],
-          total: (response.pending_entities || []).length,
-          message: 'Pending entities fetched successfully'
-        }
-      } else if (Array.isArray(response)) {
-        return {
-          success: true,
-          data: response,
-          total: response.length,
-          message: 'Pending entities fetched successfully'
-        }
-      } else if (response && response.data && Array.isArray(response.data)) {
-        return {
-          success: true,
-          data: response.data,
-          total: response.total || response.data.length,
-          message: 'Pending entities fetched successfully'
-        }
-      } else if (response && Array.isArray(response.entities)) {
-        return {
-          success: true,
-          data: response.entities,
-          total: response.total || response.entities.length,
-          message: 'Pending entities fetched successfully'
-        }
-      } else {
-        console.warn('API returned unexpected data format:', response)
-        // Return empty array as fallback
-        return {
-          success: true,
-          data: [],
-          total: 0,
-          message: 'No pending entities found'
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching pending entities:', error)
-      
-      // If we're in demo mode, use mock data
-      if (error.response?.status === 404) {
-        return {
-          success: true,
-          data: this.getMockPendingEntities(),
-          total: this.getMockPendingEntities().length,
-          message: 'Mock entities loaded (API endpoint not available)'
-        }
-      }
-      
-      return {
-        success: false,
-        data: [],
-        message: error.message || 'Failed to fetch pending entities'
-      }
-    }
-  }
+async getPendingEntities(params = {}) {
+  try {
+    console.log('Fetching pending entities from API...');
+    const response = await api.get(`${this.baseURL}/entities`, {
+      params: { status: 'PENDING', ...params }
+    });
+    const d = response?.data ?? {};
 
-  async approveEntity(entityId, data) {
-    try {
-      console.log(`Approving entity ${entityId}...`)
-      
-      const payload = {
-        status: "APPROVED",
-        notes: data?.notes || ''
-      }
-      
-      // Updated to use the actual endpoint from backend
-      const response = await api.patch(`${this.baseURL}/entities/${entityId}/approval`, payload)
-      console.log('Entity approval response:', response)
-      
+    // Accept common shapes: array, {pending_entities:[]}, {entities:[]}, {data:[]}
+    if (Array.isArray(d)) {
       return {
         success: true,
-        data: response,
-        message: 'Entity approved successfully'
-      }
-    } catch (error) {
-      console.error('Error approving entity:', error)
-      
-      if (error.response?.status === 404) {
-        console.warn('Endpoint not found, simulating successful approval')
-        return {
-          success: true,
-          data: { status: 'approved', message: 'Entity approved successfully (mock)' },
-          message: 'Entity approved successfully (mock)'
-        }
-      }
-      
-      return {
-        success: false,
-        data: null,
-        message: error.message || 'Failed to approve entity'
-      }
+        data: d,
+        total: d.length,
+        message: 'Pending entities fetched successfully'
+      };
     }
-  }
-
-  async rejectEntity(entityId, data) {
-    try {
-      console.log(`Rejecting entity ${entityId}...`)
-      
-      const payload = {
-        status: "REJECTED",
-        reason: data.reason || data.notes || ''
-      }
-      
-      // Updated to use the actual endpoint from backend
-      const response = await api.patch(`${this.baseURL}/entities/${entityId}/approval`, payload)
-      console.log('Entity rejection response:', response)
-      
+    if (Array.isArray(d.pending_entities)) {
       return {
         success: true,
-        data: response,
-        message: 'Entity rejected successfully'
-      }
-    } catch (error) {
-      console.error('Error rejecting entity:', error)
-      
-      if (error.response?.status === 404) {
-        console.warn('Endpoint not found, simulating successful rejection')
-        return {
-          success: true,
-          data: { 
-            status: 'rejected', 
-            reason: data.reason || data.notes,
-            message: 'Entity rejected successfully (mock)' 
-          },
+        data: d.pending_entities,
+        total: d.pending_entities.length,
+        message: 'Pending entities fetched successfully'
+      };
+    }
+    if (Array.isArray(d.entities)) {
+      return {
+        success: true,
+        data: d.entities,
+        total: d.total || d.entities.length,
+        message: 'Pending entities fetched successfully'
+      };
+    }
+    if (Array.isArray(d.data)) {
+      return {
+        success: true,
+        data: d.data,
+        total: d.total || d.data.length,
+        message: 'Pending entities fetched successfully'
+      };
+    }
+
+    console.warn('API returned unexpected data format:', d);
+    return {
+      success: true,
+      data: [],
+      total: 0,
+      message: 'No pending entities found'
+    };
+  } catch (error) {
+    console.error('Error fetching pending entities:', error);
+    if (error.response?.status === 404) {
+      const mocks = this.getMockPendingEntities?.() || [];
+      return {
+        success: true,
+        data: mocks,
+        total: mocks.length,
+        message: 'Mock entities loaded (API endpoint not available)'
+      };
+    }
+    return {
+      success: false,
+      data: [],
+      message: error.response?.data?.error || error.message || 'Failed to fetch pending entities'
+    };
+  }
+}
+
+async approveEntity(entityId, data) {
+  try {
+    console.log(`Approving entity ${entityId}...`);
+    const payload = {
+      status: 'APPROVED',
+      notes: data?.notes || ''
+    };
+    const response = await api.patch(`${this.baseURL}/entities/${entityId}/approval`, payload);
+    return {
+      success: true,
+      data: response?.data ?? null,
+      message: response?.data?.message || 'Entity approved successfully'
+    };
+  } catch (error) {
+    console.error('Error approving entity:', error);
+    if (error.response?.status === 404) {
+      console.warn('Endpoint not found, simulating successful approval');
+      return {
+        success: true,
+        data: { status: 'approved', message: 'Entity approved successfully (mock)' },
+        message: 'Entity approved successfully (mock)'
+      };
+    }
+    return {
+      success: false,
+      data: null,
+      message: error.response?.data?.error || error.message || 'Failed to approve entity'
+    };
+  }
+}
+
+async rejectEntity(entityId, data) {
+  try {
+    console.log(`Rejecting entity ${entityId}...`);
+    const payload = {
+      status: 'REJECTED',
+      reason: data?.reason || data?.notes || ''
+    };
+    const response = await api.patch(`${this.baseURL}/entities/${entityId}/approval`, payload);
+    return {
+      success: true,
+      data: response?.data ?? null,
+      message: response?.data?.message || 'Entity rejected successfully'
+    };
+  } catch (error) {
+    console.error('Error rejecting entity:', error);
+    if (error.response?.status === 404) {
+      console.warn('Endpoint not found, simulating successful rejection');
+      return {
+        success: true,
+        data: {
+          status: 'rejected',
+          reason: data?.reason || data?.notes || '',
           message: 'Entity rejected successfully (mock)'
-        }
-      }
-      
-      return {
-        success: false,
-        data: null,
-        message: error.message || 'Failed to reject entity'
-      }
+        },
+        message: 'Entity rejected successfully (mock)'
+      };
     }
+    return {
+      success: false,
+      data: null,
+      message: error.response?.data?.error || error.message || 'Failed to reject entity'
+    };
   }
+}
+
+async getEntitiesWithFilters(params = {}) {
+  try {
+    const response = await api.get(`${this.baseURL}/entities`, { params });
+    const d = response?.data ?? {};
+    if (Array.isArray(d)) return { success: true, data: d, total: d.length, message: 'Entities fetched' };
+    if (Array.isArray(d.entities)) return { success: true, data: d.entities, total: d.total || d.entities.length, message: 'Entities fetched' };
+    if (Array.isArray(d.data)) return { success: true, data: d.data, total: d.total || d.data.length, message: 'Entities fetched' };
+    return { success: true, data: [], total: 0, message: 'No entities found' };
+  } catch (error) {
+    return {
+      success: false,
+      data: [],
+      message: error.response?.data?.error || error.message || 'Failed to fetch entities'
+    };
+  }
+}
 
   // ==========================================
   // USER MANAGEMENT - NEW
