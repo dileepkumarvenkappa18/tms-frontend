@@ -335,7 +335,7 @@
                     <div class="flex items-center justify-center w-10 h-10 rounded bg-indigo-50 text-indigo-600">
                       <svg v-if="isPdf(doc)" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 11c0-.943 0-1.414.293-1.707C12.586 9 13.057 9 14 9h1c.943 0 1.414 0 1.707.293C17 9.586 17 10.057 17 11v2c0 .943 0 1.414-.293 1.707C16.414 15 15.943 15 15 15h-1m-4 0H9c-.943 0-1.414 0-1.707-.293C7 14.414 7 13.943 7 13v-2c0-.943 0-1.414.293-1.707C7.586 9 8.057 9 9 9h1m2 6V9m0 0V5.5c0-.465 0-.697.146-.854C12.293 4.5 12.526 4.5 12.99 4.5h1.02c.465 0 .697 0 .854.146.146.157.146.389.146.854V9" />
+                              d="M12 11c0-.943 0-1.414.293-1.707C12.586 9 13.057 9 14 9h1c.943 0 1.414 0 1.707.293C17 9.586 17 10.057 17 11v2c0 .943 0 1.414-.293 1.707C16.414 15 15.943 15 15 15h-1m-4 0H9c-.943 0-1.414 0-1.707-.293C7 14.414 7 13.943 7 13v-2c0-.943 0-1.414.293-1.707C7.586 9 8.057 9 9 9h1m2 6V9m0 0V5.5c0-.465 0-.697.146-.854C12.293 4.5 12.526 4.5 12.99 4.5h1.02c.465 0 .697 0  .854.146.146.157.146.389.146.854V9" />
                       </svg>
                       <svg v-else-if="isImage(doc)" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -382,6 +382,7 @@
                     </div>
                   </div>
                 </div>
+
               </div>
 
             </div>
@@ -517,7 +518,6 @@ const isPdf = (doc) => {
   const name = (doc?.name || doc?.filename || '').toLowerCase()
   return t.includes('pdf') || name.endsWith('.pdf')
 }
-
 const isImage = (doc) => {
   const t = (doc?.type || '').toLowerCase()
   const name = (doc?.name || doc?.filename || '').toLowerCase()
@@ -708,6 +708,62 @@ const openInNewTab = (url) => {
   }
 }
 
+// Helpers to pick a safe filename for download
+const sanitizeFileName = (name) => {
+  const fallback = 'document'
+  const raw = (name || '').trim() || fallback
+  // remove illegal characters \ / : * ? " < > | and control chars
+  return raw.replace(/[\\/:*?"<>|\u0000-\u001F]/g, '_').slice(0, 200)
+}
+
+const getFilenameFromDisposition = (disposition) => {
+  if (!disposition) return ''
+  // RFC 5987 filename*
+  const star = /filename\*\s*=\s*([^;]+)/i.exec(disposition)
+  if (star) {
+    let v = star[1].trim()
+    // strip quotes
+    v = v.replace(/^"+|"+$/g, '')
+    // UTF-8'' prefix
+    if (v.toLowerCase().startsWith("utf-8''")) {
+      v = v.substring(7)
+    }
+    try {
+      return sanitizeFileName(decodeURIComponent(v))
+    } catch {
+      return sanitizeFileName(v)
+    }
+  }
+  // fallback filename=
+  const normal = /filename\s*=\s*("?)([^";]+)\1/i.exec(disposition)
+  if (normal && normal[2]) {
+    return sanitizeFileName(normal[2])
+  }
+  return ''
+}
+
+const getFilenameFromUrl = (url) => {
+  try {
+    const u = new URL(url, window.location.origin)
+    const last = u.pathname.split('/').filter(Boolean).pop() || ''
+    return sanitizeFileName(decodeURIComponent(last))
+  } catch {
+    // relative or invalid, fallback to basic parse
+    const path = (url || '').split('?')[0].split('#')[0]
+    const last = path.split('/').filter(Boolean).pop() || ''
+    try { return sanitizeFileName(decodeURIComponent(last)) } catch { return sanitizeFileName(last) }
+  }
+}
+
+const pickDownloadName = (doc, url, disposition) => {
+  return sanitizeFileName(
+    getFilenameFromDisposition(disposition) ||
+    (doc?.name || doc?.filename) ||
+    getFilenameFromUrl(url) ||
+    'document'
+  )
+}
+
 // Direct document access for CORS issues
 const viewDocument = async (doc) => {
   console.log('viewDocument called with doc:', doc)
@@ -733,19 +789,22 @@ const viewDocument = async (doc) => {
   }
 }
 
+// UPDATED: Force-download implementation with Blob first, then graceful fallbacks
 const downloadDocument = async (doc) => {
   console.log('downloadDocument called with doc:', doc)
   if (!selectedApplication.value) return
   const appId = selectedApplication.value.id
-  
+
   // Build download URL with explicit download parameter
   const baseUrl = buildDocUrl(doc, appId, 'download')
-  const downloadUrl = baseUrl.includes('?') 
-    ? `${baseUrl}&download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`
-    : `${baseUrl}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`
+  const downloadUrl = baseUrl
+    ? (baseUrl.includes('?')
+        ? `${baseUrl}&download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`
+        : `${baseUrl}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`)
+    : ''
   
   console.log('downloadDocument - built download URL:', downloadUrl)
-  
+
   if (!downloadUrl) {
     toast.error('Download URL not available for this document.')
     return
@@ -753,56 +812,91 @@ const downloadDocument = async (doc) => {
 
   const docKey = doc.id || doc.name
   isDownloadingId.value = docKey
-  
+
+  // Method 1: Authenticated fetch -> Blob -> forced download
   try {
-    // Method 1: Use window.location for direct download
-    console.log('downloadDocument - initiating direct download via window.location')
-    window.location.href = downloadUrl
-    
-    toast.success('Download started...')
-    
-    // Give it a moment then clear the loading state
-    setTimeout(() => {
-      isDownloadingId.value = null
-    }, 2000)
-    
-  } catch (error) {
-    console.error('Download failed:', error)
-    
-    // Method 2: Fallback to iframe download
-    try {
-      console.log('downloadDocument - trying iframe download method')
-      const iframe = document.createElement('iframe')
-      iframe.style.display = 'none'
-      iframe.src = downloadUrl
-      document.body.appendChild(iframe)
-      
-      // Remove iframe after a delay
-      setTimeout(() => {
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe)
-        }
-      }, 5000)
-      
-      toast.info('Download initiated via alternative method')
-      
-    } catch (iframeError) {
-      console.error('Iframe download also failed:', iframeError)
-      
-      // Method 3: Last resort - open in new tab with download hint
-      try {
-        const newWindow = window.open(downloadUrl, '_blank', 'noopener,noreferrer')
-        if (!newWindow) {
-          toast.warning('Please allow pop-ups and try again')
-        } else {
-          toast.info('Document opened in new tab - use "Save As" to download')
-        }
-      } catch (finalError) {
-        console.error('All download methods failed:', finalError)
-        toast.error('Unable to download document. Please contact support.')
-      }
+    console.log('downloadDocument - trying fetch blob method')
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || ''
+    const resp = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'Accept': '*/*'
+      },
+      credentials: 'include' // harmless if same-origin; ensures cookies if needed
+    })
+
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`)
     }
-    
+
+    const disposition = resp.headers.get('Content-Disposition') || resp.headers.get('content-disposition') || ''
+    const contentType = resp.headers.get('Content-Type') || resp.headers.get('content-type') || (doc?.type || inferMimeFromUrlOrName(downloadUrl, doc?.name || doc?.filename) || 'application/octet-stream')
+
+    const blob = await resp.blob()
+    const finalBlob = blob.type ? blob : new Blob([blob], { type: contentType })
+
+    const fileName = pickDownloadName(doc, downloadUrl, disposition)
+    const blobUrl = URL.createObjectURL(finalBlob)
+
+    const a = document.createElement('a')
+    a.style.display = 'none'
+    a.href = blobUrl
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl)
+      a.remove()
+    }, 0)
+
+    toast.success('Download ready')
+    isDownloadingId.value = null
+    return
+  } catch (e) {
+    console.warn('downloadDocument - fetch blob method failed, falling back:', e)
+  }
+
+  // Method 2: Direct navigation (may rely on server attachment headers)
+  try {
+    console.log('downloadDocument - falling back to window.location')
+    window.location.href = downloadUrl
+    setTimeout(() => { isDownloadingId.value = null }, 2000)
+    toast.info('Attempting direct download')
+    return
+  } catch (e2) {
+    console.warn('downloadDocument - window.location failed, trying iframe:', e2)
+  }
+
+  // Method 3: Hidden iframe (older browsers)
+  try {
+    console.log('downloadDocument - trying iframe method')
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.src = downloadUrl
+    document.body.appendChild(iframe)
+    setTimeout(() => {
+      if (document.body.contains(iframe)) document.body.removeChild(iframe)
+    }, 5000)
+    toast.info('Download initiated via alternative method')
+    isDownloadingId.value = null
+    return
+  } catch (e3) {
+    console.warn('downloadDocument - iframe method failed, last resort new tab:', e3)
+  }
+
+  // Method 4: Last resort - open in new tab and let user Save As
+  try {
+    const w = window.open(downloadUrl, '_blank', 'noopener,noreferrer')
+    if (!w) {
+      toast.warning('Please allow pop-ups and try again')
+    } else {
+      toast.info('Document opened in new tab - use "Save As" to download')
+    }
+  } catch (finalError) {
+    console.error('All download methods failed:', finalError)
+    toast.error('Unable to download document. Please contact support.')
+  } finally {
     isDownloadingId.value = null
   }
 }
