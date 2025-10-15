@@ -1,11 +1,36 @@
 <template>
   <header class="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
-        <!-- Logo and Brand -->
-        <div class="flex items-center space-x-4">
-          <div class="flex-shrink-0 flex items-center">
-            <!-- Temple Logo/Icon -->
+        <!-- Left Side - Back Button, Menu Button, Logo -->
+        <div class="flex items-center space-x-2">
+          <!-- Back Button (All Devices) -->
+          <button
+            v-if="canGoBack"
+            @click="goBack"
+            class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            title="Go back"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+          </button>
+
+          <!-- Devotee Quick Access Button (Desktop Only - for quick access) -->
+          <button
+            v-if="currentRole === 'entity_admin' || currentRole === 'volunteer'"
+            @click="navigateToDevotees"
+            class="hidden lg:flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            title="Devotees"
+          >
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <span>Devotees</span>
+          </button>
+
+          <!-- Logo and Brand -->
+          <div class="flex-shrink-0 flex items-center ml-2">
             <router-link :to="getHomeLink()" class="flex items-center">
               <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
                 <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -13,21 +38,16 @@
                 </svg>
               </div>
               <div class="ml-3 hidden sm:block">
-                <h1 class="text-xl font-bold text-gray-900 hover:text-indigo-600 transition-colors">{{ appTitle }}</h1>
-                <p v-if="currentTemple" class="text-sm text-gray-500 truncate max-w-48">{{ currentTemple }}</p>
+                <h1 class="text-lg sm:text-xl font-bold text-gray-900 hover:text-indigo-600 transition-colors">{{ appTitle }}</h1>
+                <p v-if="currentTemple" class="text-xs sm:text-sm text-gray-500 truncate max-w-32 sm:max-w-48">{{ currentTemple }}</p>
               </div>
             </router-link>
           </div>
         </div>
 
-        <!-- Center - Breadcrumb (Desktop only) -->
-        <!-- <div class="hidden lg:block flex-1 max-w-md mx-8">
-          <AppBreadcrumb />
-        </div> -->
-
         <!-- Right Side - User Actions -->
-        <div class="flex items-center space-x-4">
-          
+        <div class="flex items-center space-x-2 sm:space-x-4">
+          <!-- Notification Bell -->
           <button 
             @click="toggleNotifications"
             class="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 notifications-bell"
@@ -44,16 +64,6 @@
             </span>
           </button>
 
-          <!-- Mobile Menu Toggle -->
-          <button
-            @click="toggleMobileSidebar"
-            class="lg:hidden p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-          </button>
-
           <!-- Profile Dropdown -->
           <AppProfileDropdown 
             :user="currentUser"
@@ -64,7 +74,7 @@
       </div>
     </div>
 
-    <!-- Mobile Breadcrumb -->
+    <!-- Mobile/Tablet Breadcrumb (hidden on large screens) -->
     <div class="lg:hidden border-t border-gray-200 px-4 py-2 bg-gray-50">
       <AppBreadcrumb />
     </div>
@@ -72,7 +82,7 @@
     <!-- Notifications Dropdown -->
     <div 
       v-if="showNotifications" 
-      class="notifications-container absolute top-16 right-4 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-hidden"
+      class="notifications-container absolute top-16 right-4 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-hidden"
     >
       <div class="p-4 border-b border-gray-200">
         <div class="flex items-center justify-between">
@@ -80,6 +90,7 @@
           <button 
             @click="markAllAsRead"
             class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            v-if="headerNotifications.length > 0"
           >
             Mark all read
           </button>
@@ -141,7 +152,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['toggle-menu'])
 
 // Composables
 const authStore = useAuthStore()
@@ -180,6 +191,11 @@ const currentTemple = computed(() => {
   return null
 })
 
+const canGoBack = computed(() => {
+  // Show back button if there's history to go back to
+  return window.history.length > 1
+})
+
 // Methods
 const getHomeLink = () => {
   const entityId = route.params.entityId
@@ -198,14 +214,23 @@ const getHomeLink = () => {
   }
 }
 
+const goBack = () => {
+  router.back()
+}
+
+const navigateToDevotees = () => {
+  const entityId = route.params.entityId
+  if (currentRole.value === 'entity_admin') {
+    router.push(`/entity/${entityId}/devotees`)
+  } else if (currentRole.value === 'volunteer') {
+    router.push(`/entity/${entityId}/volunteer/devotees`)
+  }
+}
+
 const toggleNotifications = (event) => {
   // Stop propagation to prevent the click outside handler from closing immediately
   event.stopPropagation()
   showNotifications.value = !showNotifications.value
-}
-
-const toggleMobileSidebar = () => {
-  emit('toggle-sidebar')
 }
 
 const markAsReadAndClose = async (notificationId) => {
@@ -214,7 +239,7 @@ const markAsReadAndClose = async (notificationId) => {
 }
 
 const markAllAsRead = async () => {
-  // Optimistic: mark each unread via store
+  // Mark each unread notification as read
   const toMark = headerNotifications.value.filter(n => !n.isRead).map(n => n.id)
   for (const id of toMark) {
     await notificationStore.markInAppAsRead(id)
@@ -246,7 +271,7 @@ const handleLogout = () => {
   router.push('/login')
 }
 
-// Click outside handler
+// Click outside handler for notifications
 const handleClickOutside = (event) => {
   // Check if the click is outside both the notifications container and the bell button
   const isClickOnBell = event.target.closest('.notifications-bell')
@@ -273,3 +298,21 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 </script>
+
+<style scoped>
+/* Smooth transitions for notifications dropdown */
+.notifications-container {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
