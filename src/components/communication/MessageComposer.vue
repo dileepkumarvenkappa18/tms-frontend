@@ -283,13 +283,18 @@ export default {
     
     // Computed values
     const senderID = computed(() => authStore.user?.id)
-    const entityID = computed(() => 
-      authStore.user?.entity_id ?? 
-      authStore.user?.entityId ?? 
-      authStore.user?.current_entity?.id ?? 
-      localStorage.getItem('current_entity_id') ??
-      null
-    )
+  const entityID = computed(() => {
+      // Priority 1: Get from route params (most reliable for entity-specific pages)
+      const routeEntityId = route.params.entityId || route.params.id
+      if (routeEntityId) return parseInt(routeEntityId)
+      
+      // Priority 2: Get from auth store
+      return authStore.user?.entity_id ?? 
+             authStore.user?.entityId ?? 
+             authStore.user?.current_entity?.id ?? 
+             parseInt(localStorage.getItem('current_entity_id')) ??
+             null
+    })
     
     const hasAuthToken = computed(() => !!localStorage.getItem('auth_token'))
     const isDevelopment = computed(() => import.meta.env.DEV)
@@ -418,7 +423,6 @@ export default {
             // For custom recipients, send specific emails/phones
             // For audience-based, let backend handle the recipient list
             recipients: isCustom ? selectedRecipients.value.map(r => {
-              // Assuming recipients have email/phone fields
               if (channel === 'email') return r.email
               if (channel === 'sms') return r.phone
               if (channel === 'whatsapp') return r.phone
@@ -426,7 +430,7 @@ export default {
             }).filter(Boolean) : [],
             // Send audience type if not custom
             audience: !isCustom ? recipientType.value : null,
-            // Additional metadata that might be useful
+            // Additional metadata
             metadata: {
               sender_id: senderID.value,
               entity_id: entityID.value,
@@ -445,12 +449,36 @@ export default {
               console.log(`✅ Successfully sent via ${channel}`)
             } else {
               errorCount++
-              lastError = result.error || 'Unknown error'
+              // ✅ Enhanced error handling
+              if (result.error?.error === 'no_recipients') {
+                lastError = result.error.details || 'No recipients found. Please add devotees or volunteers to this temple first.'
+              } else if (result.error?.error === 'service_not_configured') {
+                lastError = result.error.details || 'Email service is not properly configured. Please contact your administrator.'
+              } else {
+                lastError = result.error?.message || result.error || 'Unknown error'
+              }
               console.error(`❌ Failed to send via ${channel}:`, result.error)
             }
           } catch (err) {
             errorCount++
-            lastError = err.message || 'Network error'
+            // ✅ Parse error response from backend - ENHANCED
+            if (err.response?.data) {
+              const errorData = err.response.data
+              console.log('🔍 Error data received:', errorData)
+              
+              // Handle specific error codes
+              if (errorData.error === 'no_recipients') {
+                lastError = `📭 ${errorData.details || 'No recipients found. Please add devotees or volunteers to this temple first.'}`
+              } else if (errorData.error === 'service_not_configured') {
+                lastError = `⚙️ ${errorData.details || 'Email service is not properly configured. Please contact your administrator.'}`
+              } else if (errorData.error === 'template_error') {
+                lastError = `📄 ${errorData.details || 'Template error occurred.'}`
+              } else {
+                lastError = errorData.details || errorData.message || errorData.error || err.message
+              }
+            } else {
+              lastError = err.message || 'Network error'
+            }
             console.error(`💥 Exception sending via ${channel}:`, err)
           }
         }
@@ -464,9 +492,9 @@ export default {
           selectedRecipients.value = []
           updateRecipients() // Reset recipients
         } else if (successCount > 0 && errorCount > 0) {
-          showStatus(`⚠️ Partially sent: ${successCount} successful, ${errorCount} failed. Last error: ${lastError}`, true)
+          showStatus(`⚠️ Partially sent: ${successCount} successful, ${errorCount} failed. ${lastError}`, true)
         } else {
-          showStatus(`❌ Failed to send message: ${lastError}`, true)
+          showStatus(`❌ ${lastError}`, true)
         }
 
       } catch (error) {

@@ -552,8 +552,11 @@ const deleteEvent = async () => {
   isDeleting.value = true
   try {
     await eventStore.deleteEvent(eventToDelete.value.id)
+    // Refresh events and stats after deletion
+    await eventStore.fetchEvents(templeId.value)
     toast.success('Event deleted successfully')
     showDeleteModal.value = false
+    eventToDelete.value = null
   } catch (error) {
     toast.error('Failed to delete event')
   } finally {

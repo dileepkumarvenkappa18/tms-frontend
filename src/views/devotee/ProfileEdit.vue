@@ -1,5 +1,3 @@
-
-
 <template>
   <div class="profile-edit-container">
     <div class="max-w-4xl mx-auto py-8 px-4">
@@ -13,21 +11,6 @@
       <div v-if="isLoading" class="flex justify-center items-center py-12">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         <span class="ml-3 text-gray-600">Loading profile...</span>
-      </div>
-
-      <!-- Error State -->
-      <div v-if="error && !isLoading" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-        <div class="flex">
-          <div class="text-red-400">
-            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="ml-3">
-            <h3 class="text-sm font-medium text-red-800">Error Loading Profile</h3>
-            <p class="text-sm text-red-700 mt-1">{{ error }}</p>
-          </div>
-        </div>
       </div>
 
       <!-- Main Content -->
@@ -85,11 +68,12 @@
                 </div>
                 
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
-                    v-model="profile.dateOfBirth"
-                    type="date"
+                    v-model="profile.email"
+                    type="email"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="your.email@example.com"
                   />
                 </div>
                 
@@ -100,6 +84,15 @@
                     type="tel"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     placeholder="+91 9876543210"
+                  />
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                  <input
+                    v-model="profile.dateOfBirth"
+                    type="date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 
@@ -334,7 +327,6 @@ const { showToast } = useToast()
 const currentStep = ref(0)
 const isSaving = ref(false)
 const isLoading = ref(false)
-const error = ref(null)
 
 // Steps configuration
 const steps = ref([
@@ -347,6 +339,7 @@ const steps = ref([
 // Profile data - Initialize with empty values
 const profile = ref({
   fullName: '',
+  email: '',
   dateOfBirth: '',
   phone: '',
   gender: '',
@@ -379,6 +372,7 @@ const sevaTypes = ref([
 const completionPercentage = computed(() => {
   const fields = [
     profile.value.fullName,
+    profile.value.email,
     profile.value.dateOfBirth,
     profile.value.phone,
     profile.value.gender,
@@ -420,7 +414,6 @@ const getSevaPreferences = (data) => {
 const loadProfile = async () => {
   try {
     isLoading.value = true
-    error.value = null
     
     console.log('Loading profile data...')
     const response = await devoteeService.getProfile()
@@ -429,18 +422,21 @@ const loadProfile = async () => {
       const data = response.data
       console.log('Profile data received:', data)
       
+      // Build address string from components
+      const addressParts = []
+      if (data.street_address) addressParts.push(data.street_address)
+      if (data.city) addressParts.push(data.city)
+      if (data.state) addressParts.push(data.state)
+      if (data.pincode) addressParts.push(data.pincode)
+      
       // Map API response to form fields
       profile.value = {
         fullName: data.full_name || '',
+        email: data.email || '',
         dateOfBirth: formatDateForInput(data.dob),
         phone: data.phone || '',
         gender: data.gender || '',
-        address: [
-          data.street_address,
-          data.city,
-          data.state,
-          data.pincode
-        ].filter(Boolean).join(', '),
+        address: addressParts.join(', '),
         gotra: data.gotra || '',
         nakshatra: data.nakshatra || '',
         rashi: data.rashi || '',
@@ -456,18 +452,10 @@ const loadProfile = async () => {
       }
       
       console.log('Profile mapped to form:', profile.value)
-    } else {
-      console.log('No profile data found - user may be new')
-      // Keep default empty values for new users
     }
   } catch (err) {
     console.error('Error loading profile:', err)
-    error.value = err.message || 'Failed to load profile data'
-    
-    // Don't show error toast if it's just a 404 (new user)
-    if (!err.message?.includes('404') && !err.message?.includes('not found')) {
-      showToast(error.value, 'error')
-    }
+    // Silently handle errors - just keep empty form for new users
   } finally {
     isLoading.value = false
   }
@@ -476,47 +464,55 @@ const loadProfile = async () => {
 const saveProfile = async () => {
   try {
     isSaving.value = true
-    error.value = null
     
     console.log('Saving profile data:', profile.value)
     
-    // Convert form data to API format
-    const profileData = {
-      full_name: profile.value.fullName || null,
-      dob: profile.value.dateOfBirth || null,
-      phone: profile.value.phone || null,
-      gender: profile.value.gender || null,
-      
-      // Parse address components (basic implementation)
-      street_address: profile.value.address || null,
-      city: null,
-      state: null,
-      pincode: null,
-      country: 'India',
-      
-      gotra: profile.value.gotra || null,
-      nakshatra: profile.value.nakshatra || null,
-      rashi: profile.value.rashi || null,
-      preferred_language: profile.value.preferredLanguage || null,
-      
-      father_name: profile.value.fatherName || null,
-      mother_name: profile.value.motherName || null,
-      spouse_name: profile.value.spouseName || null,
-      number_of_children: profile.value.numberOfChildren || 0,
-      
-      // Seva preferences
-      seva_abhisheka: profile.value.preferredSevas.includes('abhisheka'),
-      seva_archana: profile.value.preferredSevas.includes('archana'),
-      seva_annadana: profile.value.preferredSevas.includes('annadana'),
-      seva_pradakshina: profile.value.preferredSevas.includes('pradakshina'),
-      seva_bhajan: profile.value.preferredSevas.includes('bhajan'),
-      seva_cleaning: profile.value.preferredSevas.includes('cleaning'),
-      
-      // Notification preferences
-      email_notifications: profile.value.emailNotifications,
-      sms_notifications: profile.value.smsNotifications,
-      whatsapp_notifications: profile.value.whatsappNotifications
+    // Convert form data to API format - only include non-empty values
+    const profileData = {}
+    
+    // Add only filled fields
+    if (profile.value.fullName?.trim()) profileData.full_name = profile.value.fullName.trim()
+    if (profile.value.email?.trim()) profileData.email = profile.value.email.trim()
+    
+    if (profile.value.dateOfBirth) {
+      // Convert date to ISO 8601 format with time
+      const date = new Date(profile.value.dateOfBirth + 'T00:00:00')
+      profileData.dob = date.toISOString()
     }
+    
+    if (profile.value.phone?.trim()) profileData.phone = profile.value.phone.trim()
+    if (profile.value.gender) profileData.gender = profile.value.gender
+    
+    // Address - send the full address as street_address
+    if (profile.value.address?.trim()) {
+      profileData.street_address = profile.value.address.trim()
+      profileData.country = 'India'
+    }
+    
+    // Spiritual information
+    if (profile.value.gotra?.trim()) profileData.gotra = profile.value.gotra.trim()
+    if (profile.value.nakshatra?.trim()) profileData.nakshatra = profile.value.nakshatra.trim()
+    if (profile.value.rashi?.trim()) profileData.rashi = profile.value.rashi.trim()
+    if (profile.value.preferredLanguage) profileData.preferred_language = profile.value.preferredLanguage
+    
+    // Family information
+    if (profile.value.fatherName?.trim()) profileData.father_name = profile.value.fatherName.trim()
+    if (profile.value.motherName?.trim()) profileData.mother_name = profile.value.motherName.trim()
+    if (profile.value.spouseName?.trim()) profileData.spouse_name = profile.value.spouseName.trim()
+    if (profile.value.numberOfChildren) profileData.number_of_children = parseInt(profile.value.numberOfChildren)
+    
+    // Seva preferences
+    profileData.seva_abhisheka = profile.value.preferredSevas.includes('abhisheka')
+    profileData.seva_archana = profile.value.preferredSevas.includes('archana')
+    profileData.seva_annadana = profile.value.preferredSevas.includes('annadana')
+    profileData.seva_pradakshina = profile.value.preferredSevas.includes('pradakshina')
+    profileData.seva_bhajan = profile.value.preferredSevas.includes('bhajan')
+    profileData.seva_cleaning = profile.value.preferredSevas.includes('cleaning')
+    
+    // Notification preferences
+    profileData.email_notifications = profile.value.emailNotifications
+    profileData.sms_notifications = profile.value.smsNotifications
+    profileData.whatsapp_notifications = profile.value.whatsappNotifications
     
     console.log('Sending profile data to API:', profileData)
     
@@ -535,8 +531,8 @@ const saveProfile = async () => {
     
   } catch (err) {
     console.error('Error saving profile:', err)
-    error.value = err.message || 'Error saving profile'
-    showToast(error.value, 'error')
+    const errorMessage = err.message || 'Error saving profile'
+    showToast(errorMessage, 'error')
   } finally {
     isSaving.value = false
   }

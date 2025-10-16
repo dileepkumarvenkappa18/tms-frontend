@@ -78,7 +78,7 @@
                 </p>
               </div>
 
-              <!-- Assigned Date - Only show if tenant is assigned -->
+              <!-- Assigned Date -->
               <div v-if="displayTenantName && displayAssignedDate">
                 <p class="text-gray-500 text-sm">Assigned Date</p>
                 <p class="font-medium">
@@ -88,7 +88,7 @@
                 </p>
               </div>
 
-              <!-- Re-assigned Date - Show when tenant is assigned and has reassignment date -->
+              <!-- Re-assigned Date -->
               <div v-if="displayTenantName && displayReassignmentDate">
                 <p class="text-gray-500 text-sm">Re-assigned Date</p>
                 <p class="font-medium">
@@ -154,7 +154,6 @@ export default {
       return ['standarduser', 'monitoringuser'].includes(role);
     });
 
-    // Get tenant name from multiple possible sources
     const displayTenantName = computed(() => {
       return user.value.tenantAssigned || 
              user.value.tenant_assigned ||
@@ -190,11 +189,8 @@ export default {
         const response = await superAdminService.getUserById(userId.value);
         if (response.success && response.data) {
           user.value = response.data;
-
-          // Debug log to see what data we're getting
           console.log('User data received:', response.data);
 
-          // Ensure tenantAssigned is reactive and updated correctly
           if (!user.value.tenantAssigned && user.value.tenant_assignment_details) {
             user.value.tenantAssigned = user.value.tenant_assignment_details.tenantName;
           }
@@ -218,27 +214,9 @@ export default {
       try {
         const response = await superAdminService.assignUserToTenant(userId.value, tenantId);
         if (response.success) {
-          // Immediately update user data for reactive UI
-          const currentTime = new Date().toISOString();
-          
-          user.value.tenantAssigned = tenantName;
-          user.value.tenant_assigned = tenantName; // backup field
-          
-          // Set assigned date only if it's the first assignment
-          if (!user.value.assignedDate) {
-            user.value.assignedDate = currentTime;
-          }
-          user.value.reassignmentDate = currentTime;
-
-          // Update tenant_assignment_details
-          if (!user.value.tenant_assignment_details) {
-            user.value.tenant_assignment_details = {};
-          }
-          user.value.tenant_assignment_details.tenantName = tenantName;
-          user.value.tenant_assignment_details.assignedOn = user.value.assignedDate || currentTime;
-          user.value.tenant_assignment_details.updatedOn = currentTime;
-
           alert('Tenant assigned successfully');
+          // ✅ Fix: Fetch updated data from backend immediately
+          await fetchUserDetails();
         } else {
           alert(response.message || 'Failed to assign tenant');
         }
