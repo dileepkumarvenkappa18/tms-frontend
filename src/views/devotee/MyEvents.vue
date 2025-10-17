@@ -1,12 +1,48 @@
 <template>
   <div class="min-h-screen bg-gray-50">    
-      <WelcomeBanner 
-        :user="currentUser"
-        :userName="currentUser?.fullName || ''"
-        :userRole="currentUser?.role || 'devotee'"
-        title="My Temple Events"
-        :subtitle="`Explore upcoming events and festivals at ${templeName}`"
-      />
+    <!-- Temple Header Bar -->
+    <div class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">
+                {{ currentTemple.name || 'Temple' }}
+              </h2>
+              <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
+                {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
+              </p>
+            </div>
+          </div>
+          
+          <!-- User Info -->
+          <div class="flex items-center space-x-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-gray-900 font-medium text-sm">{{ currentUser?.name || 'Devotee' }}</p>
+              <p class="text-gray-500 text-xs">{{ currentUser?.email || '' }}</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <WelcomeBanner 
+      :user="currentUser"
+      :userName="currentUser?.fullName || currentUser?.name || ''"
+      :userRole="currentUser?.role || 'devotee'"
+      title="My Temple Events"
+      :subtitle="`Explore upcoming events and festivals at ${currentTemple?.name || 'the temple'}`"
+    />
 
     <BaseCard class="p-6">
       <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -210,6 +246,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import eventService from '@/services/event.service'
+import axios from 'axios'
 
 // Base Components
 import BaseCard from '@/components/common/BaseCard.vue'
@@ -221,21 +258,211 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner.vue'
 
 const route = useRoute()
-const { currentUser } = useAuth()
+const { currentUser: authUser } = useAuth()
 const { showToast } = useToast()
 
 // Reactive state
 const loading = ref(true)
 const searchQuery = ref('')
 const selectedFilter = ref('all')
-const viewMode = ref('list') // Default to list view and keep it fixed
+const viewMode = ref('list')
 const showEventModal = ref(false)
 const selectedEvent = ref(null)
 
-// Temple data
-const templeName = ref('Sri Venkateswara Temple')
+// Temple and User data
 const events = ref([])
 const userRSVPs = ref(new Set())
+const currentTemple = ref({
+  name: '',
+  city: '',
+  state: ''
+})
+const currentUser = ref({
+  name: '',
+  email: ''
+})
+
+// Get current entity ID from route
+const currentEntityId = computed(() => route.params.id)
+
+// Get API base URL
+const getApiBaseUrl = () => {
+  return import.meta.env.VITE_API_BASE_URL || 
+         localStorage.getItem('api_base_url') || 
+         'https://api.yourdomain.com'
+}
+
+// Get auth token
+const getAuthToken = () => {
+  return localStorage.getItem('access_token') || 
+         localStorage.getItem('token') || 
+         localStorage.getItem('authToken')
+}
+
+// Fetch temple information
+const fetchTempleInfo = async () => {
+  try {
+    console.log('🏛️ Fetching temple information...')
+    
+    // FIRST: Try localStorage for immediate display
+    const storedTempleName = localStorage.getItem('selectedTempleName')
+    const storedTempleCity = localStorage.getItem('selectedTempleCity')
+    const storedTempleState = localStorage.getItem('selectedTempleState')
+    
+    if (storedTempleName) {
+      currentTemple.value = {
+        name: storedTempleName,
+        city: storedTempleCity || '',
+        state: storedTempleState || ''
+      }
+      console.log('✅ Temple info from localStorage:', currentTemple.value)
+    }
+    
+    // Get entity ID from multiple sources
+    const entityId = currentEntityId.value ||
+                     route.params.id ||
+                     localStorage.getItem('selectedEntityId') || 
+                     localStorage.getItem('current_entity_id') ||
+                     localStorage.getItem('current_tenant_id')
+    
+    if (!entityId) {
+      console.warn('⚠️ No entity ID found')
+      if (!storedTempleName) {
+        currentTemple.value.name = 'Temple'
+      }
+      return
+    }
+    
+    console.log('🔍 Fetching temple details for entity ID:', entityId)
+    
+    // SECOND: Fetch from API to get complete/updated information
+    try {
+      const apiUrl = getApiBaseUrl()
+      const token = getAuthToken()
+      
+      const response = await axios.get(`${apiUrl}/entities/${entityId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      console.log('📥 Temple API response:', response.data)
+      
+      const templeData = response.data?.data || response.data
+      
+      if (templeData) {
+        currentTemple.value = {
+          name: templeData.name || templeData.Name || storedTempleName || 'Temple',
+          city: templeData.city || templeData.City || storedTempleCity || '',
+          state: templeData.state || templeData.State || storedTempleState || ''
+        }
+        
+        // Update localStorage with latest data
+        if (currentTemple.value.name) {
+          localStorage.setItem('selectedTempleName', currentTemple.value.name)
+        }
+        if (currentTemple.value.city) {
+          localStorage.setItem('selectedTempleCity', currentTemple.value.city)
+        }
+        if (currentTemple.value.state) {
+          localStorage.setItem('selectedTempleState', currentTemple.value.state)
+        }
+        
+        console.log('✅ Temple info updated from API:', currentTemple.value)
+      }
+    } catch (apiError) {
+      console.warn('⚠️ API fetch failed, using localStorage data:', apiError.message)
+      // Keep the localStorage data that we already set
+      if (!currentTemple.value.name) {
+        currentTemple.value.name = storedTempleName || 'Temple'
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error in fetchTempleInfo:', error)
+    // Final fallback
+    currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
+  }
+}
+
+// Fetch user information
+const fetchUserInfo = () => {
+  try {
+    console.log('👤 Fetching user information...')
+    
+    // Try authUser first
+    if (authUser?.value) {
+      currentUser.value = {
+        name: authUser.value.name || authUser.value.full_name || 'Devotee',
+        email: authUser.value.email || ''
+      }
+      console.log('✅ User info from auth:', currentUser.value)
+      return
+    }
+    
+    // Method 1: Try user_data object
+    const userDataStr = localStorage.getItem('user_data')
+    if (userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr)
+        currentUser.value = {
+          name: userData.name || userData.Name || userData.full_name || 'Devotee',
+          email: userData.email || userData.Email || ''
+        }
+        console.log('✅ User info from user_data:', currentUser.value)
+        return
+      } catch (parseError) {
+        console.warn('⚠️ Error parsing user_data:', parseError)
+      }
+    }
+    
+    // Method 2: Try individual localStorage items
+    const userName = localStorage.getItem('user_name') || 
+                     localStorage.getItem('userName') ||
+                     localStorage.getItem('full_name')
+    const userEmail = localStorage.getItem('user_email') || 
+                      localStorage.getItem('userEmail') ||
+                      localStorage.getItem('email')
+    
+    if (userName || userEmail) {
+      currentUser.value = {
+        name: userName || 'Devotee',
+        email: userEmail || ''
+      }
+      console.log('✅ User info from localStorage items:', currentUser.value)
+      return
+    }
+    
+    // Method 3: Try profile data
+    const profileData = localStorage.getItem('devotee_profile')
+    if (profileData) {
+      try {
+        const profile = JSON.parse(profileData)
+        currentUser.value = {
+          name: profile.full_name || profile.name || 'Devotee',
+          email: profile.email || ''
+        }
+        console.log('✅ User info from profile:', currentUser.value)
+        return
+      } catch (parseError) {
+        console.warn('⚠️ Error parsing profile data:', parseError)
+      }
+    }
+    
+    // Fallback
+    console.log('⚠️ No user info found, using defaults')
+    currentUser.value = {
+      name: 'Devotee',
+      email: ''
+    }
+  } catch (error) {
+    console.error('❌ Error fetching user info:', error)
+    currentUser.value = {
+      name: 'Devotee',
+      email: ''
+    }
+  }
+}
 
 // Computed properties
 const filteredEvents = computed(() => {
@@ -266,7 +493,7 @@ const filteredEvents = computed(() => {
       break
     case 'all':
     default:
-      filtered = filtered.filter(e => e.status) // or just return filtered
+      filtered = filtered.filter(e => e.status)
       break
   }
 
@@ -276,54 +503,47 @@ const filteredEvents = computed(() => {
 // Methods
 const loadEvents = async () => {
   try {
-    loading.value = true;
+    loading.value = true
     
-    // Use getUpcomingEvents instead of getEvents since it's working
-    const data = await eventService.getUpcomingEvents();
-    console.log("🔍 Events Response:", data);
+    const data = await eventService.getUpcomingEvents()
+    console.log("🔍 Events Response:", data)
     
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-    // Map API response to our UI model
     events.value = (Array.isArray(data) ? data : []).map(event => {
-      const eventDate = new Date(event.event_date);
-      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+      const eventDate = new Date(event.event_date)
+      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())
       
-      let status = 'upcoming';
+      let status = 'upcoming'
       
       if (!isNaN(eventDate)) {
-        // Determine if event is completed, ongoing, or upcoming
         if (eventDateOnly < today) {
-          status = 'completed';
+          status = 'completed'
         } else if (eventDateOnly.getTime() === today.getTime()) {
-          // Event is today - check if it's ongoing or upcoming based on time
           if (event.event_time) {
             try {
-              const eventTimeDate = new Date(event.event_time);
-              const eventHours = eventTimeDate.getUTCHours();
-              const eventMinutes = eventTimeDate.getUTCMinutes();
+              const eventTimeDate = new Date(event.event_time)
+              const eventHours = eventTimeDate.getUTCHours()
+              const eventMinutes = eventTimeDate.getUTCMinutes()
               
-              const currentHours = now.getHours();
-              const currentMinutes = now.getMinutes();
+              const currentHours = now.getHours()
+              const currentMinutes = now.getMinutes()
               
-              // If current time is past event time, consider it ongoing
-              // (You can adjust this logic based on event duration)
               if (currentHours > eventHours || 
                   (currentHours === eventHours && currentMinutes >= eventMinutes)) {
-                status = 'ongoing';
+                status = 'ongoing'
               } else {
-                status = 'upcoming';
+                status = 'upcoming'
               }
             } catch (e) {
-              // If time parsing fails, default to ongoing for today's events
-              status = 'ongoing';
+              status = 'ongoing'
             }
           } else {
-            status = 'ongoing'; // If no time specified, assume ongoing
+            status = 'ongoing'
           }
         } else {
-          status = 'upcoming';
+          status = 'upcoming'
         }
       }
 
@@ -337,192 +557,182 @@ const loadEvents = async () => {
         status,
         attendees: event.rsvp_count || 0,
         eventType: event.event_type,
-        maxAttendees: 200 // Default placeholder
-      };
-    });
+        maxAttendees: 200
+      }
+    })
     
-    try {
-      // Skip RSVP fetching for now as it's not working correctly
-      // We'll implement this later when we have the correct API structure
-    } catch (rsvpError) {
-      console.error('Error fetching RSVPs:', rsvpError);
-    }
-
-    console.log('✅ Mapped Events:', events.value);
-    console.log('✅ User RSVPs:', userRSVPs.value);
+    console.log('✅ Mapped Events:', events.value)
 
   } catch (error) {
-    console.error('❌ Error fetching events:', error);
-    showToast('Failed to load events', 'error');
+    console.error('❌ Error fetching events:', error)
+    showToast('Failed to load events', 'error')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 
 const handleRSVP = async (eventId, isRSVP) => {
   try {
     if (isRSVP) {
-      // Try to use eventService if available for RSVP
       if (typeof eventService.registerForEvent === 'function') {
-        await eventService.registerForEvent(eventId);
-        userRSVPs.value.add(eventId);
-        showToast('RSVP confirmed successfully!', 'success');
+        await eventService.registerForEvent(eventId)
+        userRSVPs.value.add(eventId)
+        showToast('RSVP confirmed successfully!', 'success')
       } else {
-        // Fall back to showing error
-        showToast('RSVP functionality not available', 'error');
+        showToast('RSVP functionality not available', 'error')
       }
     } else {
-      // There's no cancel RSVP endpoint in your API, so we'll show an error
-      showToast('RSVP cancellation is not supported yet', 'error');
-      return;
+      showToast('RSVP cancellation is not supported yet', 'error')
+      return
     }
   } catch (error) {
-    console.error('Error updating RSVP:', error);
-    showToast('Failed to update RSVP', 'error');
+    console.error('Error updating RSVP:', error)
+    showToast('Failed to update RSVP', 'error')
   }
 }
 
 const openEventModal = (event) => {
-  selectedEvent.value = event;
-  showEventModal.value = true;
+  selectedEvent.value = event
+  showEventModal.value = true
 }
 
 const closeEventModal = () => {
-  showEventModal.value = false;
-  selectedEvent.value = null;
+  showEventModal.value = false
+  selectedEvent.value = null
 }
 
 const getUserRSVP = (eventId) => {
-  return userRSVPs.value.has(eventId);
+  return userRSVPs.value.has(eventId)
 }
 
 const canRSVP = (event) => {
   return event.status === 'upcoming' && 
-         (!event.maxAttendees || event.attendees < event.maxAttendees);
+         (!event.maxAttendees || event.attendees < event.maxAttendees)
 }
 
 const getEventStatus = (event) => {
-  if (event.status === 'completed') return 'Completed';
-  if (event.status === 'ongoing') return 'Ongoing';
-  if (event.maxAttendees && event.attendees >= event.maxAttendees) return 'Full';
-  return 'Open';
+  if (event.status === 'completed') return 'Completed'
+  if (event.status === 'ongoing') return 'Ongoing'
+  if (event.maxAttendees && event.attendees >= event.maxAttendees) return 'Full'
+  return 'Open'
 }
 
 const getEventStatusClass = (event) => {
-  const status = getEventStatus(event);
-  const baseClasses = 'px-2 py-1 rounded-lg text-xs font-medium';
+  const status = getEventStatus(event)
+  const baseClasses = 'px-2 py-1 rounded-lg text-xs font-medium'
   
   switch (status) {
     case 'Completed':
-      return `${baseClasses} bg-gray-100 text-gray-800`;
+      return `${baseClasses} bg-gray-100 text-gray-800`
     case 'Ongoing':
-      return `${baseClasses} bg-blue-100 text-blue-800`;
+      return `${baseClasses} bg-blue-100 text-blue-800`
     case 'Full':
-      return `${baseClasses} bg-red-100 text-red-800`;
+      return `${baseClasses} bg-red-100 text-red-800`
     default:
-      return `${baseClasses} bg-green-100 text-green-800`;
+      return `${baseClasses} bg-green-100 text-green-800`
   }
 }
 
 const getRSVPStatusClass = (eventId) => {
-  const baseClasses = 'px-3 py-1 rounded-lg text-sm font-medium';
+  const baseClasses = 'px-3 py-1 rounded-lg text-sm font-medium'
   return getUserRSVP(eventId)
     ? `${baseClasses} bg-green-100 text-green-800`
-    : `${baseClasses} bg-gray-100 text-gray-800`;
+    : `${baseClasses} bg-gray-100 text-gray-800`
 }
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'No date available';
+  if (!dateString) return 'No date available'
   
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return dateString;
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return dateString
   
   return date.toLocaleDateString('en-IN', { 
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
-  });
+  })
 }
 
 const formatTime = (timeString) => {
-  if (!timeString) return 'Time not specified';
+  if (!timeString) return 'Time not specified'
   
   try {
-    // Handle ISO datetime format (e.g., "0000-01-01T10:52:00Z")
-    // Extract just the time portion
     if (typeof timeString === 'string' && timeString.includes('T')) {
-      const date = new Date(timeString);
+      const date = new Date(timeString)
       if (!isNaN(date.getTime())) {
-        // Get hours and minutes from the Date object
-        let hours = date.getUTCHours(); // Use UTC to avoid timezone issues
-        const minutes = date.getUTCMinutes();
+        let hours = date.getUTCHours()
+        const minutes = date.getUTCMinutes()
         
-        // Convert to 12-hour format
-        const period = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12 || 12; // Convert 0 to 12 for midnight
+        const period = hours >= 12 ? 'PM' : 'AM'
+        hours = hours % 12 || 12
         
-        // Format with leading zeros for minutes
-        return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`
       }
     }
     
-    // Handle time-only strings (HH:MM:SS or HH:MM format)
     if (typeof timeString === 'string' && timeString.includes(':')) {
-      const timeParts = timeString.split(':');
+      const timeParts = timeString.split(':')
       if (timeParts.length >= 2) {
-        let hours = parseInt(timeParts[0], 10);
-        const minutes = parseInt(timeParts[1], 10);
+        let hours = parseInt(timeParts[0], 10)
+        const minutes = parseInt(timeParts[1], 10)
         
         if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-          // Convert to 12-hour format
-          const period = hours >= 12 ? 'PM' : 'AM';
-          hours = hours % 12 || 12; // Convert 0 to 12 for midnight
+          const period = hours >= 12 ? 'PM' : 'AM'
+          hours = hours % 12 || 12
           
-          // Format with leading zeros
-          return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
+          return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`
         }
       }
     }
   } catch (error) {
-    console.error('Error formatting time:', error, timeString);
+    console.error('Error formatting time:', error, timeString)
   }
   
-  // Return the original if we can't parse it
-  return timeString;
+  return timeString
 }
 
 const getEmptyStateMessage = () => {
   switch (selectedFilter.value) {
     case 'upcoming':
-      return 'No upcoming events found. Check back later for new events.';
+      return 'No upcoming events found. Check back later for new events.'
     case 'ongoing':
-      return 'No events are currently ongoing.';
+      return 'No events are currently ongoing.'
     case 'attending':
-      return 'You haven\'t RSVP\'d to any events yet. Browse upcoming events to participate.';
+      return 'You haven\'t RSVP\'d to any events yet. Browse upcoming events to participate.'
     case 'completed':
-      return 'No completed events to display.';
+      return 'No completed events to display.'
     default:
-      return 'No events match your search criteria.';
+      return 'No events match your search criteria.'
   }
 }
 
 const resetFilters = () => {
-  searchQuery.value = '';
-  selectedFilter.value = 'all';
+  searchQuery.value = ''
+  selectedFilter.value = 'all'
 }
 
 // Lifecycle
 onMounted(async () => {
-  console.log("ONMOUNTED Started")
-  await loadEvents();
-  console.log("ONMOUNTED DONE")
+  console.log("🚀 Devotee Events page mounted")
+  
+  // Load user and temple info first
+  fetchUserInfo()
+  await fetchTempleInfo()
+  
+  // Then load events
+  await loadEvents()
+  
+  console.log("✅ Page initialization complete", {
+    temple: currentTemple.value,
+    user: currentUser.value,
+    eventsCount: events.value.length
+  })
 })
 
 onUnmounted(() => {  
-  console.log("ON UNMOUNTED DONE")
+  console.log("👋 Devotee Events page unmounted")
 })
-
 </script>
 
 <style scoped>
@@ -530,10 +740,7 @@ onUnmounted(() => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-
-  /* Future standard support */
   line-clamp: 2;
-
   overflow: hidden;
 }
 </style>

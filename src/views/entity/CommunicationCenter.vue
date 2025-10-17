@@ -1,5 +1,17 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <div class="flex items-center space-x-4">
+  <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
+    </svg>
+  </div>
+  <div>
+    <h2 class="text-lg font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
+    <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : '' }}</p>
+  </div>
+</div>
+
     <!-- Header -->
     <div class="bg-white border-b border-gray-200 px-4 py-6 sm:px-6">
       <div class="flex items-center justify-between">
@@ -254,6 +266,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTempleStore } from '@/stores/temple'
+import api from '@/plugins/axios'
 import { 
   Mail, 
   Users, 
@@ -271,8 +285,30 @@ import MessageTemplates from '@/components/communication/MessageTemplates.vue'
 import BulkMessage from '@/components/communication/BulkMessage.vue'
 import MessageHistory from '@/components/communication/MessageHistory.vue'
 
+// Route and store
 const route = useRoute()
-const templeId = route.params.id
+const templeStore = useTempleStore()
+const temple = ref(null)
+
+// ✅ Computed templeId
+const templeId = computed(() =>
+  route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
+)
+
+// Load temple data
+const loadTempleData = async () => {
+  const storedTemple = templeStore.getTempleById(templeId.value)
+  if (storedTemple) {
+    temple.value = storedTemple
+  } else {
+    try {
+      const response = await api.get(`/entities/${templeId.value}`)
+      if (response.data) temple.value = response.data
+    } catch (err) {
+      console.error('Failed to fetch temple details:', err)
+    }
+  }
+}
 
 // Reactive state
 const activeTab = ref('compose')
@@ -299,96 +335,27 @@ const analytics = reactive({
 
 // Tab configuration
 const tabs = computed(() => [
-  { 
-    id: 'compose', 
-    name: 'Compose', 
-    icon: Mail,
-    count: null
-  },
-  // { 
-  //   id: 'bulk', 
-  //   name: 'Bulk Message', 
-  //   icon: Users,
-  //   count: null
-  // },
-  { 
-    id: 'templates', 
-    name: 'Templates', 
-    icon: FileText,
-    count: stats.activeTemplates
-  },
-  // { 
-  //   id: 'history', 
-  //   name: 'History', 
-  //   icon: Clock,
-  //   count: stats.totalMessages
-  // },
-  // { 
-  //   id: 'analytics', 
-  //   name: 'Analytics', 
-  //   icon: BarChart3,
-  //   count: null
-  // }
+  { id: 'compose', name: 'Compose', icon: Mail, count: null },
+  // { id: 'bulk', name: 'Bulk Message', icon: Users, count: null },
+  { id: 'templates', name: 'Templates', icon: FileText, count: stats.activeTemplates }
+  // { id: 'history', name: 'History', icon: Clock, count: stats.totalMessages },
+  // { id: 'analytics', name: 'Analytics', icon: BarChart3, count: null }
 ])
 
 // Popular templates data
 const popularTemplates = ref([
-  {
-    id: 1,
-    name: 'Seva Reminder',
-    category: 'Seva',
-    usage: 89
-  },
-  {
-    id: 2,
-    name: 'Festival Invitation',
-    category: 'Event',
-    usage: 67
-  },
-  {
-    id: 3,
-    name: 'Donation Receipt',
-    category: 'Finance',
-    usage: 45
-  },
-  {
-    id: 4,
-    name: 'Welcome Message',
-    category: 'General',
-    usage: 34
-  }
+  { id: 1, name: 'Seva Reminder', category: 'Seva', usage: 89 },
+  { id: 2, name: 'Festival Invitation', category: 'Event', usage: 67 },
+  { id: 3, name: 'Donation Receipt', category: 'Finance', usage: 45 },
+  { id: 4, name: 'Welcome Message', category: 'General', usage: 34 }
 ])
 
 // Recent activity data
 const recentActivity = ref([
-  {
-    id: 1,
-    message: 'Bulk message sent to 45 devotees about upcoming Diwali celebration',
-    time: '2 hours ago',
-    type: 'sent',
-    status: 'Sent'
-  },
-  {
-    id: 2,
-    message: 'Seva reminder delivered to all registered volunteers',
-    time: '4 hours ago',
-    type: 'delivered',
-    status: 'Delivered'
-  },
-  {
-    id: 3,
-    message: 'Welcome message sent to new devotee registrations',
-    time: '6 hours ago',
-    type: 'delivered',
-    status: 'Delivered'
-  },
-  {
-    id: 4,
-    message: 'Event notification failed to deliver to 3 recipients',
-    time: '1 day ago',
-    type: 'failed',
-    status: 'Failed'
-  }
+  { id: 1, message: 'Bulk message sent to 45 devotees about upcoming Diwali celebration', time: '2 hours ago', type: 'sent', status: 'Sent' },
+  { id: 2, message: 'Seva reminder delivered to all registered volunteers', time: '4 hours ago', type: 'delivered', status: 'Delivered' },
+  { id: 3, message: 'Welcome message sent to new devotee registrations', time: '6 hours ago', type: 'delivered', status: 'Delivered' },
+  { id: 4, message: 'Event notification failed to deliver to 3 recipients', time: '1 day ago', type: 'failed', status: 'Failed' }
 ])
 
 // Event handlers
@@ -410,7 +377,6 @@ const handleSaveTemplate = (templateData) => {
 }
 
 const handleTemplateSelect = (template) => {
-  // Switch to compose tab with selected template
   activeTab.value = 'compose'
 }
 
@@ -424,7 +390,6 @@ const handleTemplateDelete = (templateId) => {
 }
 
 const handlePreviewRequest = (previewData) => {
-  // Handle bulk message preview
   console.log('Preview requested:', previewData)
 }
 
@@ -433,25 +398,22 @@ const handleResendMessage = (messageId) => {
 }
 
 const handleViewDetails = (messageId) => {
-  // Handle viewing message details
   console.log('View details for message:', messageId)
 }
 
 const exportHistory = () => {
-  // Handle history export
   showToastMessage('Export started! Check your downloads.')
 }
 
 const showToastMessage = (message) => {
   toastMessage.value = message
   showToast.value = true
-  setTimeout(() => {
-    showToast.value = false
-  }, 3000)
+  setTimeout(() => showToast.value = false, 3000)
 }
 
+// Load initial data on mount
 onMounted(() => {
-  // Load initial data
-  console.log('Communication Center loaded for temple:', templeId)
+  loadTempleData()
+  console.log('Communication Center loaded for temple:', templeId.value)
 })
 </script>

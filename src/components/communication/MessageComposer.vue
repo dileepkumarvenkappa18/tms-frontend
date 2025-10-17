@@ -373,7 +373,9 @@ export default {
       console.log('📤 Starting message send process...')
       
       // Validation checks
+    
       if (!senderID.value || !entityID.value) {
+
         const errorMsg = `Missing required data - Sender ID: ${senderID.value}, Entity ID: ${entityID.value}`
         console.error('❌ Validation failed:', errorMsg)
         showStatus(errorMsg, true)
@@ -433,7 +435,7 @@ export default {
             // Additional metadata
             metadata: {
               sender_id: senderID.value,
-              entity_id: entityID.value,
+                    entity_id: entityID.value,
               message_type: messageType.value,
               scheduled_type: scheduleType.value
             }
@@ -443,7 +445,7 @@ export default {
 
           try {
             const result = await CommunicationService.sendDirectNotification(payload)
-            
+           
             if (result.success) {
               successCount++
               console.log(`✅ Successfully sent via ${channel}`)

@@ -1,5 +1,29 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Header with Temple Info -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Active
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page Header -->
     <div class="bg-white border-b border-gray-200 px-6 py-4">
       <div class="flex items-center justify-between flex-wrap gap-y-2">
@@ -29,7 +53,7 @@
 
     <!-- Stats Section - Uncomment if needing stats component -->
     <!--
-    <div class="px-6 pt--20 pb-2">
+    <div class="px-6 pt-20 pb-2">
       <DonationStats />
     </div>
     -->
@@ -123,6 +147,8 @@ import DonationReceipt from '@/components/donation/DonationReceipt.vue'
 import { useToast } from '@/composables/useToast'
 import donationService from '@/services/donation.service'
 import { useDonationStore } from '@/stores/donation'
+import { useTempleStore } from '@/stores/temple'
+import api from '@/plugins/axios'
 
 export default {
   name: 'DonationManagement',
@@ -136,7 +162,9 @@ export default {
     const route = useRoute()
     const { showToast } = useToast()
     const donationStore = useDonationStore()
+    const templeStore = useTempleStore()
 
+    const temple = ref(null)
     const loading = ref(false)
     const showAddDonationModal = ref(false)
     const showReceiptModal = ref(false)
@@ -144,6 +172,33 @@ export default {
     const searchQuery = ref('')
     const selectedDonation = ref(null)
     const entityId = computed(() => route.params.id)
+    
+    // Get templeId
+    const templeId = computed(() =>
+      route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
+    )
+
+    // Load temple data
+    const loadTempleData = async () => {
+      try {
+        const storedTemple = templeStore.getTempleById(templeId.value)
+        
+        if (storedTemple) {
+          temple.value = storedTemple
+        } else {
+          try {
+            const response = await api.get(`/entities/${templeId.value}`)
+            if (response.data) {
+              temple.value = response.data
+            }
+          } catch (err) {
+            console.error('Failed to fetch temple details:', err)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading temple data:', error)
+      }
+    }
     
     // This is a lookup table for donor information based on user ID
     const userLookup = {
@@ -179,9 +234,9 @@ export default {
         
         // Create transformed donations with proper names
         if (originalDonations.length > 0) {
-  donationStore.$patch({
-    donations: originalDonations
-  })
+          donationStore.$patch({
+            donations: originalDonations
+          })
         }
         
       } catch (error) {
@@ -235,18 +290,22 @@ export default {
     }
 
     // Load initial data on component mount
-    onMounted(() => {
-      refreshData()
+    onMounted(async () => {
+      await Promise.all([
+        loadTempleData(),
+        refreshData()
+      ])
     })
 
     return {
+      temple,
       loading,
       showAddDonationModal,
       showReceiptModal,
       selectedDateRange,
       searchQuery,
       selectedDonation,
-      donations: computed(() => donationStore.donations), // Use the store's data directly
+      donations: computed(() => donationStore.donations),
       handleDonationSubmitted,
       handleReceiptDownload,
       exportReport,

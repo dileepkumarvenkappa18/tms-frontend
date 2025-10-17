@@ -1,5 +1,42 @@
 <template>
+  
   <div>
+    <!-- Temple Header Bar -->
+    <div class="bg-white shadow-lg mb-6">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">
+                {{ currentTemple.name || 'Loading Temple...' }}
+              </h2>
+              <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
+                {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
+              </p>
+            </div>
+          </div>
+          
+          <!-- User Info -->
+          <div class="flex items-center space-x-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-gray-900 font-medium text-sm">{{ currentUser.name || 'Devotee' }}</p>
+              <p class="text-gray-500 text-xs">{{ currentUser.email || '' }}</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page Header -->
     <div class="bg-white p-6 rounded-xl shadow-sm mb-6">
       <div class="flex items-center justify-between">
@@ -288,6 +325,7 @@ import { useSevaStore } from '@/stores/seva'
 import { useToast } from '@/composables/useToast'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { sevaService } from '@/services/seva.service'
+import api from '@/plugins/axios'
 
 const route = useRoute()
 const router = useRouter()
@@ -306,8 +344,114 @@ const selectedBooking = ref(null)
 const showBookingDetailsModal = ref(false)
 const showCancelConfirmModal = ref(false)
 
+// Temple and User info
+const currentTemple = ref({
+  name: '',
+  city: '',
+  state: ''
+})
+
+const currentUser = ref({
+  name: '',
+  email: ''
+})
+
 // Get current entity ID from route
 const currentEntityId = computed(() => route.params.id)
+
+// Fetch temple information
+const fetchTempleInfo = async () => {
+  try {
+    console.log('Fetching temple information...')
+    
+    // Try localStorage first for quick load
+    const storedTempleName = localStorage.getItem('selectedTempleName')
+    if (storedTempleName) {
+      currentTemple.value.name = storedTempleName
+      console.log('Temple name from localStorage:', storedTempleName)
+    }
+    
+    // Get entity ID
+    const entityId = currentEntityId.value ||
+                     localStorage.getItem('selectedEntityId') || 
+                     localStorage.getItem('current_entity_id') ||
+                     localStorage.getItem('current_tenant_id')
+    
+    if (!entityId) {
+      console.warn('No entity ID found')
+      return
+    }
+    
+    console.log('Fetching temple details for entity ID:', entityId)
+    
+    // Fetch from API
+    try {
+      const response = await api.get(`/entities/${entityId}`)
+      console.log('Temple API response:', response)
+      
+      const templeData = response.data?.data || response.data || response
+      
+      if (templeData) {
+        currentTemple.value = {
+          name: templeData.name || templeData.Name || storedTempleName || 'Temple',
+          city: templeData.city || templeData.City || '',
+          state: templeData.state || templeData.State || ''
+        }
+        
+        // Save to localStorage
+        if (currentTemple.value.name) {
+          localStorage.setItem('selectedTempleName', currentTemple.value.name)
+        }
+        
+        console.log('Temple info loaded:', currentTemple.value)
+      }
+    } catch (apiError) {
+      console.warn('API fetch failed, using localStorage data:', apiError)
+      currentTemple.value.name = storedTempleName || 'Temple'
+    }
+  } catch (error) {
+    console.error('Error fetching temple info:', error)
+    currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
+  }
+}
+
+// Fetch user information
+const fetchUserInfo = () => {
+  try {
+    // Try to get user info from localStorage
+    const userName = localStorage.getItem('user_name') || localStorage.getItem('userName')
+    const userEmail = localStorage.getItem('user_email') || localStorage.getItem('userEmail')
+    
+    // Try to parse user_data if available
+    try {
+      const userData = localStorage.getItem('user_data')
+      if (userData) {
+        const parsed = JSON.parse(userData)
+        currentUser.value = {
+          name: parsed.name || parsed.Name || userName || 'Devotee',
+          email: parsed.email || parsed.Email || userEmail || ''
+        }
+        return
+      }
+    } catch (parseError) {
+      console.warn('Error parsing user_data:', parseError)
+    }
+    
+    // Fallback to individual localStorage items
+    currentUser.value = {
+      name: userName || 'Devotee',
+      email: userEmail || ''
+    }
+    
+    console.log('User info loaded:', currentUser.value)
+  } catch (error) {
+    console.error('Error fetching user info:', error)
+    currentUser.value = {
+      name: 'Devotee',
+      email: ''
+    }
+  }
+}
 
 // Format helpers
 const formatDate = (dateTime) => {
@@ -349,17 +493,14 @@ const formatStatus = (status) => {
 
 // Get seva schedule date and time
 const getSevaScheduleDate = (booking) => {
-  // Check seva object for date field
   if (booking.seva && booking.seva.date) {
     return formatDate(booking.seva.date)
   }
   
-  // Check if there's a direct schedule_time field
   if (booking.schedule_time || booking.ScheduleTime) {
     return formatDate(booking.schedule_time || booking.ScheduleTime)
   }
   
-  // Check for time slot information
   if (booking.time_slot_date || booking.TimeSlotDate) {
     return formatDate(booking.time_slot_date || booking.TimeSlotDate)
   }
@@ -368,7 +509,6 @@ const getSevaScheduleDate = (booking) => {
 }
 
 const getSevaScheduleTime = (booking) => {
-  // Check seva object for start_time and end_time
   if (booking.seva) {
     if (booking.seva.start_time && booking.seva.end_time) {
       return `${booking.seva.start_time} - ${booking.seva.end_time}`
@@ -381,12 +521,10 @@ const getSevaScheduleTime = (booking) => {
     }
   }
   
-  // Check if there's a direct schedule_time field
   if (booking.schedule_time || booking.ScheduleTime) {
     return formatTime(booking.schedule_time || booking.ScheduleTime)
   }
   
-  // Check for time slot information
   if (booking.time_slot || booking.TimeSlot) {
     return booking.time_slot || booking.TimeSlot
   }
@@ -445,7 +583,7 @@ const filteredBookings = computed(() => {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay()) // Sunday
+    startOfWeek.setDate(now.getDate() - now.getDay())
     startOfWeek.setHours(0, 0, 0, 0)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
     const startOfYear = new Date(now.getFullYear(), 0, 1)
@@ -574,12 +712,20 @@ const confirmCancelBooking = async () => {
 watch(() => route.params.id, (newEntityId, oldEntityId) => {
   if (newEntityId && newEntityId !== oldEntityId) {
     console.log('Entity changed from', oldEntityId, 'to', newEntityId)
+    fetchTempleInfo()
     fetchSevaBookings()
   }
 })
 
 // Lifecycle hooks
 onMounted(async () => {
+  console.log('SevaBookings component mounted')
+  
+  // Load user info first (synchronous, from localStorage)
+  fetchUserInfo()
+  
+  // Then load temple and seva bookings data
+  await fetchTempleInfo()
   await fetchSevaBookings()
   
   // Log store state for debugging
@@ -588,7 +734,9 @@ onMounted(async () => {
     sevaCatalog: sevaStore.sevaCatalog,
     loadingRecentSevas: sevaStore.loadingRecentSevas,
     loadingCatalog: sevaStore.loadingCatalog,
-    currentEntityId: currentEntityId.value
+    currentEntityId: currentEntityId.value,
+    currentTemple: currentTemple.value,
+    currentUser: currentUser.value
   })
 })
 </script>

@@ -1,5 +1,41 @@
 <template>
-  <div class="profile-edit-container">
+  <div class="profile-edit-container min-h-screen bg-gray-50">
+    <!-- Temple Header Bar -->
+    <div class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">
+                {{ currentTemple.name || 'Temple' }}
+              </h2>
+              <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
+                {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
+              </p>
+            </div>
+          </div>
+          
+          <!-- User Info -->
+          <div class="flex items-center space-x-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-gray-900 font-medium text-sm">{{ currentUser.name || 'Devotee' }}</p>
+              <p class="text-gray-500 text-xs">{{ currentUser.email || '' }}</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="max-w-4xl mx-auto py-8 px-4">
       <!-- Header -->
       <div class="mb-8">
@@ -33,13 +69,13 @@
         <div class="bg-white rounded-lg shadow-sm border">
           <!-- Step Navigation -->
           <div class="border-b border-gray-200 px-6 py-4">
-            <nav class="flex space-x-8">
+            <nav class="flex space-x-8 overflow-x-auto">
               <button
                 v-for="(step, index) in steps"
                 :key="step.id"
                 @click="currentStep = index"
                 :class="[
-                  'py-2 px-1 border-b-2 font-medium text-sm transition-colors',
+                  'py-2 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap',
                   currentStep === index
                     ? 'border-indigo-500 text-indigo-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -318,6 +354,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import devoteeService from '@/services/devotee.service'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
@@ -327,6 +364,18 @@ const { showToast } = useToast()
 const currentStep = ref(0)
 const isSaving = ref(false)
 const isLoading = ref(false)
+
+// Temple and User info
+const currentTemple = ref({
+  name: '',
+  city: '',
+  state: ''
+})
+
+const currentUser = ref({
+  name: '',
+  email: ''
+})
 
 // Steps configuration
 const steps = ref([
@@ -384,6 +433,178 @@ const completionPercentage = computed(() => {
   const filledFields = fields.filter(field => field && field.toString().trim() !== '').length
   return Math.round((filledFields / fields.length) * 100)
 })
+
+// Get current entity ID from route
+const currentEntityId = computed(() => route.params.id)
+
+// Get API base URL
+const getApiBaseUrl = () => {
+  return import.meta.env.VITE_API_BASE_URL || 
+         localStorage.getItem('api_base_url') || 
+         'https://api.yourdomain.com'
+}
+
+// Get auth token
+const getAuthToken = () => {
+  return localStorage.getItem('access_token') || 
+         localStorage.getItem('token') || 
+         localStorage.getItem('authToken')
+}
+
+// Fetch temple information
+const fetchTempleInfo = async () => {
+  try {
+    console.log('🏛️ Fetching temple information...')
+    
+    // FIRST: Try localStorage for immediate display
+    const storedTempleName = localStorage.getItem('selectedTempleName')
+    const storedTempleCity = localStorage.getItem('selectedTempleCity')
+    const storedTempleState = localStorage.getItem('selectedTempleState')
+    
+    if (storedTempleName) {
+      currentTemple.value = {
+        name: storedTempleName,
+        city: storedTempleCity || '',
+        state: storedTempleState || ''
+      }
+      console.log('✅ Temple info from localStorage:', currentTemple.value)
+    }
+    
+    // Get entity ID from multiple sources
+    const entityId = currentEntityId.value ||
+                     route.params.id ||
+                     localStorage.getItem('selectedEntityId') || 
+                     localStorage.getItem('current_entity_id') ||
+                     localStorage.getItem('current_tenant_id')
+    
+    if (!entityId) {
+      console.warn('⚠️ No entity ID found')
+      if (!storedTempleName) {
+        currentTemple.value.name = 'Temple'
+      }
+      return
+    }
+    
+    console.log('🔍 Fetching temple details for entity ID:', entityId)
+    
+    // SECOND: Fetch from API to get complete/updated information
+    try {
+      const apiUrl = getApiBaseUrl()
+      const token = getAuthToken()
+      
+      const response = await axios.get(`${apiUrl}/entities/${entityId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      console.log('📥 Temple API response:', response.data)
+      
+      const templeData = response.data?.data || response.data
+      
+      if (templeData) {
+        currentTemple.value = {
+          name: templeData.name || templeData.Name || storedTempleName || 'Temple',
+          city: templeData.city || templeData.City || storedTempleCity || '',
+          state: templeData.state || templeData.State || storedTempleState || ''
+        }
+        
+        // Update localStorage with latest data
+        if (currentTemple.value.name) {
+          localStorage.setItem('selectedTempleName', currentTemple.value.name)
+        }
+        if (currentTemple.value.city) {
+          localStorage.setItem('selectedTempleCity', currentTemple.value.city)
+        }
+        if (currentTemple.value.state) {
+          localStorage.setItem('selectedTempleState', currentTemple.value.state)
+        }
+        
+        console.log('✅ Temple info updated from API:', currentTemple.value)
+      }
+    } catch (apiError) {
+      console.warn('⚠️ API fetch failed, using localStorage data:', apiError.message)
+      // Keep the localStorage data that we already set
+      if (!currentTemple.value.name) {
+        currentTemple.value.name = storedTempleName || 'Temple'
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error in fetchTempleInfo:', error)
+    // Final fallback
+    currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
+  }
+}
+
+// Fetch user information
+const fetchUserInfo = () => {
+  try {
+    console.log('👤 Fetching user information...')
+    
+    // Method 1: Try user_data object
+    const userDataStr = localStorage.getItem('user_data')
+    if (userDataStr) {
+      try {
+        const userData = JSON.parse(userDataStr)
+        currentUser.value = {
+          name: userData.name || userData.Name || userData.full_name || 'Devotee',
+          email: userData.email || userData.Email || ''
+        }
+        console.log('✅ User info from user_data:', currentUser.value)
+        return
+      } catch (parseError) {
+        console.warn('⚠️ Error parsing user_data:', parseError)
+      }
+    }
+    
+    // Method 2: Try individual localStorage items
+    const userName = localStorage.getItem('user_name') || 
+                     localStorage.getItem('userName') ||
+                     localStorage.getItem('full_name')
+    const userEmail = localStorage.getItem('user_email') || 
+                      localStorage.getItem('userEmail') ||
+                      localStorage.getItem('email')
+    
+    if (userName || userEmail) {
+      currentUser.value = {
+        name: userName || 'Devotee',
+        email: userEmail || ''
+      }
+      console.log('✅ User info from localStorage items:', currentUser.value)
+      return
+    }
+    
+    // Method 3: Try profile data
+    const profileData = localStorage.getItem('devotee_profile')
+    if (profileData) {
+      try {
+        const profile = JSON.parse(profileData)
+        currentUser.value = {
+          name: profile.full_name || profile.name || 'Devotee',
+          email: profile.email || ''
+        }
+        console.log('✅ User info from profile:', currentUser.value)
+        return
+      } catch (parseError) {
+        console.warn('⚠️ Error parsing profile data:', parseError)
+      }
+    }
+    
+    // Fallback
+    console.log('⚠️ No user info found, using defaults')
+    currentUser.value = {
+      name: 'Devotee',
+      email: ''
+    }
+  } catch (error) {
+    console.error('❌ Error fetching user info:', error)
+    currentUser.value = {
+      name: 'Devotee',
+      email: ''
+    }
+  }
+}
 
 // Helper function to format date for input field
 const formatDateForInput = (dateString) => {
@@ -539,14 +760,27 @@ const saveProfile = async () => {
 }
 
 // Lifecycle
-onMounted(() => {
-  loadProfile()
+onMounted(async () => {
+  console.log('🚀 Edit Profile page mounted')
+  
+  // Load user and temple info first (synchronous from localStorage)
+  fetchUserInfo()
+  
+  // Then fetch temple info (may include API call)
+  await fetchTempleInfo()
+  
+  // Finally load profile data
+  await loadProfile()
+  
+  console.log('✅ Page initialization complete', {
+    temple: currentTemple.value,
+    user: currentUser.value
+  })
 })
 </script>
 
 <style scoped>
 .profile-edit-container {
-  min-height: calc(100vh - 64px);
   background-color: #f9fafb;
 }
 </style>

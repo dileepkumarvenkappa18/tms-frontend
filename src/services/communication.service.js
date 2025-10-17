@@ -104,9 +104,9 @@ const communicationService = {
       if (!payload.body) {
         throw new Error('Body is required');
       }
-
+console.log("-->payload:",payload.channel,payload.subject,payload.body)
       const response = await apiClient.communication.sendDirectNotification(payload);
-      
+      console.log('---->response',response)
       console.log('✅ CommunicationService: Notification sent successfully:', response.data);
       return { success: true, data: response.data };
       
@@ -123,7 +123,8 @@ const communicationService = {
           data: error.response.data,
           headers: error.response.headers
         });
-        
+
+        console.log('error.response.data:',error.response.data)
         if (error.response.data) {
           if (typeof error.response.data === 'string') {
             errorMessage = error.response.data;
@@ -221,7 +222,7 @@ const communicationService = {
     
     // Extract error message
     let errorMessage = 'An unexpected error occurred';
-    
+console.log('error.response',error.response)
     if (error.response) {
       // The request was made and the server responded with a status code
       // that falls out of the range of 2xx

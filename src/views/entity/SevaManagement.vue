@@ -1,8 +1,32 @@
 
 <template>
   <div class="min-h-screen bg-gray-50/90">
+    <!-- Header with Temple Info -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Active
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 shadow-sm">
+    <div class="bg-white border-b border-gray-200">
       <div class="px-6 py-6">
         <div class="flex items-center justify-between">
           <div>
@@ -819,6 +843,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSevaStore } from '@/stores/seva'
 import { sevaService } from '@/services/seva.service'
+import { useTempleStore } from '@/stores/temple'
+import api from '@/plugins/axios'
 
 // Get entity ID from route
 const route = useRoute()
@@ -826,8 +852,10 @@ const entityId = route.params.id
 
 // Initialize stores
 const sevaStore = useSevaStore()
+const templeStore = useTempleStore()
 
-// Local state
+// Local 
+const temple = ref(null)
 const loading = ref(false)
 const formLoading = ref(false)
 const showCreateForm = ref(false)
@@ -1098,6 +1126,27 @@ const getInitials = (name) => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase()
 }
 
+// Load temple data
+const loadTempleData = async () => {
+  try {
+    const storedTemple = templeStore.getTempleById(entityId)
+    
+    if (storedTemple) {
+      temple.value = storedTemple
+    } else {
+      try {
+        const response = await api.get(`/entities/${entityId}`)
+        if (response.data) {
+          temple.value = response.data
+        }
+      } catch (err) {
+        console.error('Failed to fetch temple details:', err)
+      }
+    }
+  } catch (error) {
+    console.error('Error loading temple data:', error)
+  }
+}
 // FIXED formatDate function to handle empty strings
 const formatDate = (dateString) => {
   if (!dateString || dateString === '') return 'No Date Set'
@@ -1514,11 +1563,12 @@ const clearSevaFilters = () => {
   sevaStatusFilter.value = ''
 }
 
-// MOUNTED lifecycle hook
-onMounted(() => {
+onMounted(async () => {
   console.log('SevaManagement component mounted for entity:', entityId)
+  await loadTempleData()
   loadSevas()
   loadSevaCatalog()
+
 })
 </script>
 

@@ -1,5 +1,29 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50/90">
+    <!-- Header with Temple Info -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Active
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page Header -->
     <div class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,7 +40,6 @@
                 </svg>
                 Refresh
               </button>
-          
             </div>
           </div>
         </div>
@@ -70,12 +93,6 @@
               <p class="text-sm text-gray-600">
                 Showing {{ paginationInfo.start }}-{{ paginationInfo.end }} of {{ paginationInfo.total }} devotees
               </p>
-            </div>
-            <div class="flex items-center space-x-2">
-              <!-- View Toggle -->
-              <div class="flex bg-gray-100 rounded-lg p-0.5">
-               
-              </div>
             </div>
           </div>
 
@@ -179,7 +196,6 @@
               </div>
               <div>
                 <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                  <!-- Previous button -->
                   <button
                     @click="goToPage(currentPage - 1)"
                     :disabled="currentPage === 1"
@@ -191,7 +207,6 @@
                     </svg>
                   </button>
 
-                  <!-- Page numbers -->
                   <template v-for="page in visiblePages" :key="page">
                     <button
                       v-if="page !== '...'"
@@ -213,7 +228,6 @@
                     </span>
                   </template>
 
-                  <!-- Next button -->
                   <button
                     @click="goToPage(currentPage + 1)"
                     :disabled="currentPage === totalPages"
@@ -258,7 +272,9 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useDevoteeStore } from '@/stores/devotee'
+import { useTempleStore } from '@/stores/temple'
 import { storeToRefs } from 'pinia'
+import api from '@/plugins/axios'
 
 // Components
 import DevoteeCard from '@/components/devotee/DevoteeCard.vue'
@@ -277,9 +293,11 @@ export default {
     const router = useRouter()
     const toast = useToast()
     const devoteeStore = useDevoteeStore()
+    const templeStore = useTempleStore()
     const { devotees } = storeToRefs(devoteeStore)
 
     // Reactive data
+    const temple = ref(null)
     const loading = ref(false)
     const statusUpdateLoading = ref(null)
     const viewMode = ref('table')
@@ -291,26 +309,14 @@ export default {
     const currentPage = ref(1)
     const itemsPerPage = ref(25)
 
-    // Get entity ID safely
-    const getEntityId = () => {
-      const entityId = route.params.id || route.params.entityId
-      if (!entityId) {
-        console.error('❌ No entity ID found in route params')
-        toast.error('Invalid entity ID')
-        return null
-      }
-      return entityId
-    }
+    // Get entity ID from route
+    const templeId = computed(() =>
+      route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
+    )
 
     // Computed
     const filteredDevotees = computed(() => {
       let devotees = devoteeStore.devotees || []
-
-      console.log('🔍 Filtering devotees:', {
-        totalDevotees: devotees.length,
-        searchQuery: searchQuery.value,
-        statusFilter: statusFilter.value
-      })
 
       // Apply search
       if (searchQuery.value) {
@@ -349,7 +355,6 @@ export default {
         })
       }
 
-      console.log('✅ Filtered devotees result:', devotees.length)
       return devotees
     })
 
@@ -375,24 +380,19 @@ export default {
     const visiblePages = computed(() => {
       const total = totalPages.value
       const current = currentPage.value
-      const delta = 2 // Number of pages to show on each side of current page
+      const delta = 2
 
       if (total <= 7) {
-        // Show all pages if total is small
         return Array.from({ length: total }, (_, i) => i + 1)
       }
 
       const pages = []
-
-      // Always show first page
       pages.push(1)
 
-      // Add ellipsis if needed
       if (current - delta > 2) {
         pages.push('...')
       }
 
-      // Add pages around current
       const start = Math.max(2, current - delta)
       const end = Math.min(total - 1, current + delta)
 
@@ -400,12 +400,10 @@ export default {
         pages.push(i)
       }
 
-      // Add ellipsis if needed
       if (current + delta < total - 1) {
         pages.push('...')
       }
 
-      // Always show last page if more than 1 page
       if (total > 1) {
         pages.push(total)
       }
@@ -461,62 +459,73 @@ export default {
       currentPage.value = 1
     }
 
+    // Load temple data
+    const loadTempleData = async () => {
+      try {
+        const storedTemple = templeStore.getTempleById(templeId.value)
+        
+        if (storedTemple) {
+          temple.value = storedTemple
+        } else {
+          try {
+            const response = await api.get(`/entities/${templeId.value}`)
+            if (response.data) {
+              temple.value = response.data
+            }
+          } catch (err) {
+            console.error('Failed to fetch temple details:', err)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading temple data:', error)
+      }
+    }
+
     // Data loading methods
     const loadDevotees = async () => {
-      const entityId = getEntityId()
-      if (!entityId) return
+      if (!templeId.value) return
 
-      loading.value = true
       try {
-        console.log('🔄 Loading devotees for entity:', entityId)
-        await devoteeStore.fetchDevoteesByEntity(entityId)
-        console.log('✅ Devotees loaded:', devoteeStore.devotees.length)
+        await devoteeStore.fetchDevoteesByEntity(templeId.value)
       } catch (error) {
-        console.error('❌ Error loading devotees:', error)
+        console.error('Error loading devotees:', error)
         toast.error('Failed to load devotees')
-      } finally {
-        loading.value = false
       }
     }
 
     const loadDevoteeStats = async () => {
-      const entityId = getEntityId()
-      if (!entityId) return
+      if (!templeId.value) return
 
       try {
-        console.log('🔄 Loading devotee stats for entity:', entityId)
-        await devoteeStore.fetchDevoteeStats(entityId)
-        console.log('✅ Devotee stats loaded:', devoteeStore.devoteeStats)
+        await devoteeStore.fetchDevoteeStats(templeId.value)
       } catch (error) {
-        console.error('❌ Error loading devotee stats:', error)
+        console.error('Error loading devotee stats:', error)
         toast.error('Failed to load devotee statistics')
       }
     }
 
     const refreshData = async () => {
-      await Promise.all([
-        loadDevotees(),
-        loadDevoteeStats()
-      ])
+      loading.value = true
+      try {
+        await Promise.all([
+          loadDevotees(),
+          loadDevoteeStats()
+        ])
+      } catch (error) {
+        console.error('Error refreshing data:', error)
+      } finally {
+        loading.value = false
+      }
     }
 
-// Status toggle handler - FIXED
+    // Status toggle handler
     const handleToggleStatus = async (devotee) => {
-      const entityId = getEntityId()
-      if (!entityId) return
+      if (!templeId.value) return
 
       const devoteeId = getDevoteeId(devotee)
       const currentStatus = devotee.status || 'active'
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
 
-      console.log('🔄 Toggling devotee status:', {
-        devoteeId,
-        currentStatus,
-        newStatus,
-        entityId
-      })
-
-      // Validate inputs
       if (!devoteeId || devoteeId === 'unknown') {
         toast.error('Invalid devotee ID')
         return
@@ -525,92 +534,49 @@ export default {
       statusUpdateLoading.value = devoteeId
 
       try {
-        // Use the correct store method
-        await devoteeStore.updateDevoteeStatus(entityId, devoteeId, newStatus)
-
-        // Refresh devotees list to reflect the changes immediately
+        await devoteeStore.updateDevoteeStatus(templeId.value, devoteeId, newStatus)
         await loadDevotees()
-        
-        // Refresh stats after status change
         await loadDevoteeStats()
-
-        console.log('✅ Status updated successfully')
         toast.success(`Devotee ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`)
-
       } catch (error) {
-        console.error('❌ Error updating status:', error)
-        
-        // More detailed error handling
+        console.error('Error updating status:', error)
         const errorMessage = error.response?.data?.error || 
                             error.response?.data?.message || 
                             error.message || 
                             'Failed to update devotee status'
-        
         toast.error(errorMessage)
       } finally {
         statusUpdateLoading.value = null
       }
     }
 
-    // Export functionality
-    const exportData = () => {
-      try {
-        // Export all filtered data, not just paginated data
-        const csvContent = [
-          ['User ID', 'Full Name', 'Email', 'Phone', 'Status', 'Gotra', 'Created Date'],
-          ...filteredDevotees.value.map(d => [
-            getDevoteeId(d),
-            getDevoteeName(d),
-            d.email || '',
-            d.phone || '',
-            d.status || 'active',
-            d.gotra || '',
-            d.created_at ? new Date(d.created_at).toLocaleDateString() : ''
-          ])
-        ].map(row => row.join(',')).join('\n')
-
-        // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `devotees_${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-
-        toast.success('Devotee data exported successfully')
-      } catch (error) {
-        console.error('❌ Export error:', error)
-        toast.error('Failed to export data')
-      }
-    }
-
-    // Error handling for missing route params
-    const validateRouteParams = () => {
-      const entityId = getEntityId()
-      if (!entityId) {
-        console.error('❌ No entity ID in route, redirecting...')
-        router.push('/dashboard')
-        return false
-      }
-      return true
-    }
-
     // Lifecycle
     onMounted(async () => {
-      console.log('🚀 DevoteeManagement mounted')
-      console.log('Route params:', route.params)
-      
-      if (!validateRouteParams()) {
+      if (!templeId.value) {
+        toast.error('Invalid temple ID')
+        router.push('/dashboard')
         return
       }
 
-      await refreshData()
+      loading.value = true
+      try {
+        await Promise.all([
+          loadTempleData(),
+          loadDevotees(),
+          loadDevoteeStats()
+        ])
+      } catch (error) {
+        console.error('Error loading data:', error)
+        toast.error('Failed to load data')
+      } finally {
+        loading.value = false
+      }
     })
 
     return {
+      // Data
+      temple,
+      
       // Store
       devoteeStore,
 
@@ -641,7 +607,6 @@ export default {
 
       // Action methods
       handleToggleStatus,
-      exportData,
       refreshData,
       goToPage,
       resetPagination
@@ -650,71 +615,3 @@ export default {
 }
 </script>
 
-<style scoped>
-/* Loading spinner animation */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Improved button states */
-.disabled\:opacity-50:disabled {
-  opacity: 0.5;
-}
-
-.disabled\:cursor-not-allowed:disabled {
-  cursor: not-allowed;
-}
-
-/* Hover effects */
-.hover\:bg-gray-50:hover {
-  background-color: #f9fafb;
-}
-
-.hover\:bg-red-50:hover {
-  background-color: #fef2f2;
-}
-
-.hover\:bg-green-50:hover {
-  background-color: #f0fdf4;
-}
-
-.hover\:bg-indigo-50:hover {
-  background-color: #eef2ff;
-}
-
-/* Focus states for accessibility */
-.focus\:ring-2:focus {
-  --tw-ring-width: 2px;
-}
-
-.focus\:ring-indigo-500:focus {
-  --tw-ring-color: #6366f1;
-}
-
-.focus\:ring-offset-2:focus {
-  --tw-ring-offset-width: 2px;
-}
-
-/* Transition effects */
-.transition-all {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-.transition-colors {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-.duration-200 {
-  transition-duration: 200ms;
-}
-</style>

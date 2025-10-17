@@ -1,6 +1,42 @@
 <!-- src/views/devotee/DonationHistory.vue -->
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Temple Header Bar -->
+    <div class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">
+                {{ currentTemple.name || 'Loading Temple...' }}
+              </h2>
+              <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
+                {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
+              </p>
+            </div>
+          </div>
+          
+          <!-- User Info -->
+          <div class="flex items-center space-x-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-gray-900 font-medium text-sm">{{ currentUser.name || 'Devotee' }}</p>
+              <p class="text-gray-500 text-xs">{{ currentUser.email || '' }}</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page Header -->
     <div class="bg-white border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -252,6 +288,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { donationService } from '@/services/donation.service'
+import api from '@/plugins/axios'
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
@@ -268,6 +305,18 @@ const showDonationForm = ref(false)
 const donationHistory = ref([])
 const loading = ref(true)
 const submittingDonation = ref(false)
+
+// Temple and User info
+const currentTemple = ref({
+  name: '',
+  city: '',
+  state: ''
+})
+
+const currentUser = ref({
+  name: '',
+  email: ''
+})
 
 // User context for entity association
 const userContext = ref(null)
@@ -359,6 +408,108 @@ const filteredDonations = computed(() => {
   })
 })
 
+// Fetch temple information
+const fetchTempleInfo = async () => {
+  try {
+    console.log('Fetching temple information...')
+    
+    // Try localStorage first for quick load
+    const storedTempleName = localStorage.getItem('selectedTempleName')
+    if (storedTempleName) {
+      currentTemple.value.name = storedTempleName
+      console.log('Temple name from localStorage:', storedTempleName)
+    }
+    
+    // Get entity ID
+    const entityId = localStorage.getItem('selectedEntityId') || 
+                     localStorage.getItem('current_entity_id') ||
+                     localStorage.getItem('current_tenant_id') ||
+                     userContext.value?.temple_id ||
+                     userContext.value?.entity_id
+    
+    if (!entityId) {
+      console.warn('No entity ID found')
+      return
+    }
+    
+    console.log('Fetching temple details for entity ID:', entityId)
+    
+    // Fetch from API
+    try {
+      const response = await api.get(`/entities/${entityId}`)
+      console.log('Temple API response:', response)
+      
+      const templeData = response.data?.data || response.data || response
+      
+      if (templeData) {
+        currentTemple.value = {
+          name: templeData.name || templeData.Name || storedTempleName || 'Temple',
+          city: templeData.city || templeData.City || '',
+          state: templeData.state || templeData.State || ''
+        }
+        
+        // Save to localStorage
+        if (currentTemple.value.name) {
+          localStorage.setItem('selectedTempleName', currentTemple.value.name)
+        }
+        
+        console.log('Temple info loaded:', currentTemple.value)
+      }
+    } catch (apiError) {
+      console.warn('API fetch failed, using localStorage/context data:', apiError)
+      
+      // Fallback to user context
+      if (userContext.value) {
+        currentTemple.value.name = userContext.value.temple_name || 
+                                   userContext.value.entity_name || 
+                                   storedTempleName || 
+                                   'Temple'
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching temple info:', error)
+    currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
+  }
+}
+
+// Fetch user information
+const fetchUserInfo = () => {
+  try {
+    // Try to get user info from localStorage
+    const userName = localStorage.getItem('user_name') || localStorage.getItem('userName')
+    const userEmail = localStorage.getItem('user_email') || localStorage.getItem('userEmail')
+    
+    // Try to parse user_data if available
+    try {
+      const userData = localStorage.getItem('user_data')
+      if (userData) {
+        const parsed = JSON.parse(userData)
+        currentUser.value = {
+          name: parsed.name || parsed.Name || userName || 'Devotee',
+          email: parsed.email || parsed.Email || userEmail || ''
+        }
+        return
+      }
+    } catch (parseError) {
+      console.warn('Error parsing user_data:', parseError)
+    }
+    
+    // Fallback to individual localStorage items
+    currentUser.value = {
+      name: userName || 'Devotee',
+      email: userEmail || ''
+    }
+    
+    console.log('User info loaded:', currentUser.value)
+  } catch (error) {
+    console.error('Error fetching user info:', error)
+    currentUser.value = {
+      name: 'Devotee',
+      email: ''
+    }
+  }
+}
+
 // Debug function to analyze response structure
 const debugDonationResponse = (response) => {
   console.log('=== DONATION RESPONSE DEBUG ===')
@@ -366,13 +517,11 @@ const debugDonationResponse = (response) => {
   console.log('Response type:', typeof response)
   console.log('Response keys:', Object.keys(response || {}))
   
-  // Check for nested data
   if (response.data) {
     console.log('response.data:', response.data)
     console.log('response.data keys:', Object.keys(response.data || {}))
   }
   
-  // Check for different field name variations
   const possibleOrderIds = [
     response.order_id,
     response.OrderID,
@@ -395,14 +544,12 @@ const debugDonationResponse = (response) => {
   
   console.log('Found possible order_id values:', possibleOrderIds)
   console.log('Found possible razorpay_key values:', possibleKeys)
-  
   console.log('JSON stringified response:', JSON.stringify(response, null, 2))
   console.log('=== END DEBUG ===')
 }
 
-// Comprehensive response parsing - handles multiple backend response formats
+// Comprehensive response parsing
 const parseRazorpayResponse = (response) => {
-  // The response might be nested in different ways
   const possibleDataSources = [
     response,
     response.data,
@@ -415,18 +562,15 @@ const parseRazorpayResponse = (response) => {
   let order_id, razorpay_key, amount
   
   for (const source of possibleDataSources) {
-    // Try different field name variations for order_id
     order_id = order_id || 
       source.order_id || 
       source.OrderID || 
       source.orderId || 
-      source.order_id || 
       source.razorpay_order_id ||
       source.RazorpayOrderID ||
       source.orderID ||
       source.id
     
-    // Try different field name variations for razorpay_key
     razorpay_key = razorpay_key || 
       source.razorpay_key || 
       source.RazorpayKey || 
@@ -438,7 +582,6 @@ const parseRazorpayResponse = (response) => {
       source.razorpay_api_key ||
       source.RazorpayApiKey
     
-    // Try different field name variations for amount
     amount = amount || 
       source.amount || 
       source.Amount || 
@@ -448,13 +591,12 @@ const parseRazorpayResponse = (response) => {
       source.PaymentAmount
   }
   
-  // Fallback for amount
   amount = amount || Number(donationForm.value.amount)
   
   return { order_id, razorpay_key, amount }
 }
 
-// FIXED: Get user context with entity/temple ID
+// Get user context with entity/temple ID
 const getUserContext = async () => {
   try {
     console.log('Getting user context for entity association...')
@@ -543,7 +685,7 @@ const submitDonation = async () => {
       return;
     }
 
-    // FIXED: Pass entity/temple ID in donation data
+    // Pass entity/temple ID in donation data
     const donationData = {
       amount: Number(donationForm.value.amount),
       donationType: donationForm.value.type,
@@ -552,7 +694,6 @@ const submitDonation = async () => {
 
     // Add entity/temple ID if available from user context
     if (userContext.value) {
-      // Try different field names for entity ID
       if (userContext.value.entity_id) {
         donationData.entityId = userContext.value.entity_id
         donationData.entity_id = userContext.value.entity_id
@@ -583,7 +724,6 @@ const submitDonation = async () => {
     if (!order_id || !razorpay_key) {
       console.error('Missing required fields in response:', response)
       
-      // Show more helpful error message
       const missingFields = []
       if (!order_id) missingFields.push('order_id/OrderID/orderId')
       if (!razorpay_key) missingFields.push('razorpay_key/RazorpayKey/key')
@@ -603,7 +743,7 @@ Please check backend implementation or contact support.`
       key: razorpay_key,
       amount: amount * 100, // Razorpay expects paise
       currency: "INR",
-      name: "Temple Donation",
+      name: currentTemple.value.name || "Temple Donation",
       description: "Thank you for your generosity!",
       order_id: order_id,
       handler: async function (response) {
@@ -634,8 +774,8 @@ Please check backend implementation or contact support.`
         }
       },
       prefill: {
-        name: localStorage.getItem("user_name") || userContext.value?.name || "Donor",
-        email: localStorage.getItem("user_email") || userContext.value?.email || "donor@example.com",
+        name: currentUser.value.name || "Donor",
+        email: currentUser.value.email || "donor@example.com",
       },
       theme: {
         color: "#6366f1",
@@ -700,8 +840,16 @@ const fetchDonationHistory = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Get user context first, then fetch donations
+  console.log('DonationHistory component mounted')
+  
+  // Load user info first (synchronous, from localStorage)
+  fetchUserInfo()
+  
+  // Then load temple and donation data
   await getUserContext()
+  await fetchTempleInfo()
   await fetchDonationHistory()
+  
+  console.log('All data loaded successfully')
 })
 </script>

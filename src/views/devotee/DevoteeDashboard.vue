@@ -1,5 +1,44 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div>
+  <!-- Temple Header Bar -->
+<!-- Temple Header Bar -->
+<div class="bg-white shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+          <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        </div>
+        <div v-if="currentTemple?.name">
+          <h2 class="text-lg font-semibold text-gray-900">
+            {{ currentTemple.name }}
+          </h2>
+          <p class="text-sm text-gray-500" v-if="currentTemple.city && currentTemple.state">
+            {{ currentTemple.city }}, {{ currentTemple.state }}
+          </p>
+        </div>
+      </div>
+      
+      <!-- User Info -->
+      <div class="flex items-center space-x-3">
+        <div class="text-right hidden sm:block">
+          <p class="text-gray-900 font-medium text-sm">{{ currentUser?.name || 'Devotee' }}</p>
+          <p class="text-gray-500 text-xs">{{ currentUser?.email || '' }}</p>
+        </div>
+        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content Container -->
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Welcome Banner -->
     <WelcomeBanner 
       :user="currentUser" 
@@ -282,58 +321,7 @@
           </BaseCard>
 
           <!-- Temple Info -->
-          <BaseCard class="p-6" v-if="currentTemple">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Temple Information</h3>
-              <span class="text-sm font-medium text-indigo-600">{{ currentTemple.status || 'Active' }}</span>
-            </div>
-            
-            <div class="space-y-4">
-              <div class="flex items-start">
-                <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <div class="ml-4">
-                  <h4 class="text-sm font-medium text-gray-900">Address</h4>
-                  <p class="text-sm text-gray-500 mt-1">
-                    {{ currentTemple.address || 'No address available' }}<br>
-                    {{ [currentTemple.city, currentTemple.state, currentTemple.pincode].filter(Boolean).join(', ') }}
-                  </p>
-                </div>
-              </div>
-              
-              <div class="flex items-start">
-                <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </div>
-                <div class="ml-4">
-                  <h4 class="text-sm font-medium text-gray-900">Contact Information</h4>
-                  <p class="text-sm text-gray-500 mt-1">
-                    {{ currentTemple.phone || 'No phone available' }}<br>
-                    {{ currentTemple.email || 'No email available' }}
-                  </p>
-                </div>
-              </div>
-              
-              <div class="flex items-start">
-                <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div class="ml-4">
-                  <h4 class="text-sm font-medium text-gray-900">Temple Hours</h4>
-                  <p class="text-sm text-gray-500 mt-1">
-                    {{ currentTemple.operating_hours || 'Hours not specified' }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </BaseCard>
+          
         </div>
 
         <!-- Right Column - Events & Notifications -->
@@ -441,43 +429,11 @@
           </BaseCard>
 
           <!-- Temple Information -->
-          <BaseCard class="p-6" v-if="currentTemple">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">About Temple</h3>
-            <div class="space-y-4">
-              <div class="flex items-center gap-2">
-                <div class="text-sm font-medium text-gray-500">Type:</div>
-                <div class="text-sm text-gray-900">{{ currentTemple.temple_type || 'Not specified' }}</div>
-              </div>
-              
-              <div class="flex items-center gap-2">
-                <div class="text-sm font-medium text-gray-500">Established:</div>
-                <div class="text-sm text-gray-900">{{ currentTemple.established_year || 'Unknown' }}</div>
-              </div>
-              
-              <div>
-                <div class="text-sm font-medium text-gray-500 mb-1">Description:</div>
-                <div class="text-sm text-gray-900">
-                  {{ currentTemple.description || 'No description available' }}
-                </div>
-              </div>
-              
-              <div v-if="currentTemple.website">
-                <a 
-                  :href="currentTemple.website" 
-                  target="_blank"
-                  class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800"
-                >
-                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Visit Website
-                </a>
-              </div>
-            </div>
-          </BaseCard>
+         
         </div>
       </div>
     </div>
+</div>
 </div>
 </template>
 
@@ -692,10 +648,30 @@ const lockCounters = () => {
 // Computed properties
 const currentUser = computed(() => authStore.user)
 const currentTemple = computed(() => {
+  // First check if we have entityDetails loaded from API
   if (entityDetails.value) {
     return entityDetails.value
   }
-  return templeStore.temples?.find(t => t.id === parseInt(route.params.id)) || templeStore.currentTemple
+  
+  // Then check temple store
+  const storeTemple = templeStore.temples?.find(t => t.id === parseInt(route.params.id)) || templeStore.currentTemple
+  if (storeTemple) {
+    return storeTemple
+  }
+  
+  // Fallback: Create a basic temple object from localStorage
+  const templeName = localStorage.getItem('selectedTempleName')
+  const entityId = route.params.id || localStorage.getItem('selectedEntityId')
+  
+  if (templeName && entityId) {
+    return {
+      id: entityId,
+      name: templeName,
+      status: 'Active'
+    }
+  }
+  
+  return null
 })
 
 const profileCompletionPercentage = computed(() => {
@@ -1694,6 +1670,7 @@ const loadDashboardData = async () => {
     loading.value = false
   }
 }
+
 
 // FIX: Check if donations and events failed to load and try again
 const checkAndReloadMissingData = () => {

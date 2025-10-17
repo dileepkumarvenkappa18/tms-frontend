@@ -1,11 +1,35 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header Section -->
+    <!-- Header with Temple Info -->
+    <div class="bg-white shadow-sm border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-3">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Active
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Header Section -->
     <div class="bg-white border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center py-6">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900">Events & Festivals</h1>
+            <h2 class="text-2xl font-bold text-gray-900">Events & Festivals</h2>
             <p class="mt-1 text-sm text-gray-600">
               Create and manage temple events, festivals, and special occasions
             </p>
@@ -58,22 +82,6 @@
           </div>
         </div>
 
-         <!--<div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                </svg>
-              </div>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Total RSVPs</p>
-              <p class="text-2xl font-bold text-gray-900">{{ eventStats.totalRSVPs || 0 }}</p>
-            </div>
-          </div>
-        </div> -->
-
         <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div class="flex items-center">
             <div class="flex-shrink-0">
@@ -86,6 +94,22 @@
             <div class="ml-4">
               <p class="text-sm font-medium text-gray-600">Upcoming</p>
               <p class="text-2xl font-bold text-gray-900">{{ eventStats.upcoming || 0 }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+              </div>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-600">Completed</p>
+              <p class="text-2xl font-bold text-gray-900">{{ eventStats.completed || 0 }}</p>
             </div>
           </div>
         </div>
@@ -109,20 +133,6 @@
             </svg>
             List View
           </button>
-          <!-- <button
-            @click="currentView = 'calendar'"
-            :class="[
-              'px-4 py-2 text-sm font-medium rounded-md transition-all duration-200',
-              currentView === 'calendar'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            ]"
-          >
-            <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            Calendar View
-          </button> -->
         </div>
 
         <!-- Filters -->
@@ -207,7 +217,6 @@
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <!-- <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSVPs</th> -->
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -243,9 +252,6 @@
                     {{ getEventStatus(event) }}
                   </span>
                 </td>
-                <!-- <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ event.currentAttendees || 0 }} / {{ event.maxAttendees || '∞' }}
-                </td> -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-3">
                     <button 
@@ -254,18 +260,6 @@
                     >
                       Edit
                     </button>
-                    <!-- <button 
-                      @click="handleViewRSVP(event)" 
-                      class="text-blue-600 hover:text-blue-900 transition-colors"
-                    >
-                      RSVPs
-                    </button> -->
-                    <!-- <button 
-                      @click="handleNotifyDevotees(event)" 
-                      class="text-green-600 hover:text-green-900 transition-colors"
-                    >
-                      Notify
-                    </button> -->
                     <button 
                       @click="confirmDeleteEvent(event)" 
                       class="text-red-600 hover:text-red-900 transition-colors"
@@ -277,12 +271,6 @@
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- Calendar View (placeholder - you'd integrate with a calendar component) -->
-        <div v-else-if="currentView === 'calendar'" class="p-6">
-          <p class="text-center text-gray-500">Calendar view will be integrated here</p>
-          <!-- You would integrate with a calendar component here -->
         </div>
       </div>
     </div>
@@ -341,117 +329,30 @@
         </div>
       </div>
     </div>
-
-    <!-- Notification Modal -->
-    <div
-      v-if="showNotificationModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-      @click="showNotificationModal = false"
-    >
-      <div
-        class="bg-white rounded-xl shadow-xl max-w-lg w-full"
-        @click.stop
-      >
-        <div class="p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Notify Devotees</h3>
-            <button
-              @click="showNotificationModal = false"
-              class="text-gray-400 hover:text-gray-600"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Notification Type
-              </label>
-              <div class="space-y-2">
-                <label class="flex items-center">
-                  <input
-                    v-model="notificationSettings.sms"
-                    type="checkbox"
-                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-700">SMS</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="notificationSettings.whatsapp"
-                    type="checkbox"
-                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-700">WhatsApp</span>
-                </label>
-                <label class="flex items-center">
-                  <input
-                    v-model="notificationSettings.email"
-                    type="checkbox"
-                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                  >
-                  <span class="ml-2 text-sm text-gray-700">Email</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Message Template
-              </label>
-              <textarea
-                v-model="notificationMessage"
-                rows="4"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Enter your message to devotees..."
-              ></textarea>
-            </div>
-
-            <div class="flex justify-end space-x-3 pt-4">
-              <button
-                @click="showNotificationModal = false"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                @click="sendNotifications"
-                :disabled="isSendingNotification"
-                class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200 disabled:opacity-50 flex items-center"
-              >
-                <svg v-if="isSendingNotification" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Send Notifications
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useEventStore } from '@/stores/event'
+import { useTempleStore } from '@/stores/temple'
 import { useToast } from '@/composables/useToast'
 import EventForm from '@/components/event/EventForm.vue'
+import api from '@/plugins/axios'
 
 const route = useRoute()
 const eventStore = useEventStore()
+const templeStore = useTempleStore()
 const toast = useToast()
 
-
-// Get templeId from route params or provide a default
+// Get templeId from route params
 const templeId = computed(() =>
-  route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
+  route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
 )
+
+// Temple data
+const temple = ref(null)
 
 // Reactive state
 const loading = ref(false)
@@ -459,9 +360,7 @@ const currentView = ref('list')
 const showCreateEventModal = ref(false)
 const showEditEventModal = ref(false)
 const showDeleteModal = ref(false)
-const showNotificationModal = ref(false)
 const isDeleting = ref(false)
-const isSendingNotification = ref(false)
 const selectedEvent = ref(null)
 const eventToDelete = ref(null)
 const searchTerm = ref('')
@@ -469,12 +368,6 @@ const filters = ref({
   status: 'all',
   category: 'all'
 })
-const notificationSettings = ref({
-  sms: true,
-  whatsapp: true,
-  email: true
-})
-const notificationMessage = ref('')
 
 // Computed properties
 const eventStats = computed(() => eventStore.eventStats)
@@ -512,11 +405,36 @@ const filteredEvents = computed(() => {
   return result;
 })
 
+// Load temple data
+const loadTempleData = async () => {
+  try {
+    const storedTemple = templeStore.getTempleById(templeId.value)
+    
+    if (storedTemple) {
+      temple.value = storedTemple
+    } else {
+      try {
+        const response = await api.get(`/entities/${templeId.value}`)
+        if (response.data) {
+          temple.value = response.data
+        }
+      } catch (err) {
+        console.error('Failed to fetch temple details:', err)
+      }
+    }
+  } catch (error) {
+    console.error('Error loading temple data:', error)
+  }
+}
+
 // Load events on component mount
 onMounted(async () => {
   try {
     loading.value = true
-    await eventStore.fetchEvents(templeId.value);
+    await Promise.all([
+      loadTempleData(),
+      eventStore.fetchEvents(templeId.value)
+    ])
   } catch (error) {
     console.error('Error loading events:', error)
     toast.error('Failed to load events')
@@ -531,8 +449,6 @@ const applyFilters = () => {
 }
 
 const debounceSearch = () => {
-  // In a real app, you would use a debounce function here
-  // For simplicity, we're applying the search directly
   applyFilters()
 }
 
@@ -552,7 +468,6 @@ const deleteEvent = async () => {
   isDeleting.value = true
   try {
     await eventStore.deleteEvent(eventToDelete.value.id)
-    // Refresh events and stats after deletion
     await eventStore.fetchEvents(templeId.value)
     toast.success('Event deleted successfully')
     showDeleteModal.value = false
@@ -564,53 +479,9 @@ const deleteEvent = async () => {
   }
 }
 
-const handleViewRSVP = (event) => {
-  // This would open a modal or navigate to RSVP details page
-  // For now, just show a toast message
-  toast.info(`Viewing RSVPs for ${event.title}`)
-}
-
-const handleNotifyDevotees = (event) => {
-  selectedEvent.value = event
-  notificationMessage.value = `Reminder: ${event.title} is scheduled for ${formatDate(event.eventDate)} at ${formatTime(event.eventDate)}. Don't miss this special occasion!`
-  showNotificationModal.value = true
-}
-
-const sendNotifications = async () => {
-  if (!notificationMessage.value.trim()) {
-    toast.error('Please enter a notification message')
-    return
-  }
-  
-  const types = []
-  if (notificationSettings.value.sms) types.push('SMS')
-  if (notificationSettings.value.whatsapp) types.push('WhatsApp')
-  if (notificationSettings.value.email) types.push('Email')
-  
-  if (types.length === 0) {
-    toast.error('Please select at least one notification method')
-    return
-  }
-  
-  isSendingNotification.value = true
-  try {
-    // Here you would call your API to send notifications
-    // For now, we'll just simulate a delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    toast.success(`Notifications sent via ${types.join(', ')}`)
-    showNotificationModal.value = false
-  } catch (error) {
-    toast.error('Failed to send notifications')
-  } finally {
-    isSendingNotification.value = false
-  }
-}
-
 const handleSaveEvent = async (eventData) => {
   closeModals()
   
-  // Reload events after a short delay
   setTimeout(async () => {
     try {
       await eventStore.fetchEvents(templeId.value);
@@ -637,20 +508,9 @@ const formatDate = (dateString) => {
   })
 }
 
-const formatTime = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleTimeString('en-IN', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: true
-  })
-}
-
 const formatEventType = (type) => {
   if (!type) return 'Other'
   
-  // Convert snake_case or kebab-case to Title Case
   return type
     .replace(/_/g, ' ')
     .replace(/-/g, ' ')
@@ -677,10 +537,8 @@ const getEventStatus = (event) => {
   
   const now = new Date()
   const eventDate = new Date(event.eventDate)
-  
-  // If event has endDate, use it; otherwise assume it ends on the same day
   const endDate = event.endDate ? new Date(event.endDate) : new Date(eventDate)
-  endDate.setHours(23, 59, 59) // End of the event day
+  endDate.setHours(23, 59, 59)
   
   if (now < eventDate) return 'Upcoming'
   if (now >= eventDate && now <= endDate) return 'Ongoing'
@@ -701,15 +559,23 @@ const getStatusClass = (event) => {
 
 const formatEventTime = (event) => {
   if (event.eventTime && event.eventTime !== '00:00') {
-    // Convert 24-hour format to 12-hour format
     const [hours, minutes] = event.eventTime.split(':');
     const hour24 = parseInt(hours);
     const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
     const ampm = hour24 >= 12 ? 'PM' : 'AM';
     return `${hour12}:${minutes} ${ampm}`;
   }
-  // Fallback to the existing formatTime function
   return formatTime(event.eventDate);
+}
+
+const formatTime = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleTimeString('en-IN', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true
+  })
 }
 
 const truncateText = (text, maxLength) => {
