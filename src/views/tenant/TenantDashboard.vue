@@ -34,16 +34,49 @@
           </div>
           
           <div class="mt-6 md:mt-0" v-if="isTenantUser">
-            <router-link 
-              to="/tenant/entities/create"
-              class="inline-flex items-center bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            <button
+              @click="handleCreateTempleClick"
+              :disabled="isMonitoringUser"
+              :class="[
+                'inline-flex items-center px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg',
+                isMonitoringUser 
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                  : 'bg-white text-indigo-600 hover:bg-indigo-50 hover:shadow-xl transform hover:-translate-y-1'
+              ]"
+              :title="isMonitoringUser ? 'Monitoring users are not allowed to create temples' : 'Create a new temple'"
             >
               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
               </svg>
               Create New Temple
-            </router-link>
+            </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Permission Denied Alert for Monitoring Users -->
+      <div v-if="showPermissionAlert" class="mb-8 bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-sm">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-lg font-semibold text-red-800">Access Restricted</h3>
+            <p class="mt-2 text-sm text-red-700">
+              You are not allowed to create temples. Monitoring users have view-only access to temple data. 
+              Please contact your administrator if you need additional permissions.
+            </p>
+          </div>
+          <button 
+            @click="showPermissionAlert = false"
+            class="flex-shrink-0 ml-4 text-red-500 hover:text-red-700"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -103,15 +136,22 @@
               </p>
             </div>
             <div class="mt-4 sm:mt-0" v-if="isTenantUser">
-              <router-link 
-                to="/tenant/entities/create"
-                class="inline-flex items-center bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200 font-medium"
+              <button
+                @click="handleCreateTempleClick"
+                :disabled="isMonitoringUser"
+                :class="[
+                  'inline-flex items-center px-4 py-2 rounded-lg transition-colors duration-200 font-medium',
+                  isMonitoringUser 
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                ]"
+                :title="isMonitoringUser ? 'Monitoring users are not allowed to create temples' : 'Add a new temple'"
               >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                 </svg>
                 Add Temple
-              </router-link>
+              </button>
             </div>
           </div>
         </div>
@@ -167,9 +207,9 @@
                   View
                 </button>
                 
-                <!-- Only show Edit button for tenant users -->
+                <!-- Only show Edit button for tenant users who are not monitoring users -->
                 <button
-                  v-if="isTenantUser"
+                  v-if="isTenantUser && !isMonitoringUser"
                   @click="editTemple(temple)"
                   class="inline-flex items-center px-4 py-2 border border-indigo-300 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors duration-200"
                 >
@@ -179,29 +219,28 @@
                   Edit
                 </button>
 
-                <!-- Access or Manage Button - Always show for monitoring/standard users -->
-                <!-- Access or Manage Button - Only enabled for approved temples when user is a tenant -->
-<button
-  @click="manageTemple(temple)"
-  :disabled="isTenantUser && !isTempleApproved(temple)"
-  :class="[
-    'inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200',
-    (isTenantUser && !isTempleApproved(temple))
-      ? 'bg-gray-400 text-gray-100 cursor-not-allowed'
-      : 'bg-indigo-600 text-white hover:bg-indigo-700'
-  ]"
-  :title="(isTenantUser && !isTempleApproved(temple)) ? 'Temple needs approval before it can be managed' : ''"
->
-  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"/>
-  </svg>
-  {{ isTenantUser ? 'Manage' : 'Access Dashboard' }}
-</button>
+                <!-- Access or Manage Button -->
+                <button
+                  @click="manageTemple(temple)"
+                  :disabled="isTenantUser && !isMonitoringUser && !isTempleApproved(temple)"
+                  :class="[
+                    'inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200',
+                    (isTenantUser && !isMonitoringUser && !isTempleApproved(temple))
+                      ? 'bg-gray-400 text-gray-100 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  ]"
+                  :title="(isTenantUser && !isMonitoringUser && !isTempleApproved(temple)) ? 'Temple needs approval before it can be managed' : ''"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"/>
+                  </svg>
+                  {{ (isTenantUser && !isMonitoringUser) ? 'Manage' : 'Access Dashboard' }}
+                </button>
               </div>
             </div>
 
-            <!-- Rejection Notes (if rejected) - Only show for tenant users -->
-            <div v-if="isTenantUser && isTempleRejected(temple) && temple.adminNotes" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <!-- Rejection Notes (if rejected) - Only show for non-monitoring tenant users -->
+            <div v-if="isTenantUser && !isMonitoringUser && isTempleRejected(temple) && temple.adminNotes" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <div class="flex items-start">
                 <svg class="w-5 h-5 text-red-400 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -228,18 +267,18 @@
           </svg>
           <h3 class="text-lg font-medium text-gray-900 mb-2">No temples registered yet</h3>
           <p class="text-gray-600 mb-6">
-            {{ isTenantUser ? 'Get started by creating your first temple registration' : 'No temples are available for this tenant' }}
+            {{ isTenantUser && !isMonitoringUser ? 'Get started by creating your first temple registration' : 'No temples are available for this tenant' }}
           </p>
-          <router-link 
-            v-if="isTenantUser"
-            to="/tenant/entities/create"
+          <button
+            v-if="isTenantUser && !isMonitoringUser"
+            @click="handleCreateTempleClick"
             class="inline-flex items-center bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-200 font-medium"
           >
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
             </svg>
             Create Your First Temple
-          </router-link>
+          </button>
         </div>
       </div>
     </div>
@@ -263,6 +302,9 @@ const { showToast } = useToast()
 
 // Loading state
 const isLoading = ref(true)
+
+// Permission alert state
+const showPermissionAlert = ref(false)
 
 // Status check helper functions
 const isTempleApproved = (temple) => {
@@ -304,7 +346,9 @@ const isTenantUser = computed(() => {
 
 const isMonitoringUser = computed(() => {
   const role = (userStore.userRole || '').toLowerCase()
-  return role === 'monitoring_user' || role === 'monitoringuser'
+  const roleId = userStore.user?.roleId || userStore.user?.role_id
+  // Check both role name and roleId (6 for monitoring_user)
+  return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
 })
 
 const isStandardUser = computed(() => {
@@ -314,7 +358,7 @@ const isStandardUser = computed(() => {
 
 // Formatted role display
 const userRoleDisplay = computed(() => {
-  if (isTenantUser.value) return 'Tenant'
+  if (isTenantUser.value && !isMonitoringUser.value) return 'Tenant'
   if (isMonitoringUser.value) return 'Monitoring User'
   if (isStandardUser.value) return 'Standard User'
   return userStore.userRole || 'User'
@@ -360,6 +404,25 @@ const pendingTemplesCount = computed(() => {
   return templeStore.temples.filter(temple => isTemplePending(temple)).length
 })
 
+// Handle create temple button click
+const handleCreateTempleClick = () => {
+  if (isMonitoringUser.value) {
+    // Show error message
+    showPermissionAlert.value = true
+    showToast('You are not allowed to create temples. Monitoring users have view-only access.', 'error')
+    
+    // Auto-hide alert after 5 seconds
+    setTimeout(() => {
+      showPermissionAlert.value = false
+    }, 5000)
+    
+    return
+  }
+  
+  // Navigate to create temple page
+  router.push('/tenant/entities/create')
+}
+
 // Methods
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
@@ -376,6 +439,10 @@ const viewTemple = (temple) => {
 }
 
 const editTemple = (temple) => {
+  if (isMonitoringUser.value) {
+    showToast('You are not allowed to edit temples. Monitoring users have view-only access.', 'error')
+    return
+  }
   // Navigate to temple edit page
   router.push(`/tenant/entities/${temple.id}/edit`)
 }
@@ -386,6 +453,10 @@ const manageTemple = (temple) => {
 }
 
 const reUploadDocuments = (temple) => {
+  if (isMonitoringUser.value) {
+    showToast('You are not allowed to re-upload documents. Monitoring users have view-only access.', 'error')
+    return
+  }
   // Navigate to document re-upload page
   router.push(`/tenant/entities/${temple.id}/documents`)
 }
@@ -398,7 +469,6 @@ watch(tenantId, async (newValue, oldValue) => {
   }
 })
 
-// Load temple data for the current tenant
 // Load temple data for the current tenant
 const loadTempleData = async () => {
   isLoading.value = true;
@@ -458,12 +528,14 @@ const formatAddress = (address) => {
 // Lifecycle
 onMounted(async () => {
   console.log('TenantDashboard mounted with tenantId:', tenantId.value)
+  console.log('User role:', userStore.userRole, 'Role ID:', userStore.user?.roleId)
+  console.log('Is Monitoring User:', isMonitoringUser.value)
   
   // Load temples for current tenant
   await loadTempleData()
   
   // Check if tenant is pending approval
-  if (isTenantUser.value) {
+  if (isTenantUser.value && !isMonitoringUser.value) {
     if (isUserPending.value) {
       // Show notification about pending status
       showToast('Your account is pending approval from the administrator.', 'info')

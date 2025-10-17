@@ -339,7 +339,12 @@ export const useNotificationStore = defineStore('notification', () => {
         message: item.message,
         category: item.category,
         isRead: item.is_read,
-        createdAt: item.created_at
+        createdAt: item.created_at,
+        type: item.type || NOTIFICATION_TYPES.INFO,
+        priority: item.priority || PRIORITY_LEVELS.MEDIUM,
+        actionUrl: item.action_url || null,
+        actionText: item.action_text || null,
+        metadata: item.metadata || {}
       }))
       unreadCount.value = notifications.value.filter(n => !n.isRead).length
       lastFetch.value = new Date().toISOString()
@@ -371,15 +376,15 @@ export const useNotificationStore = defineStore('notification', () => {
     if (eventSource) return
     
     // Match the axios baseURL configuration
-    const baseURL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_BASE_URL
+    const baseURL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL
     const token = localStorage.getItem('auth_token')
     
     console.log('SSE Connection baseURL:', baseURL)
     
     // Construct SSE URL with token for authentication
     const url = token 
-      ? `${baseURL}/notifications/stream-token?token=${token}` 
-      : `${baseURL}/notifications/stream`
+      ? `${baseURL}/v1/notifications/stream-token?token=${token}` 
+      : `${baseURL}/v1/notifications/stream`
     
     console.log('Connecting to SSE:', url)
     
@@ -396,20 +401,29 @@ export const useNotificationStore = defineStore('notification', () => {
           title: data.title,
           message: data.message,
           category: data.category,
-          isRead: data.is_read,
-          createdAt: data.created_at
+          isRead: data.is_read || false,
+          createdAt: data.created_at,
+          type: data.type || NOTIFICATION_TYPES.INFO,
+          priority: data.priority || PRIORITY_LEVELS.MEDIUM,
+          actionUrl: data.action_url || null,
+          actionText: data.action_text || null,
+          metadata: data.metadata || {}
         }
         
-        // Add to notifications array
-        notifications.value.unshift(n)
-        if (!n.isRead) unreadCount.value++
-        
-        // Show toast notification for new messages
-        if (!n.isRead) {
-          showToast(n.message, NOTIFICATION_TYPES.INFO, {
-            title: n.title,
-            duration: 6000
-          })
+        // Check if notification already exists (prevent duplicates)
+        const existingIndex = notifications.value.findIndex(existing => existing.id === n.id)
+        if (existingIndex === -1) {
+          // Add to notifications array
+          notifications.value.unshift(n)
+          if (!n.isRead) unreadCount.value++
+          
+          // Show toast notification for new messages
+          if (!n.isRead) {
+            showToast(n.message, n.type, {
+              title: n.title,
+              duration: 6000
+            })
+          }
         }
       } catch (e) {
         console.error('Failed to parse SSE notification:', e)
@@ -421,12 +435,20 @@ export const useNotificationStore = defineStore('notification', () => {
       console.log('SSE connection established')
     })
     
+    // Handle heartbeat/ping events to keep connection alive
+    eventSource.addEventListener('ping', () => {
+      console.log('SSE heartbeat received')
+    })
+    
     // Handle connection errors
     eventSource.onerror = (error) => {
       console.error('SSE connection error:', error)
       disconnectStream()
       // Retry connection after 3 seconds
-      setTimeout(connectStream, 3000)
+      setTimeout(() => {
+        console.log('Attempting to reconnect SSE...')
+        connectStream()
+      }, 3000)
     }
   }
 

@@ -1,4 +1,3 @@
-
 <template>
   <div class="min-h-screen bg-gray-50/90">
     <!-- Header with Temple Info -->
@@ -58,8 +57,15 @@
               </button>
             </div>
             <button
-              @click="showCreateForm = true"
-              class="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
+              @click="handleCreateSevaClick"
+              :disabled="isMonitoringUser"
+              :class="[
+                'inline-flex items-center px-4 py-2.5 text-white text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm',
+                isMonitoringUser
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              ]"
+              :title="isMonitoringUser ? 'Monitoring users are not allowed to create sevas' : 'Create a new seva'"
             >
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -67,6 +73,34 @@
               Create Seva
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permission Denied Alert for Monitoring Users -->
+    <div v-if="showPermissionAlert" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-sm">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-lg font-semibold text-red-800">Access Restricted</h3>
+            <p class="mt-2 text-sm text-red-700">
+              You are not allowed to create or modify sevas. Monitoring users have view-only access. 
+              Please contact your administrator if you need additional permissions.
+            </p>
+          </div>
+          <button 
+            @click="showPermissionAlert = false"
+            class="flex-shrink-0 ml-4 text-red-500 hover:text-red-700"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>
@@ -305,6 +339,7 @@
                     <!-- Approve/Reject for Pending -->
                     <template v-if="getStatus(booking) === 'pending'">
                       <button
+                        v-if="!isMonitoringUser"
                         @click="approveSeva(booking)"
                         class="text-green-600 hover:text-green-900 transition-colors duration-150"
                         title="Approve"
@@ -314,9 +349,31 @@
                         </svg>
                       </button>
                       <button
+                        v-else
+                        @click="showPermissionAlert = true"
+                        class="text-gray-400 cursor-not-allowed"
+                        title="Monitoring users cannot approve bookings"
+                      >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      </button>
+                      
+                      <button
+                        v-if="!isMonitoringUser"
                         @click="rejectSeva(booking)"
                         class="text-red-600 hover:text-red-900 transition-colors duration-150"
                         title="Reject"
+                      >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                      <button
+                        v-else
+                        @click="showPermissionAlert = true"
+                        class="text-gray-400 cursor-not-allowed"
+                        title="Monitoring users cannot reject bookings"
                       >
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -337,9 +394,9 @@
           </svg>
           <h3 class="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
           <p class="mt-1 text-sm text-gray-500">Get started by creating a new seva.</p>
-          <div class="mt-6">
+          <div v-if="!isMonitoringUser" class="mt-6">
             <button
-              @click="showCreateForm = true"
+              @click="handleCreateSevaClick"
               class="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 shadow-sm"
             >
               <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -497,12 +554,43 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex items-center gap-2">
-                    <button @click="editSeva(seva)" class="text-blue-600 hover:text-blue-900 transition-colors duration-150" title="Edit Seva">
+                    <button 
+                      v-if="!isMonitoringUser"
+                      @click="editSeva(seva)" 
+                      class="text-blue-600 hover:text-blue-900 transition-colors duration-150" 
+                      title="Edit Seva"
+                    >
                       <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                       </svg>
                     </button>
-                    <button @click="confirmDeleteSeva(seva)" class="text-red-600 hover:text-red-900 transition-colors duration-150" title="Delete Seva">
+                    <button
+                      v-else
+                      @click="showPermissionAlert = true"
+                      class="text-gray-400 cursor-not-allowed"
+                      title="Monitoring users cannot edit sevas"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    
+                    <button 
+                      v-if="!isMonitoringUser"
+                      @click="confirmDeleteSeva(seva)" 
+                      class="text-red-600 hover:text-red-900 transition-colors duration-150" 
+                      title="Delete Seva"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                    <button
+                      v-else
+                      @click="showPermissionAlert = true"
+                      class="text-gray-400 cursor-not-allowed"
+                      title="Monitoring users cannot delete sevas"
+                    >
                       <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                       </svg>
@@ -786,7 +874,7 @@
           </div>
           
           <!-- Action buttons -->
-          <div v-if="getStatus(selectedSeva) === 'pending'" class="flex justify-end space-x-3">
+          <div v-if="getStatus(selectedSeva) === 'pending' && !isMonitoringUser" class="flex justify-end space-x-3">
             <button
               @click="rejectSeva(selectedSeva)"
               class="px-4 py-2.5 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-all duration-200"
@@ -799,6 +887,16 @@
             >
               Approve Booking
             </button>
+          </div>
+          
+          <!-- Read-only message for monitoring users -->
+          <div v-if="getStatus(selectedSeva) === 'pending' && isMonitoringUser" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-center">
+              <svg class="h-5 w-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <p class="text-sm text-yellow-800">You have view-only access. Contact an administrator to approve or reject this booking.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -844,6 +942,7 @@ import { useRoute } from 'vue-router'
 import { useSevaStore } from '@/stores/seva'
 import { sevaService } from '@/services/seva.service'
 import { useTempleStore } from '@/stores/temple'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/plugins/axios'
 
 // Get entity ID from route
@@ -853,8 +952,17 @@ const entityId = route.params.id
 // Initialize stores
 const sevaStore = useSevaStore()
 const templeStore = useTempleStore()
+const authStore = useAuthStore()
 
-// Local 
+// Check if user is monitoring user
+const isMonitoringUser = computed(() => {
+  const role = (authStore.userRole || '').toLowerCase()
+  const roleId = authStore.user?.roleId || authStore.user?.role_id
+  // Check both role name and roleId (6 for monitoring_user)
+  return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
+})
+
+// Local state
 const temple = ref(null)
 const loading = ref(false)
 const formLoading = ref(false)
@@ -864,10 +972,11 @@ const selectedSeva = ref(null)
 const toasts = ref([])
 const nextToastId = ref(1)
 const sevaList = ref([])
-const sevaCache = ref({}) // Cache for seva details
+const sevaCache = ref({})
+const showPermissionAlert = ref(false)
 
 // View and filter states
-const currentView =ref('sevas')  // 'bookings' or 'sevas'
+const currentView = ref('sevas')
 const loadingSevaCatalog = ref(false)
 const sevaCatalog = ref([])
 const sevaToDelete = ref(null)
@@ -884,7 +993,6 @@ const sevaTypeFilter = ref('')
 const sevaStatusFilter = ref('')
 
 // Hardcoded mapping of seva_id to seva name and type
-// This ensures we'll always have something to show, even if API doesn't return it
 const sevaMapping = {
   1: { name: 'Archana Seva', type: 'daily' },
   2: { name: 'Anadhana Seva', type: 'daily' },
@@ -909,18 +1017,15 @@ const getDevoteePhone = (booking) => booking?.DevoteePhone || booking?.devotee_p
 const getSevaName = (booking) => {
   if (!booking) return 'Unknown Seva'
   
-  // Check for direct seva_name property first (both cases)
   if (booking.SevaName || booking.seva_name) {
     return booking.SevaName || booking.seva_name
   }
   
-  // Use hardcoded mapping as fallback
   const sevaId = getSevaId(booking)
   if (sevaMapping[sevaId]) {
     return sevaMapping[sevaId].name
   }
   
-  // Final fallback
   return 'Archana Seva'
 }
 
@@ -928,18 +1033,15 @@ const getSevaName = (booking) => {
 const getSevaType = (booking) => {
   if (!booking) return 'Not Categorized'
   
-  // Check for direct seva_type property first (both cases)
   if (booking.SevaType || booking.seva_type) {
     return booking.SevaType || booking.seva_type
   }
   
-  // Use hardcoded mapping as fallback
   const sevaId = getSevaId(booking)
   if (sevaMapping[sevaId]) {
     return sevaMapping[sevaId].type
   }
   
-  // Final fallback
   return 'daily'
 }
 
@@ -1005,7 +1107,6 @@ const filteredSevas = computed(() => {
     })
   }
   
-  // Add date range filtering
   if (dateRangeFilter.value) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -1086,14 +1187,14 @@ const filteredSevaCatalog = computed(() => {
   return filtered
 })
 
-// Form data for create/edit - FIXED to use correct field names
+// Form data for create/edit
 const sevaForm = ref({
   name: '',
   type: '',
   description: '',
   price: 0,
   duration: 30,
-  date: '', // Changed from availability_schedule to date
+  date: '',
   startTime: '',
   endTime: '',
   max_bookings_per_day: 10,
@@ -1106,7 +1207,6 @@ const showToast = (message, type = 'info') => {
   const toast = { id, message, type, show: true }
   toasts.value.push(toast)
   
-  // Auto-hide after 3 seconds
   setTimeout(() => {
     const index = toasts.value.findIndex(t => t.id === id)
     if (index !== -1) {
@@ -1120,10 +1220,20 @@ const showToast = (message, type = 'info') => {
   return id
 }
 
-// Helper functions
-const getInitials = (name) => {
-  if (!name) return 'NA'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase()
+// Handle create seva button click
+const handleCreateSevaClick = () => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    showToast('You are not allowed to create sevas. Monitoring users have view-only access.', 'error')
+    
+    setTimeout(() => {
+      showPermissionAlert.value = false
+    }, 5000)
+    
+    return
+  }
+  
+  showCreateForm.value = true
 }
 
 // Load temple data
@@ -1147,13 +1257,12 @@ const loadTempleData = async () => {
     console.error('Error loading temple data:', error)
   }
 }
-// FIXED formatDate function to handle empty strings
+
 const formatDate = (dateString) => {
   if (!dateString || dateString === '') return 'No Date Set'
   
   try {
     const date = new Date(dateString)
-    // Check if date is valid
     if (isNaN(date.getTime())) return 'Invalid Date'
     
     return date.toLocaleDateString('en-IN', {
@@ -1168,47 +1277,42 @@ const formatDate = (dateString) => {
 }
 
 const formatTime = (timeString) => {
-  if (!timeString) return '';
+  if (!timeString) return ''
   
   try {
-    // Extract only the time portion from timestamps like "2025-08-04 07:59:02.513772+00"
     if (timeString.includes(' ')) {
-      const parts = timeString.split(' ');
+      const parts = timeString.split(' ')
       if (parts.length > 1) {
-        // Get the time part and remove milliseconds and timezone
-        const timePart = parts[1].split('.')[0];
-        // Convert to 12-hour format
-        const [hours, minutes, seconds] = timePart.split(':');
-        const hour = parseInt(hours, 10);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const hour12 = hour % 12 || 12;
-        return `${hour12}:${minutes} ${ampm}`;
+        const timePart = parts[1].split('.')[0]
+        const [hours, minutes, seconds] = timePart.split(':')
+        const hour24 = parseInt(hours, 10)
+        const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+        const ampm = hour24 >= 12 ? 'PM' : 'AM'
+        return `${hour12}:${minutes} ${ampm}`
       }
     }
     
-    // Handle ISO strings with T separator
     if (timeString.includes('T')) {
-      const date = new Date(timeString);
+      const date = new Date(timeString)
       return date.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
-      });
+      })
     }
     
-    // For simple time strings like "HH:MM:SS"
     if (timeString.includes(':')) {
-      const [hours, minutes] = timeString.split(':');
-      const hour = parseInt(hours, 10);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      const hour12 = hour % 12 || 12;
-      return `${hour12}:${minutes} ${ampm}`;
+      const [hours, minutes] = timeString.split(':')
+      const hour = parseInt(hours, 10)
+      const ampm = hour >= 12 ? 'PM' : 'AM'
+      const hour12 = hour % 12 || 12
+      return `${hour12}:${minutes} ${ampm}`
     }
     
-    return timeString;
+    return timeString
   } catch (error) {
-    console.error('Error formatting time:', error, timeString);
-    return timeString;
+    console.error('Error formatting time:', error, timeString)
+    return timeString
   }
 }
 
@@ -1241,13 +1345,11 @@ const loadSevas = async () => {
     loading.value = true
     const result = await sevaService.getEntityBookings(entityId)
 
-    // Ensure sevaList is always an array
     const bookings = result?.data
     sevaList.value = Array.isArray(bookings) ? bookings : []
 
-    // Debug the response data structure
-    console.log('First booking object fields:', sevaList.value.length > 0 ? Object.keys(sevaList.value[0]) : 'No bookings');
-    console.log('Sample booking data:', sevaList.value.length > 0 ? sevaList.value[0] : 'No bookings');
+    console.log('First booking object fields:', sevaList.value.length > 0 ? Object.keys(sevaList.value[0]) : 'No bookings')
+    console.log('Sample booking data:', sevaList.value.length > 0 ? sevaList.value[0] : 'No bookings')
 
   } catch (error) {
     console.error('Error loading seva bookings:', error)
@@ -1281,16 +1383,21 @@ const loadSevaCatalog = async () => {
 
 // Action handlers
 const approveSeva = async (booking) => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    showToast('You are not allowed to approve bookings. Monitoring users have view-only access.', 'error')
+    return
+  }
+  
   const bookingId = getId(booking)
   console.log('Approving booking:', bookingId)
   
   try {
     const result = await sevaService.updateBookingStatus(bookingId, 'approved')
     if (result.success) {
-      await loadSevas() // Reload the list
+      await loadSevas()
       showToast(`Booking approved successfully`, 'success')
       
-      // Close detail view if open
       if (selectedSeva.value && getId(selectedSeva.value) === bookingId) {
         selectedSeva.value = null
       }
@@ -1304,16 +1411,21 @@ const approveSeva = async (booking) => {
 }
 
 const rejectSeva = async (booking) => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    showToast('You are not allowed to reject bookings. Monitoring users have view-only access.', 'error')
+    return
+  }
+  
   const bookingId = getId(booking)
   console.log('Rejecting booking:', bookingId)
   
   try {
     const result = await sevaService.updateBookingStatus(bookingId, 'rejected')
     if (result.success) {
-      await loadSevas() // Reload the list
+      await loadSevas()
       showToast(`Booking rejected`, 'warning')
       
-      // Close detail view if open
       if (selectedSeva.value && getId(selectedSeva.value) === bookingId) {
         selectedSeva.value = null
       }
@@ -1326,29 +1438,16 @@ const rejectSeva = async (booking) => {
   }
 }
 
-const completeSeva = async (booking) => {
-  const bookingId = getId(booking)
-  console.log('Completing booking:', bookingId)
-  
-  try {
-    const result = await sevaService.updateBookingStatus(bookingId, 'completed')
-    if (result.success) {
-      await loadSevas() // Reload the list
-      showToast(`Booking marked as completed`, 'success')
-    } else {
-      showToast(result.message || 'Failed to mark booking as completed', 'error')
-    }
-  } catch (error) {
-    console.error('Error completing booking:', error)
-    showToast('Failed to mark booking as completed. Please try again.', 'error')
-  }
-}
-
-// CORRECTED Seva management functions
+// Seva management functions
 const editSeva = (seva) => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    showToast('You are not allowed to edit sevas. Monitoring users have view-only access.', 'error')
+    return
+  }
+  
   console.log('Editing seva:', seva)
   
-  // Populate the form with the seva data using correct field names and handle variations
   sevaForm.value = {
     name: seva.name || seva.Name || '',
     type: seva.seva_type || seva.type || seva.SevaType || '',
@@ -1362,15 +1461,19 @@ const editSeva = (seva) => {
     is_active: seva.is_active !== undefined ? seva.is_active : (seva.status === 'active' || true)
   }
   
-  // Store the original for updating
   editingSeva.value = seva
 }
 
 const confirmDeleteSeva = (seva) => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    showToast('You are not allowed to delete sevas. Monitoring users have view-only access.', 'error')
+    return
+  }
+  
   sevaToDelete.value = seva
 }
 
-// CORRECTED Delete seva function
 const deleteSeva = async () => {
   if (!sevaToDelete.value) return
   
@@ -1402,15 +1505,12 @@ const deleteSeva = async () => {
   }
 }
 
-// IMPROVED saveSeva function with proper payload handling
 const saveSeva = async () => {
-  // Validate form
   if (!sevaForm.value.name || !sevaForm.value.type || !sevaForm.value.description) {
     showToast('Please fill in all required fields', 'error')
     return
   }
   
-  // Validate entity ID for new seva creation
   if (!editingSeva.value && !entityId) {
     showToast('Missing entity ID. Please try again.', 'error')
     return
@@ -1419,7 +1519,6 @@ const saveSeva = async () => {
   formLoading.value = true
   
   try {
-    // Build base payload
     const payload = {
       name: sevaForm.value.name.trim(),
       seva_type: sevaForm.value.type,
@@ -1427,11 +1526,10 @@ const saveSeva = async () => {
       price: parseFloat(sevaForm.value.price) || 0,
       duration: parseInt(sevaForm.value.duration) || 30,
       max_bookings_per_day: parseInt(sevaForm.value.max_bookings_per_day) || 10,
-      status: "upcoming", // FIXED: Changed from "active" to "upcoming"
+      status: "upcoming",
       is_active: true
     }
     
-    // Add optional fields only if they have values
     if (sevaForm.value.date && sevaForm.value.date.trim()) {
       payload.date = sevaForm.value.date
     }
@@ -1445,11 +1543,9 @@ const saveSeva = async () => {
     console.log("Base payload:", payload)
     
     if (editingSeva.value) {
-      // UPDATE OPERATION
       const sevaId = editingSeva.value.id || editingSeva.value.ID
       console.log("Updating seva ID:", sevaId)
       
-      // For updates, only send fields that actually have values
       const updatePayload = Object.fromEntries(
         Object.entries(payload).filter(([key, value]) => {
           return value !== null && value !== undefined && value !== ''
@@ -1470,10 +1566,8 @@ const saveSeva = async () => {
         showToast(errorMsg, 'error')
       }
     } else {
-      // CREATE OPERATION
       console.log("Creating new seva")
       
-      // Add entity_id only for creation
       payload.entity_id = parseInt(entityId)
       console.log("Final create payload:", payload)
       
@@ -1482,7 +1576,7 @@ const saveSeva = async () => {
       if (result && result.success) {
         await Promise.all([loadSevas(), loadSevaCatalog()])
         showToast(`Seva "${sevaForm.value.name}" created successfully`, 'success')
-         currentView.value = 'sevas' 
+        currentView.value = 'sevas' 
         closeForm()
       } else {
         console.error('Create failed:', result)
@@ -1530,12 +1624,10 @@ const viewSevaDetails = (booking) => {
   selectedSeva.value = booking
 }
 
-// CORRECTED closeForm function
 const closeForm = () => {
   showCreateForm.value = false
   editingSeva.value = null
   
-  // Reset form with correct field names
   sevaForm.value = {
     name: '',
     type: '',
@@ -1568,7 +1660,6 @@ onMounted(async () => {
   await loadTempleData()
   loadSevas()
   loadSevaCatalog()
-
 })
 </script>
 

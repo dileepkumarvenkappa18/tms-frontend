@@ -6,6 +6,35 @@
     @click="closeMobileMenu"
   ></div>
 
+  <!-- Permission Denied Alert for Monitoring Users -->
+  <transition name="fade">
+    <div v-if="showPermissionAlert" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-md">
+      <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-lg">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-sm font-semibold text-red-800">Access Restricted</h3>
+            <p class="mt-1 text-xs text-red-700">
+              Monitoring users have view-only access. Contact your administrator for additional permissions.
+            </p>
+          </div>
+          <button 
+            @click="showPermissionAlert = false"
+            class="flex-shrink-0 ml-2 text-red-500 hover:text-red-700"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
+
   <!-- Sidebar -->
   <aside 
     class="fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-gray-200 overflow-y-auto shadow-md transition-transform duration-300 ease-in-out z-40"
@@ -15,10 +44,10 @@
     }"
     style="margin-top: 48px; display: block !important;"
   >
-    <!-- Logo Area with INCREASED top padding -->
+    <!-- Logo Area -->
     <div class="p-4 pt-8 border-b border-gray-200">
       <h3 class="text-lg font-semibold text-indigo-600">Temple Management</h3>
-      <p v-if="actualRole" class="text-sm text-gray-500">{{ actualRole }}</p>
+      <p v-if="actualRole" class="text-sm text-gray-500">{{ formatRoleName(actualRole) }}</p>
     </div>
     
     <!-- Navigation Menu -->
@@ -49,14 +78,50 @@
           Dashboard
         </router-link>
 
-        <router-link to="/tenant/entities/create" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute('/tenant/entities/create') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+        <!-- Create Temple - Disabled for Monitoring Users -->
+        <button
+          v-if="isMonitoringUser"
+          @click="showMonitoringUserAlert"
+          class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-400 cursor-not-allowed bg-gray-50"
+          title="Monitoring users are not allowed to create temples"
+        >
+          <svg class="mr-3 h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Create Temple
+        </button>
+        <router-link 
+          v-else
+          to="/tenant/entities/create" 
+          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+          :class="isActiveRoute('/tenant/entities/create') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+          @click="closeMobileMenu"
+        >
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/tenant/entities/create') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           </svg>
           Create Temple
         </router-link>
 
-        <router-link to="/tenant/user-management" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute('/tenant/user-management') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+        <!-- Tenant User Management - Disabled for Monitoring Users -->
+        <button
+          v-if="isMonitoringUser"
+          @click="showMonitoringUserAlert"
+          class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-400 cursor-not-allowed bg-gray-50"
+          title="Monitoring users are not allowed to manage users"
+        >
+          <svg class="mr-3 h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          Tenant User Management
+        </button>
+        <router-link 
+          v-else
+          to="/tenant/user-management" 
+          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+          :class="isActiveRoute('/tenant/user-management') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+          @click="closeMobileMenu"
+        >
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/tenant/user-management') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
@@ -64,7 +129,6 @@
         </router-link>
 
         <!-- Reports Dashboard with Subsections -->
-         
         <div class="mt-3">
           <div 
             class="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md bg-indigo-50 text-indigo-700 cursor-pointer"
@@ -115,7 +179,7 @@
                 <svg class="mr-2 h-4 w-4" :class="isActiveRoute('/tenant/reports/birthdays') ? 'text-indigo-600' : 'text-gray-500'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" />
                 </svg>
-                <span>Devotee & Birthday Report</span>
+                <span>Devotee Reports</span>
               </router-link>
 
               <router-link 
@@ -172,7 +236,25 @@
           Events & Festivals
         </router-link>
 
-        <router-link :to="`/entity/${entityId}/communication`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/communication`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+        <!-- Communication - Disabled for Monitoring Users -->
+        <button
+          v-if="isMonitoringUser"
+          @click="showMonitoringUserAlert"
+          class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-400 cursor-not-allowed bg-gray-50"
+          title="Monitoring users are not allowed to access communication"
+        >
+          <svg class="mr-3 h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          Communication
+        </button>
+        <router-link
+          v-else
+          :to="`/entity/${entityId}/communication`" 
+          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+          :class="isActiveRoute(`/entity/${entityId}/communication`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+          @click="closeMobileMenu"
+        >
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/communication`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
@@ -188,19 +270,18 @@
           </svg>
           Dashboard
         </router-link>
-<router-link 
-  to="/devotee/temple-selection" 
-  class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
-  :class="isActiveRoute('/devotee/temple-selection') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
-  @click="closeMobileMenu"
->
-  <!-- Temple Icon -->
-  <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/temple-selection') ? 'text-indigo-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24" stroke="none">
-    <path d="M12 2L2 7h3v13h6V14h2v6h6V7h3L12 2zM12 4.5L18 8v10h-4v-4H10v4H6V8l6-3.5z" />
-  </svg>
-  Temple Profile
-</router-link>
-
+        
+        <router-link 
+          to="/devotee/temple-selection" 
+          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+          :class="isActiveRoute('/devotee/temple-selection') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+          @click="closeMobileMenu"
+        >
+          <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/temple-selection') ? 'text-indigo-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24" stroke="none">
+            <path d="M12 2L2 7h3v13h6V14h2v6h6V7h3L12 2zM12 4.5L18 8v10h-4v-4H10v4H6V8l6-3.5z" />
+          </svg>
+          Temple Profile
+        </router-link>
 
         <router-link :to="`/entity/${entityId}/devotee/seva-booking`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -229,8 +310,6 @@
           </svg>
           My Profile
         </router-link>
- 
-
       </div>
 
       <!-- VOLUNTEER Navigation -->
@@ -273,7 +352,6 @@
           Super Admin Dashboard
         </router-link>
 
-
         <router-link to="/superadmin/tenant-approvals" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute('/superadmin/tenant-approvals') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/superadmin/tenant-approvals') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -309,7 +387,6 @@
           Reset Password
         </router-link>
 
-        
         <div class="mt-3">
           <div 
             class="flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md bg-indigo-50 text-indigo-700 cursor-pointer"
@@ -373,7 +450,7 @@
           </svg>
           Audit Logs
         </router-link>
-          <!-- Tenant Dashboard Access Button -->
+
         <router-link to="/tenant-selection" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute('/tenant-selection') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/tenant-selection') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -381,7 +458,6 @@
           Tenant Dashboard
         </router-link>
       </div>
-      
 
       <!-- Default message when no role is set -->
       <div v-else class="text-center py-6">
@@ -407,7 +483,7 @@
     </div>
   </aside>
 
-  <!-- Mobile Menu Toggle Button (Hamburger) -->
+  <!-- Mobile Menu Toggle Button -->
   <button
     @click="toggleMobileMenu"
     class="fixed top-14 left-4 z-50 lg:hidden bg-indigo-600 text-white p-2 rounded-md shadow-lg hover:bg-indigo-700 transition-colors"
@@ -426,7 +502,6 @@ import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
-// Props
 const props = defineProps({
   isOpen: {
     type: Boolean,
@@ -438,63 +513,49 @@ const props = defineProps({
   }
 });
 
-// Composables
 const route = useRoute();
 const authStore = useAuthStore();
 
-// Mobile menu state
 const isMobileMenuOpen = ref(false);
+const showPermissionAlert = ref(false);
 
-// Extract entity ID from route
 const entityId = computed(() => {
   return route.params.id || route.params.entityId || '1';
 });
 
-// Detect if superadmin is accessing as tenant
+// Check if user is monitoring user
+const isMonitoringUser = computed(() => {
+  const role = (authStore.userRole || '').toLowerCase()
+  const roleId = authStore.user?.roleId || authStore.user?.role_id
+  return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
+})
+
 const isSuperadminAsTenant = computed(() => {
-  // Check if user has superadmin privileges but is viewing tenant dashboard
   const userRole = authStore.user?.role?.toLowerCase() || props.user?.role?.toLowerCase();
   const isSuperadmin = userRole === 'superadmin';
   const isOnTenantRoute = route.path.includes('/tenant/');
-  
   return isSuperadmin && isOnTenantRoute;
 });
 
-// Detect role from various sources for reliability
 const actualRole = computed(() => {
-  // First try to get from auth store
   if (authStore.user && authStore.user.role) {
     return authStore.user.role.toLowerCase();
   }
-  
-  // Then try from props
   if (props.user && props.user.role) {
     return props.user.role.toLowerCase();
   }
-  
-  // Try to infer from route path
   const path = route.path;
-  if (path.includes('/tenant/')) {
-    return 'tenant';
-  } else if (path.includes('/entity/') && path.includes('/devotee/')) {
-    return 'devotee';
-  } else if (path.includes('/entity/') && path.includes('/volunteer/')) {
-    return 'volunteer';
-  } else if (path.includes('/entity/') && !path.includes('/devotee/') && !path.includes('/volunteer/')) {
-    return 'entity_admin';
-  } else if (path.includes('/superadmin/')) {
-    return 'superadmin';
-  }
-  
-  // Default to empty if can't determine
+  if (path.includes('/tenant/')) return 'tenant';
+  if (path.includes('/entity/') && path.includes('/devotee/')) return 'devotee';
+  if (path.includes('/entity/') && path.includes('/volunteer/')) return 'volunteer';
+  if (path.includes('/entity/') && !path.includes('/devotee/') && !path.includes('/volunteer/')) return 'entity_admin';
+  if (path.includes('/superadmin/')) return 'superadmin';
   return '';
 });
 
-// Reports Dashboard state
 const isReportsDashboardActive = ref(false);
 const isSuperadminReportsActive = ref(false);
 
-// Methods
 const isActiveRoute = (path) => {
   return route.path.startsWith(path);
 };
@@ -514,10 +575,23 @@ const toggleMobileMenu = () => {
 const closeMobileMenu = () => {
   isMobileMenuOpen.value = false;
 };
+
+const showMonitoringUserAlert = () => {
+  showPermissionAlert.value = true;
+  setTimeout(() => {
+    showPermissionAlert.value = false;
+  }, 5000);
+};
+
+const formatRoleName = (role) => {
+  if (!role) return '';
+  if (role === 'entity_admin') return 'Entity Admin';
+  if (role === 'monitoring_user') return 'Monitoring User';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
 </script>
 
 <style scoped>
-/* Custom scrollbar for webkit browsers */
 aside::-webkit-scrollbar {
   width: 4px;
 }
@@ -535,7 +609,6 @@ aside::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-/* Transitions */
 .slide-down-enter-active,
 .slide-down-leave-active {
   transition: all 0.3s ease-out;

@@ -20,73 +20,71 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Complete role mapping including ALL backend roleIds
   const userRole = computed(() => {
-  if (!user.value) return null
+    if (!user.value) return null
 
-  // Handle both string roles and numeric role_id
-  if (typeof user.value.role === 'string') {
-    const roleStr = user.value.role.toLowerCase().trim()
+    // Handle both string roles and numeric role_id
+    if (typeof user.value.role === 'string') {
+      const roleStr = user.value.role.toLowerCase().trim()
 
-    // Normalize role string variations
-    if (roleStr === 'monitoringuser' || roleStr === 'monitoring_user') return 'monitoring_user'
-    if (roleStr === 'standarduser' || roleStr === 'standard_user') return 'standard_user'
-    if (roleStr === 'superadmin' || roleStr === 'super_admin') return 'superadmin'
-    if (roleStr === 'templeadmin' || roleStr === 'tenant') return 'templeadmin'
-    return roleStr
-  }
+      // Normalize role string variations
+      if (roleStr === 'monitoringuser' || roleStr === 'monitoring_user') return 'monitoring_user'
+      if (roleStr === 'standarduser' || roleStr === 'standard_user') return 'standard_user'
+      if (roleStr === 'superadmin' || roleStr === 'super_admin') return 'superadmin'
+      if (roleStr === 'templeadmin' || roleStr === 'tenant') return 'templeadmin'
+      return roleStr
+    }
 
-  // COMPLETE role mapping for ALL backend roleIds
-  const ROLE_MAP = {
-    1: 'superadmin',
-    2: 'templeadmin',
-    3: 'devotee',
-    4: 'volunteer',
-    5: 'standard_user',
-    6: 'monitoring_user'
-  }
+    // COMPLETE role mapping for ALL backend roleIds
+    const ROLE_MAP = {
+      1: 'superadmin',
+      2: 'templeadmin',
+      3: 'devotee',
+      4: 'volunteer',
+      5: 'standard_user',
+      6: 'monitoring_user'
+    }
 
-  const mappedRole = user.value.roleId ? ROLE_MAP[user.value.roleId] : null
+    const mappedRole = user.value.roleId ? ROLE_MAP[user.value.roleId] : null
 
-  console.log('🎭 Role mapping:', {
-    roleId: user.value.roleId,
-    mappedRole,
-    userObject: user.value
+    console.log('🎭 Role mapping:', {
+      roleId: user.value.roleId,
+      mappedRole,
+      userObject: user.value
+    })
+
+    return mappedRole
   })
-
-  return mappedRole
-})
   
   // Parse JWT token to extract claims
   const parseJwt = (token) => {
     try {
       // JWT tokens are base64 encoded and have three parts separated by dots
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const base64Url = token.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
       const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      }).join(''))
 
-      return JSON.parse(jsonPayload);
+      return JSON.parse(jsonPayload)
     } catch (e) {
-      console.error('Error parsing JWT token:', e);
-      return {};
+      console.error('Error parsing JWT token:', e)
+      return {}
     }
-  };
+  }
   
   // Dashboard path logic with assigned tenant ID support
-  // UPDATED: Changed redirection path for monitoring_user and standard_user to tenant dashboard
   const getDashboardPath = (userRole) => {
     const role = (userRole || '').toLowerCase().trim()
     
     console.log('🎯 Getting dashboard path for role:', role)
     
-    //dileep role id to be used instead of role name
     // Handle monitoring_user and standard_user with assigned tenant ID
-   if (role === 'standard_user' || role === 'standarduser' || 
-    role === 'monitoring_user' || role === 'monitoringuser') {
+    if (role === 'standard_user' || role === 'standarduser' || 
+        role === 'monitoring_user' || role === 'monitoringuser') {
       // Check for assigned tenant ID
       if (assignedTenantId.value) {
         console.log(`✅ ${role} redirecting to assigned tenant: ${assignedTenantId.value}`)
-        // UPDATED: Redirect to tenant dashboard instead of entity dashboard
+        // Redirect to tenant dashboard instead of entity dashboard
         return `/tenant/${assignedTenantId.value}/dashboard`
       }
       
@@ -100,8 +98,6 @@ export const useAuthStore = defineStore('auth', () => {
       return '/superadmin/dashboard'
     }
     
-
-    //dilepp recheck of this code its required
     // Handle other roles
     const entityId = user.value?.entityId || user.value?.current_entity?.id
     
@@ -109,7 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
       const tenantId = user.value?.id || currentTenantId.value
       return tenantId ? `/tenant/${tenantId}/dashboard` : '/tenant/dashboard'
     } else if (role === 'devotee') {
-      // MODIFIED: Always redirect devotees to temple selection first
+      // Always redirect devotees to temple selection first
       return '/devotee/temple-selection'
     } else if (role === 'volunteer') {
       return entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
@@ -127,126 +123,124 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Role-specific getters
   const isTenant = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
-    return role === 'tenant' || role === 'templeadmin';
+    const role = userRole.value?.toLowerCase() || ''
+    return role === 'tenant' || role === 'templeadmin'
   })
   
   const isDevotee = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
-    return role === 'devotee';
+    const role = userRole.value?.toLowerCase() || ''
+    return role === 'devotee'
   })
   
   const isVolunteer = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
-    return role === 'volunteer';
+    const role = userRole.value?.toLowerCase() || ''
+    return role === 'volunteer'
   })
   
   const isSuperAdmin = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
-    return role === 'superadmin' || role === 'super_admin';
+    const role = userRole.value?.toLowerCase() || ''
+    return role === 'superadmin' || role === 'super_admin'
   })
   
   const isStandardUser = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
-    return role === 'standard_user' || role === 'standarduser';
+    const role = userRole.value?.toLowerCase() || ''
+    return role === 'standard_user' || role === 'standarduser'
   })
   
   const isMonitoringUser = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
-    return role === 'monitoring_user' || role === 'monitoringuser';
+    const role = userRole.value?.toLowerCase() || ''
+    return role === 'monitoring_user' || role === 'monitoringuser'
   })
   
   const isEndUser = computed(() => isDevotee.value || isVolunteer.value)
   
   // Check if user needs tenant selection
   const needsTenantSelection = computed(() => {
-    const role = userRole.value?.toLowerCase() || '';
+    const role = userRole.value?.toLowerCase() || ''
     // Only need tenant selection if standard/monitoring user AND no assigned tenant
     return (role === 'standard_user' || role === 'standarduser' || 
            role === 'monitoring_user' || role === 'monitoringuser') && 
-           !assignedTenantId.value;
+           !assignedTenantId.value
   })
   
   // Refresh the auth token
   const refreshToken = async () => {
-    if (!token.value) return false;
+    if (!token.value) return false
     
     try {
-      console.log('Refreshing auth token...');
+      console.log('Refreshing auth token...')
       
       // Set the token in headers for the refresh request
-      api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
       
       // Update token timestamp to avoid validation loops
-      localStorage.setItem('token_last_refreshed', new Date().getTime());
-      localStorage.setItem('auth_token', token.value);
+      localStorage.setItem('token_last_refreshed', new Date().getTime())
+      localStorage.setItem('auth_token', token.value)
       
-      return true;
+      return true
     } catch (err) {
-      console.error('Token refresh failed:', err);
-      return false;
+      console.error('Token refresh failed:', err)
+      return false
     }
   }
 
-
-const checkAuth = () => {
-  const token = localStorage.getItem('auth_token');
-  
-  if (token) {
-    isAuthenticated.value = true;
+  const checkAuth = () => {
+    const token = localStorage.getItem('auth_token')
     
-    // Try to restore user data if available
-    const storedUserId = localStorage.getItem('user_id');
-    const storedUserRole = localStorage.getItem('user_role');
-    
-    if (!user.value && storedUserId) {
-      // If user data is missing but we have an ID, create minimal user object
-      user.value = {
-        id: storedUserId,
-        role: storedUserRole || 'unknown'
-      };
+    if (token) {
+      isAuthenticated.value = true
+      
+      // Try to restore user data if available
+      const storedUserId = localStorage.getItem('user_id')
+      const storedUserRole = localStorage.getItem('user_role')
+      
+      if (!user.value && storedUserId) {
+        // If user data is missing but we have an ID, create minimal user object
+        user.value = {
+          id: storedUserId,
+          role: storedUserRole || 'unknown'
+        }
+      }
+      
+      // Set authorization header for API calls
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+      console.log('Auth check: Authenticated with token')
+      return true
+    } else {
+      isAuthenticated.value = false
+      user.value = null
+      console.log('Auth check: Not authenticated (no token)')
+      return false
     }
-    
-    // Set authorization header for API calls
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    console.log('Auth check: Authenticated with token');
-    return true;
-  } else {
-    isAuthenticated.value = false;
-    user.value = null;
-    console.log('Auth check: Not authenticated (no token)');
-    return false;
   }
-};
 
   const normalizedRole = computed(() => {
-  // If user has a role object with roleName property
-  if (user.value?.role?.roleName) {
-    return user.value.role.roleName.toLowerCase();
-  }
-  // If user has a direct role property
-  else if (user.value?.role) {
-    return user.value.role.toLowerCase();
-  }
-  // If the store tracks userRole directly
-  else if (userRole.value) {
-    return userRole.value.toLowerCase();
-  }
-  return '';
-});
+    // If user has a role object with roleName property
+    if (user.value?.role?.roleName) {
+      return user.value.role.roleName.toLowerCase()
+    }
+    // If user has a direct role property
+    else if (user.value?.role) {
+      return user.value.role.toLowerCase()
+    }
+    // If the store tracks userRole directly
+    else if (userRole.value) {
+      return userRole.value.toLowerCase()
+    }
+    return ''
+  })
 
-
-// Check if user has a specific role
-const hasRole = (roleToCheck) => {
-  if (!isAuthenticated.value) return false;
-  
-  const currentRole = normalizedRole.value;
-  if (!currentRole) return false;
-  
-  // Check if the role matches (normalizing the input)
-  return currentRole === roleToCheck.toLowerCase() ||
-    currentRole === roleToCheck.toLowerCase().replace('_', '');
-};
+  // Check if user has a specific role
+  const hasRole = (roleToCheck) => {
+    if (!isAuthenticated.value) return false
+    
+    const currentRole = normalizedRole.value
+    if (!currentRole) return false
+    
+    // Check if the role matches (normalizing the input)
+    return currentRole === roleToCheck.toLowerCase() ||
+      currentRole === roleToCheck.toLowerCase().replace('_', '')
+  }
   
   // Clear all browser storage completely
   const clearAllStorage = () => {
@@ -256,8 +250,8 @@ const hasRole = (roleToCheck) => {
     
     // Try to clear cookies related to the app
     document.cookie.split(";").forEach(function(c) {
-      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-    });
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
+    })
     
     console.log('All storage cleared')
   }
@@ -305,7 +299,7 @@ const hasRole = (roleToCheck) => {
   
   // Initialize auth state
   const initialize = async () => {
-    console.log('Initializing auth store...');
+    console.log('Initializing auth store...')
     
     const storedToken = localStorage.getItem('auth_token')
     if (storedToken) {
@@ -313,18 +307,18 @@ const hasRole = (roleToCheck) => {
 
       // Extract assigned tenant ID from token
       try {
-        const tokenData = parseJwt(storedToken);
+        const tokenData = parseJwt(storedToken)
         if (tokenData.assigned_tenant_id) {
-          assignedTenantId.value = tokenData.assigned_tenant_id;
-          localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id);
-          console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id);
+          assignedTenantId.value = tokenData.assigned_tenant_id
+          localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id)
+          console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id)
           
           // Set tenant header for assigned_tenant_id
-          api.defaults.headers.common['X-Tenant-ID'] = tokenData.assigned_tenant_id;
-          console.log('✅ Set X-Tenant-ID header from token:', tokenData.assigned_tenant_id);
+          api.defaults.headers.common['X-Tenant-ID'] = tokenData.assigned_tenant_id
+          console.log('✅ Set X-Tenant-ID header from token:', tokenData.assigned_tenant_id)
         }
       } catch (e) {
-        console.error('Failed to parse token for assigned tenant ID:', e);
+        console.error('Failed to parse token for assigned tenant ID:', e)
       }
 
       const storedUser = localStorage.getItem('user_data')
@@ -336,57 +330,57 @@ const hasRole = (roleToCheck) => {
           console.log('User role computed as:', userRole.value) 
           console.log('Set Authorization header with token')
           
-          // ADDED: Refresh token timestamp
-          localStorage.setItem('token_last_refreshed', new Date().getTime());
+          // Refresh token timestamp
+          localStorage.setItem('token_last_refreshed', new Date().getTime())
           
           // Set tenant header if applicable (fallback to stored value)
           if (assignedTenantId.value) {
             // Already set from token parsing above
           } else {
-            const tenantId = localStorage.getItem('current_tenant_id');
+            const tenantId = localStorage.getItem('current_tenant_id')
             if (tenantId) {
-              api.defaults.headers.common['X-Tenant-ID'] = tenantId;
-              currentTenantId.value = tenantId;
-              console.log('Set X-Tenant-ID header from localStorage:', tenantId);
+              api.defaults.headers.common['X-Tenant-ID'] = tenantId
+              currentTenantId.value = tenantId
+              console.log('Set X-Tenant-ID header from localStorage:', tenantId)
             }
           }
           
-          return true;
+          return true
         } catch (e) {
           console.error('Failed to parse stored user_data:', e)
-          return false;
+          return false
         }
       } else {
         console.warn('Token exists but no valid user data found')
-        return false;
+        return false
       }
     }
     
-    return false;
+    return false
   }
 
   // Verify token is still valid
   const verifyToken = async () => {
-    if (!token.value) return false;
+    if (!token.value) return false
     
     try {
       // Set the token in headers
-      api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
       
       // Get current timestamp
-      const now = new Date().getTime();
-      const lastRefreshed = parseInt(localStorage.getItem('token_last_refreshed') || '0');
+      const now = new Date().getTime()
+      const lastRefreshed = parseInt(localStorage.getItem('token_last_refreshed') || '0')
       
       // Only verify if it's been more than 10 seconds since last check
       if (now - lastRefreshed > 10000) {
         // Update last refreshed time
-        localStorage.setItem('token_last_refreshed', now.toString());
+        localStorage.setItem('token_last_refreshed', now.toString())
       }
       
-      return true;
+      return true
     } catch (err) {
-      console.error('Token verification failed:', err);
-      return false;
+      console.error('Token verification failed:', err)
+      return false
     }
   }
 
@@ -409,9 +403,7 @@ const hasRole = (roleToCheck) => {
       
       // Extract data from response based on backend structure
       const data = response.data
-      //const accessToken = data.accessToken || data.token || data.access_token || data.jwt
       const accessToken = data.accessToken 
-      //const userData = data.user || data.userData || data
       const userData = data.user
       
       if (!accessToken) {
@@ -428,22 +420,20 @@ const hasRole = (roleToCheck) => {
       
       // Extract assigned tenant ID from token
       try {
-        const tokenData = parseJwt(accessToken);
-        console.log('🔑 Token payload:', tokenData);
+        const tokenData = parseJwt(accessToken)
+        console.log('🔑 Token payload:', tokenData)
         
-        //main  is a assert is a tenant/standarduser/monitoringuser
         if (tokenData.assigned_tenant_id) {
-          assignedTenantId.value = tokenData.assigned_tenant_id;
-          localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id);
-          console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id);
+          assignedTenantId.value = tokenData.assigned_tenant_id
+          localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id)
+          console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id)
           
-          //dileep try to comment this
           // Set tenant header for API calls when using assigned tenant ID
-          api.defaults.headers.common['X-Tenant-ID'] = tokenData.assigned_tenant_id;
-          console.log('✅ Set X-Tenant-ID header from token:', tokenData.assigned_tenant_id);
+          api.defaults.headers.common['X-Tenant-ID'] = tokenData.assigned_tenant_id
+          console.log('✅ Set X-Tenant-ID header from token:', tokenData.assigned_tenant_id)
         }
       } catch (e) {
-        console.error('Failed to parse token for assigned tenant ID:', e);
+        console.error('Failed to parse token for assigned tenant ID:', e)
       }
       
       // Debug role computation after user is set
@@ -451,13 +441,11 @@ const hasRole = (roleToCheck) => {
       console.log('🔍 Role computed from roleId:', userData.roleId)
       
       // Set token refresh timestamp
-      localStorage.setItem('token_last_refreshed', new Date().getTime());
+      localStorage.setItem('token_last_refreshed', new Date().getTime())
       
       // Set axios default header for authentication
       api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
       console.log('🔑 Set Authorization header with token')
-
-      //dileep to fix roleid issue
       
       // For tenant users, store and set tenant ID (only if not already set from token)
       if (!assignedTenantId.value && (userData.roleId === 2)) {
@@ -465,7 +453,6 @@ const hasRole = (roleToCheck) => {
         currentTenantId.value = tenantId
         localStorage.setItem('current_tenant_id', tenantId)
         
-        // dileep
         // Set tenant header for API calls
         api.defaults.headers.common['X-Tenant-ID'] = tenantId
         console.log('🏛️ Set X-Tenant-ID header from user data:', tenantId)
@@ -613,46 +600,46 @@ const hasRole = (roleToCheck) => {
   // Select tenant (for admins, standard users, and monitoring users)
   const selectTenant = async (tenantId) => {
     if (!tenantId) {
-      console.error('No tenant ID provided');
-      return { success: false, error: 'No tenant ID provided' };
+      console.error('No tenant ID provided')
+      return { success: false, error: 'No tenant ID provided' }
     }
     
     try {
-      console.log('🏛️ Selecting tenant ID:', tenantId);
+      console.log('🏛️ Selecting tenant ID:', tenantId)
       
       // Store the tenant ID
-      localStorage.setItem('selected_tenant_id', tenantId);
-      localStorage.setItem('current_tenant_id', tenantId);
-      localStorage.setItem('current_entity_id', tenantId);
+      localStorage.setItem('selected_tenant_id', tenantId)
+      localStorage.setItem('current_tenant_id', tenantId)
+      localStorage.setItem('current_entity_id', tenantId)
       
       // Update store state
-      currentTenantId.value = tenantId;
+      currentTenantId.value = tenantId
       
       // Set headers for API calls
-      api.defaults.headers.common['X-Tenant-ID'] = tenantId;
+      api.defaults.headers.common['X-Tenant-ID'] = tenantId
       
       // Determine redirect path based on role
-      const role = (userRole.value || '').toLowerCase();
-      let redirectPath;
+      const role = (userRole.value || '').toLowerCase()
+      let redirectPath
       
       if (role === 'superadmin' || role === 'super_admin' || 
           role === 'standard_user' || role === 'standarduser' || 
           role === 'monitoring_user' || role === 'monitoringuser') {
-        redirectPath = `/entity/${tenantId}/dashboard`;
+        redirectPath = `/entity/${tenantId}/dashboard`
       } else {
-        redirectPath = `/tenant/${tenantId}/dashboard`;
+        redirectPath = `/tenant/${tenantId}/dashboard`
       }
       
       return {
         success: true,
         redirectPath
-      };
+      }
     } catch (err) {
-      console.error('Error selecting tenant:', err);
+      console.error('Error selecting tenant:', err)
       return { 
         success: false, 
         error: 'Failed to select tenant' 
-      };
+      }
     }
   }
   

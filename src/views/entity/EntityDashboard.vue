@@ -105,25 +105,25 @@
           </div>
         </router-link>
 
-       <!-- Donations -->
-<router-link :to="{ name: 'DonationManagement', params: { id: $route.params.id } }" class="block">
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-32 hover:shadow-md transition-shadow duration-200 cursor-pointer">
-    <div class="flex items-center h-full">
-      <div class="flex-shrink-0">
-        <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-          <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-          </svg>
-        </div>
-      </div>
-      <div class="ml-4 flex flex-col">
-        <p class="text-sm font-medium text-gray-600 whitespace-nowrap">Month Donations</p>
-        <p class="text-2xl font-bold text-gray-900">₹{{ formatCurrency(dashboardData.donations?.thisMonth || 0) }}</p>
-        <p class="text-xs text-green-600 mb-4">+{{ dashboardData.donations?.growth || 0 }}% from last month</p>
-      </div>
-    </div>
-  </div>
-</router-link>
+        <!-- Donations -->
+        <router-link :to="{ name: 'DonationManagement', params: { id: $route.params.id } }" class="block">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-32 hover:shadow-md transition-shadow duration-200 cursor-pointer">
+            <div class="flex items-center h-full">
+              <div class="flex-shrink-0">
+                <div class="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="ml-4 flex flex-col">
+                <p class="text-sm font-medium text-gray-600 whitespace-nowrap">Month Donations</p>
+                <p class="text-2xl font-bold text-gray-900">₹{{ formatCurrency(dashboardData.donations?.thisMonth || 0) }}</p>
+                <p class="text-xs text-green-600 mb-4">+{{ dashboardData.donations?.growth || 0 }}% from last month</p>
+              </div>
+            </div>
+          </div>
+        </router-link>
 
         <!-- Upcoming Events -->
         <router-link :to="{ name: 'EventManagement', params: { id: $route.params.id } }" class="block">
@@ -195,8 +195,31 @@
                   </div>
                 </router-link>
 
-                <router-link :to="`/entity/${entityId}/communication`" 
-                           class="flex items-center p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-md transition-all duration-200 group">
+                <!-- Send Message - Disabled for Monitoring Users -->
+                <div 
+                  v-if="isMonitoringUser"
+                  class="flex items-center p-4 border border-gray-200 rounded-xl bg-gray-50 cursor-not-allowed opacity-60 relative group"
+                  :title="isMonitoringUser ? 'Monitoring users are not allowed to send messages' : ''"
+                >
+                  <div class="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                  </div>
+                  <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-600">Send Message</p>
+                    <p class="text-xs text-gray-400">Communicate with devotees</p>
+                  </div>
+                  <div class="absolute -top-8 left-0 bg-red-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">
+                    Restricted for monitoring users
+                  </div>
+                </div>
+
+                <!-- Send Message - Enabled for Regular Users -->
+                <router-link 
+                  v-else
+                  :to="`/entity/${entityId}/communication`" 
+                  class="flex items-center p-4 border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-md transition-all duration-200 group">
                   <div class="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center group-hover:bg-green-200 transition-colors duration-200">
                     <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
@@ -247,9 +270,6 @@
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-900">{{ event.title }}</p>
                     <p class="text-xs text-gray-500">{{ formatFullDate(event.date) }}</p>
-                    <div class="flex items-center mt-1">
-                  
-                    </div>
                   </div>
                 </div>
               </div>
@@ -307,7 +327,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useTempleStore } from '@/stores/temple'
 import { useToast } from '@/composables/useToast'
 import api from '@/plugins/axios'
-import { apiClient } from '@/plugins/axios'
 import { donationService } from '@/services/donation.service'
 
 const route = useRoute()
@@ -330,6 +349,14 @@ const notifications = ref([])
 const upcomingEvents = ref([])
 const topDonors = ref([])
 
+// Check if user is monitoring user - Same logic as Event page
+const isMonitoringUser = computed(() => {
+  const role = (authStore.userRole || '').toLowerCase()
+  const roleId = authStore.user?.roleId || authStore.user?.role_id
+  // Check both role name and roleId (6 for monitoring_user)
+  return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
+})
+
 const loadEntityData = async () => {
   try {
     loading.value = true
@@ -344,7 +371,6 @@ const loadEntityData = async () => {
       console.log('Temple not in store, fetching from API')
       try {
         const response = await api.get(`/entities/${entityId.value}`)
-        
         if (response.data) {
           temple.value = response.data
         }
@@ -376,7 +402,6 @@ const loadEntityData = async () => {
             thisWeek: dashboardResponse.data.upcoming_events.this_week || 0
           }
         }
-        
         console.log('Dashboard data loaded successfully:', dashboardData.value)
       }
     } catch (err) {
@@ -414,7 +439,7 @@ const loadEntityData = async () => {
       } else if (Array.isArray(donorsResponse.data)) {
         topDonors.value = donorsResponse.data.map(donor => ({
           id: donor.email || Math.random(),
-          name: donor.name || 'Unknown Donor', 
+          name: donor.name || 'Unknown Donor',
           email: donor.email || '',
           amount: donor.total_amount || donor.totalAmount || 0,
           totalDonations: donor.donation_count || donor.donationCount || 0

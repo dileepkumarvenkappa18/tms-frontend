@@ -90,7 +90,7 @@
           <button 
             @click="markAllAsRead"
             class="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-            v-if="headerNotifications.length > 0"
+            v-if="headerNotifications.length > 0 && headerNotifications.some(n => !n.isRead)"
           >
             Mark all read
           </button>
@@ -282,8 +282,6 @@ const handleClickOutside = (event) => {
   }
 }
 
-let pollTimer = null
-
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   // Load notifications on mount
@@ -293,7 +291,6 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (pollTimer) clearInterval(pollTimer)
   notificationStore.disconnectStream()
   document.removeEventListener('click', handleClickOutside)
 })

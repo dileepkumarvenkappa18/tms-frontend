@@ -35,13 +35,48 @@
             </p>
           </div>
           <button
-            @click="showCreateEventModal = true"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+            @click="handleCreateEventClick"
+            :disabled="isMonitoringUser"
+            :class="[
+              'inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium transition-colors duration-200',
+              isMonitoringUser
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+            ]"
+            :title="isMonitoringUser ? 'Monitoring users are not allowed to create events' : 'Create a new event'"
           >
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
             </svg>
             Create Event
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permission Denied Alert for Monitoring Users -->
+    <div v-if="showPermissionAlert" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-sm">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-6 w-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-lg font-semibold text-red-800">Access Restricted</h3>
+            <p class="mt-2 text-sm text-red-700">
+              You are not allowed to create or modify events. Monitoring users have view-only access. 
+              Please contact your administrator if you need additional permissions.
+            </p>
+          </div>
+          <button 
+            @click="showPermissionAlert = false"
+            class="flex-shrink-0 ml-4 text-red-500 hover:text-red-700"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -196,7 +231,8 @@
              'Try adjusting your filters or search terms' : 'Create your first event to get started' }}
         </p>
         <button
-          @click="showCreateEventModal = true"
+          v-if="!isMonitoringUser"
+          @click="handleCreateEventClick"
           class="mt-6 inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -255,14 +291,32 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-3">
                     <button 
+                      v-if="!isMonitoringUser"
                       @click="handleEditEvent(event)" 
                       class="text-indigo-600 hover:text-indigo-900 transition-colors"
                     >
                       Edit
                     </button>
+                    <button
+                      v-else
+                      @click="showPermissionAlert = true"
+                      class="text-gray-400 cursor-not-allowed"
+                      title="Monitoring users cannot edit events"
+                    >
+                      Edit
+                    </button>
                     <button 
+                      v-if="!isMonitoringUser"
                       @click="confirmDeleteEvent(event)" 
                       class="text-red-600 hover:text-red-900 transition-colors"
+                    >
+                      Delete
+                    </button>
+                    <button
+                      v-else
+                      @click="showPermissionAlert = true"
+                      class="text-gray-400 cursor-not-allowed"
+                      title="Monitoring users cannot delete events"
                     >
                       Delete
                     </button>
@@ -337,6 +391,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useEventStore } from '@/stores/event'
 import { useTempleStore } from '@/stores/temple'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import EventForm from '@/components/event/EventForm.vue'
 import api from '@/plugins/axios'
@@ -344,6 +399,7 @@ import api from '@/plugins/axios'
 const route = useRoute()
 const eventStore = useEventStore()
 const templeStore = useTempleStore()
+const authStore = useAuthStore()
 const toast = useToast()
 
 // Get templeId from route params
@@ -364,9 +420,18 @@ const isDeleting = ref(false)
 const selectedEvent = ref(null)
 const eventToDelete = ref(null)
 const searchTerm = ref('')
+const showPermissionAlert = ref(false)
 const filters = ref({
   status: 'all',
   category: 'all'
+})
+
+// Check if user is monitoring user
+const isMonitoringUser = computed(() => {
+  const role = (authStore.userRole || '').toLowerCase()
+  const roleId = authStore.user?.roleId || authStore.user?.role_id
+  // Check both role name and roleId (6 for monitoring_user)
+  return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
 })
 
 // Computed properties
@@ -404,6 +469,23 @@ const filteredEvents = computed(() => {
   
   return result;
 })
+
+// Handle create event button click
+const handleCreateEventClick = () => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    toast.error('You are not allowed to create events. Monitoring users have view-only access.')
+    
+    // Auto-hide alert after 5 seconds
+    setTimeout(() => {
+      showPermissionAlert.value = false
+    }, 5000)
+    
+    return
+  }
+  
+  showCreateEventModal.value = true
+}
 
 // Load temple data
 const loadTempleData = async () => {
@@ -453,11 +535,23 @@ const debounceSearch = () => {
 }
 
 const handleEditEvent = (event) => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    toast.error('You are not allowed to edit events. Monitoring users have view-only access.')
+    return
+  }
+  
   selectedEvent.value = { ...event }
   showEditEventModal.value = true
 }
 
 const confirmDeleteEvent = (event) => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    toast.error('You are not allowed to delete events. Monitoring users have view-only access.')
+    return
+  }
+  
   eventToDelete.value = event
   showDeleteModal.value = true
 }
