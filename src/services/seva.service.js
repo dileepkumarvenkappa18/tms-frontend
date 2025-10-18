@@ -464,36 +464,61 @@ class SevaService {
    * Get user's seva bookings - matches GET /my-bookings route (devotee only)
    * @returns {Promise<Object>} User's booking history
    */
-  async getMyBookings() {
-    try {
-      const entityId = this.getCurrentEntityId();
-      const tenantId = localStorage.getItem('current_tenant_id');
-      
-      const headers = {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
-        }
-      };
-      
-      console.log(`Fetching my bookings for entity ${entityId}`);
-      const response = await axios.get('/sevas/my-bookings', headers);
-      
-      return {
-        success: true,
-        data: response.data?.bookings || []
-      };
-    } catch (error) {
-      console.error('Error fetching my bookings:', error.response?.data || error);
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Failed to fetch booking history',
-        data: []
-      };
+// In seva.service.js - Update getMyBookings method
+
+/**
+ * Get user's seva bookings - matches GET /my-bookings route (devotee only)
+ * @param {string} entityId - Optional entity ID to filter bookings
+ * @returns {Promise<Object>} User's booking history
+ */
+async getMyBookings(entityId = null) {
+  try {
+    // Use provided entityId or get from resolution logic
+    const resolvedEntityId = entityId || this.getCurrentEntityId();
+    const tenantId = localStorage.getItem('current_tenant_id');
+    
+    console.log(`Fetching my bookings for entity ${resolvedEntityId}`);
+    
+    // Build URL with entity filtering
+    const url = resolvedEntityId ? 
+      `/sevas/my-bookings?entity_id=${resolvedEntityId}` : 
+      '/sevas/my-bookings';
+    
+    const headers = {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        'Content-Type': 'application/json',
+        'X-Entity-ID': resolvedEntityId,
+        'X-Tenant-ID': tenantId
+      }
+    };
+    
+    const response = await axios.get(url, headers);
+    
+    let bookings = response.data?.bookings || [];
+    
+    // Additional client-side filtering by entity ID for safety
+    if (resolvedEntityId) {
+      bookings = bookings.filter(booking => {
+        const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId;
+        return bookingEntityId && parseInt(bookingEntityId) === parseInt(resolvedEntityId);
+      });
+      console.log(`✅ Filtered ${bookings.length} bookings for entity ${resolvedEntityId}`);
     }
+    
+    return {
+      success: true,
+      data: bookings
+    };
+  } catch (error) {
+    console.error('Error fetching my bookings:', error.response?.data || error);
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to fetch booking history',
+      data: []
+    };
   }
+}
 
   /**
    * Get entity bookings - matches GET /entity-bookings route (temple admin)

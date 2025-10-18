@@ -116,7 +116,7 @@
             :value="sevaCount"
             icon="calendar"
             color="indigo"
-            :subtitle="`${upcomingSevaCount} upcoming`"
+          
           />
         </router-link>
 
@@ -1469,25 +1469,34 @@ const loadDashboardData = async () => {
       loading.value = false
     }
 
-    // SEVA DATA
-    console.log('🔄 Loading seva bookings...')
+// SEVA DATA
+    console.log('🔄 Loading seva bookings for entity:', entityId)
     const sevaPromise = (async () => {
       try {
         // Check if we already have data
         if (localData.recentSevas.length === 0) {
           if (sevaStore.fetchRecentSevas) {
-            await sevaStore.fetchRecentSevas()
+            // Pass entity ID to filter sevas by entity
+            await sevaStore.fetchRecentSevas(entityId)
             
             // Wait a bit for the data to propagate to the store
             await new Promise(resolve => setTimeout(resolve, 100))
           }
           
-          // If store doesn't have data, try direct method
+          // If store doesn't have data, try direct method with entity filter
           if (!sevaStore.recentSevas || sevaStore.recentSevas.length === 0) {
-            const sevaData = await fetchMySevaBookings()
+            const sevaData = await fetchMySevaBookings(entityId)
             if (Array.isArray(sevaData) && sevaData.length > 0) {
+              // Filter by entity ID to ensure only current entity's sevas
+              const entitySevas = sevaData.filter(seva => {
+                const sevaEntityId = seva.entity_id || seva.EntityID || seva.entityId
+                return sevaEntityId && parseInt(sevaEntityId) === parseInt(entityId)
+              })
+              
+              console.log(`✅ Filtered ${entitySevas.length} sevas for entity ${entityId} from ${sevaData.length} total`)
+              
               // IMPORTANT: Apply name resolution to sevas before setting to view
-              const enrichedSevas = await enrichSevaWithNames(sevaData)
+              const enrichedSevas = await enrichSevaWithNames(entitySevas)
               mySevaBookings.value = enrichedSevas.slice(0, 3)
               
               // Store in local data
@@ -1505,15 +1514,17 @@ const loadDashboardData = async () => {
               }
             }
           } else {
+            // Filter store sevas by entity ID
+            const entitySevas = sevaStore.recentSevas.filter(seva => {
+              const sevaEntityId = seva.entity_id || seva.EntityID || seva.entityId
+              return sevaEntityId && parseInt(sevaEntityId) === parseInt(entityId)
+            })
+            
+            console.log(`✅ Filtered ${entitySevas.length} sevas from store for entity ${entityId}`)
+            
             // IMPORTANT: Apply name resolution to store sevas
-            const enrichedSevas = await enrichSevaWithNames(sevaStore.recentSevas)
+            const enrichedSevas = await enrichSevaWithNames(entitySevas)
             if (enrichedSevas && enrichedSevas.length > 0) {
-              // Update sevaStore data with enriched names if possible
-              if (Array.isArray(sevaStore.recentSevas)) {
-                // This may or may not work depending on reactivity
-                sevaStore.recentSevas = enrichedSevas
-              }
-              
               // Store in local data
               localData.recentSevas = JSON.parse(JSON.stringify(enrichedSevas))
               
@@ -1530,8 +1541,14 @@ const loadDashboardData = async () => {
             }
           }
         } else {
+          // Filter existing data by entity ID before enriching
+          const entitySevas = localData.recentSevas.filter(seva => {
+            const sevaEntityId = seva.entity_id || seva.EntityID || seva.entityId
+            return sevaEntityId && parseInt(sevaEntityId) === parseInt(entityId)
+          })
+          
           // We have data in localData.recentSevas, let's make sure names are resolved
-          const enrichedSevas = await enrichSevaWithNames(localData.recentSevas)
+          const enrichedSevas = await enrichSevaWithNames(entitySevas)
           localData.recentSevas = JSON.parse(JSON.stringify(enrichedSevas))
         }
         dataLoadingStatus.sevas = true

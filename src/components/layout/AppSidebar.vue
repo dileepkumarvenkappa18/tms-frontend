@@ -280,7 +280,19 @@
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/temple-selection') ? 'text-indigo-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24" stroke="none">
             <path d="M12 2L2 7h3v13h6V14h2v6h6V7h3L12 2zM12 4.5L18 8v10h-4v-4H10v4H6V8l6-3.5z" />
           </svg>
-          Temple Profile
+          Temple Selection
+        </router-link>
+
+        <router-link 
+          to="/devotee/profile/create" 
+          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+          :class="isActiveRoute('/devotee/profile/create') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+          @click="closeMobileMenu"
+        >
+          <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/profile/create') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          My Profile
         </router-link>
 
         <router-link :to="`/entity/${entityId}/devotee/seva-booking`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
@@ -302,13 +314,6 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Temple Events
-        </router-link>
-
-        <router-link :to="`/entity/${entityId}/devotee/profile/edit`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/profile`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
-          <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/profile`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          My Profile
         </router-link>
       </div>
 

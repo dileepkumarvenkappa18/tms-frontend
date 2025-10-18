@@ -271,61 +271,76 @@ export const useSevaStore = defineStore('seva', () => {
    * Fetch recent sevas for devotee dashboard - uses /my-bookings endpoint
    * @returns {Array} Recent bookings with seva details
    */
-  const fetchRecentSevas = async () => {
-    loadingRecentSevas.value = true;
-    try {
-      // Always fetch the catalog first, regardless of whether we have bookings
-      await fetchSevaCatalog();
+  // In src/stores/seva.js - Complete fetchRecentSevas function
+
+/**
+ * Fetch recent sevas for devotee dashboard - uses /my-bookings endpoint
+ * @param {string} entityId - Optional entity ID to filter bookings
+ * @returns {Array} Recent bookings with seva details
+ */
+const fetchRecentSevas = async (entityId = null) => {
+  loadingRecentSevas.value = true;
+  try {
+    // Always fetch the catalog first, regardless of whether we have bookings
+    await fetchSevaCatalog();
+    
+    // Then get the bookings with entity filter
+    const response = await sevaService.getMyBookings(entityId);
+    
+    if (response.success) {
+      let bookings = response.data || [];
       
-      // Then get the bookings
-      const response = await sevaService.getMyBookings();
-      
-      if (response.success) {
-        let bookings = response.data || [];
-        
-        // Map seva names to bookings using the catalog
-        bookings = bookings.map(booking => {
-          const sevaId = booking.seva_id || booking.SevaID;
-          const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
-          
-          return {
-            ...booking,
-            seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
-            seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
-            seva_description: seva?.description || seva?.Description || '',
-            seva: seva ? {
-              id: seva.id || seva.ID,
-              name: seva.name || seva.Name,
-              type: seva.type || seva.Type || seva.seva_type,
-              description: seva.description || seva.Description
-            } : null
-          };
+      // Filter by entity ID if provided
+      if (entityId) {
+        bookings = bookings.filter(booking => {
+          const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId;
+          return bookingEntityId && parseInt(bookingEntityId) === parseInt(entityId);
         });
-        
-        console.log('Bookings with seva names:', bookings);
-        
-        // Sort by booking time, newest first
-        const sorted = [...bookings].sort((a, b) => {
-          const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
-          const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
-          return dateB - dateA;
-        });
-        
-        recentSevas.value = sorted;
-        return recentSevas.value;
-      } else {
-        recentSevas.value = [];
-        return [];
+        console.log(`Filtered ${bookings.length} bookings for entity ${entityId}`);
       }
-    } catch (error) {
-      console.error('Failed to fetch recent sevas:', error);
+      
+      // Map seva names to bookings using the catalog
+      bookings = bookings.map(booking => {
+        const sevaId = booking.seva_id || booking.SevaID;
+        const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
+        
+        return {
+          ...booking,
+          seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
+          seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
+          seva_description: seva?.description || seva?.Description || '',
+          seva: seva ? {
+            id: seva.id || seva.ID,
+            name: seva.name || seva.Name,
+            type: seva.type || seva.Type || seva.seva_type,
+            description: seva.description || seva.Description
+          } : null
+        };
+      });
+      
+      console.log(`Bookings with seva names for entity ${entityId}:`, bookings.length);
+      
+      // Sort by booking time, newest first
+      const sorted = [...bookings].sort((a, b) => {
+        const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
+        const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
+        return dateB - dateA;
+      });
+      
+      recentSevas.value = sorted;
+      return recentSevas.value;
+    } else {
       recentSevas.value = [];
       return [];
-    } finally {
-      loadingRecentSevas.value = false;
     }
+  } catch (error) {
+    console.error('Failed to fetch recent sevas:', error);
+    recentSevas.value = [];
+    return [];
+  } finally {
+    loadingRecentSevas.value = false;
   }
-  
+}
   /**
    * Create new seva - uses POST / endpoint
    * @param {Object} sevaData - Seva creation data

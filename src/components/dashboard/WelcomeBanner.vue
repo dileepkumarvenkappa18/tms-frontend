@@ -60,7 +60,7 @@
         <slot name="actions">
           <!-- Default actions based on role -->
           <button
-            v-if="userRole === 'tenant'"
+            v-if="userRole === 'tenant' || userRole === 'templeadmin'"
             @click="$emit('create-temple')"
             :class="actionButtonClasses"
           >
@@ -69,17 +69,6 @@
             </svg>
             Create Temple
           </button>
-          
-          <!-- <button
-            v-if="userRole === 'devotee' && profileCompletion < 100"
-            @click="$emit('complete-profile')"
-            :class="actionButtonClasses"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            Complete Profile
-          </button> -->
           
           <button
             v-if="userRole === 'entity_admin'"
@@ -100,7 +89,7 @@
       <div class="flex flex-wrap gap-2">
         <slot name="mobile-actions">
           <button
-            v-if="userRole === 'tenant'"
+            v-if="userRole === 'tenant' || userRole === 'templeadmin'"
             @click="$emit('create-temple')"
             :class="mobileActionButtonClasses"
           >
@@ -116,17 +105,18 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   userRole: {
     type: String,
     required: true,
-    validator: (value) => ['tenant', 'entity_admin', 'devotee', 'volunteer', 'super_admin'].includes(value)
+    validator: (value) => ['tenant', 'templeadmin', 'entity_admin', 'devotee', 'volunteer', 'super_admin', 'superadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser'].includes(value)
   },
   userName: {
     type: String,
-    required: true
+    default: ''
   },
   entityName: String,
   lastLogin: [String, Date],
@@ -147,9 +137,35 @@ const props = defineProps({
 
 const emit = defineEmits(['create-temple', 'complete-profile', 'quick-action'])
 
+// Auth store
+const authStore = useAuthStore()
+
+// Reactive data for devotee name
+const devoteeFullName = ref('')
+
+// Get display name from auth store or props
+const displayName = computed(() => {
+  // Priority: devoteeFullName > auth store user > props userName
+  if (devoteeFullName.value) {
+    return devoteeFullName.value
+  }
+  
+  if (authStore.user?.name || authStore.user?.fullName) {
+    return authStore.user.name || authStore.user.fullName
+  }
+  
+  return props.userName || 'User'
+})
+
 const roleConfig = computed(() => {
   const configs = {
     tenant: {
+      title: 'Temple Administrator',
+      icon: 'BuildingOfficeIcon',
+      gradient: 'from-indigo-600 to-purple-600',
+      solid: 'bg-indigo-600'
+    },
+    templeadmin: {
       title: 'Temple Administrator',
       icon: 'BuildingOfficeIcon',
       gradient: 'from-indigo-600 to-purple-600',
@@ -178,6 +194,36 @@ const roleConfig = computed(() => {
       icon: 'ShieldCheckIcon',
       gradient: 'from-red-600 to-pink-600',
       solid: 'bg-red-600'
+    },
+    superadmin: {
+      title: 'System Administrator',
+      icon: 'ShieldCheckIcon',
+      gradient: 'from-red-600 to-pink-600',
+      solid: 'bg-red-600'
+    },
+    standard_user: {
+      title: 'Standard User',
+      icon: 'UserIcon',
+      gradient: 'from-teal-600 to-cyan-600',
+      solid: 'bg-teal-600'
+    },
+    standarduser: {
+      title: 'Standard User',
+      icon: 'UserIcon',
+      gradient: 'from-teal-600 to-cyan-600',
+      solid: 'bg-teal-600'
+    },
+    monitoring_user: {
+      title: 'Monitoring User',
+      icon: 'EyeIcon',
+      gradient: 'from-slate-600 to-gray-600',
+      solid: 'bg-slate-600'
+    },
+    monitoringuser: {
+      title: 'Monitoring User',
+      icon: 'EyeIcon',
+      gradient: 'from-slate-600 to-gray-600',
+      solid: 'bg-slate-600'
     }
   }
   return configs[props.userRole] || configs.devotee
@@ -191,29 +237,40 @@ const welcomeMessage = computed(() => {
   else if (timeOfDay < 17) greeting = 'Good Afternoon'
   else greeting = 'Good Evening'
   
-  return `${greeting}, ${props.userName}!`
+  return `${greeting}, ${displayName.value}!`
 })
 
 const subMessage = computed(() => {
   const messages = {
     tenant: 'Manage your temples and oversee operations',
+    templeadmin: 'Manage your temples and oversee operations',
     entity_admin: props.entityName ? `Welcome back to ${props.entityName}` : 'Manage your temple operations',
     devotee: 'Continue your spiritual journey',
     volunteer: 'Thank you for your service',
-    super_admin: 'System overview and administration'
+    super_admin: 'System overview and administration',
+    superadmin: 'System overview and administration',
+    standard_user: 'Access your temple dashboard',
+    standarduser: 'Access your temple dashboard',
+    monitoring_user: 'Monitor temple activities',
+    monitoringuser: 'Monitor temple activities'
   }
   return messages[props.userRole] || 'Welcome to your dashboard'
 })
 
 const roleIcon = computed(() => {
   // Using simple div with emoji for now since we don't have Heroicons imported
-  // In a real app, you'd import and use the actual icons
   const icons = {
     tenant: 'div',
+    templeadmin: 'div',
     entity_admin: 'div', 
     devotee: 'div',
     volunteer: 'div',
-    super_admin: 'div'
+    super_admin: 'div',
+    superadmin: 'div',
+    standard_user: 'div',
+    standarduser: 'div',
+    monitoring_user: 'div',
+    monitoringuser: 'div'
   }
   return icons[props.userRole]
 })
@@ -272,4 +329,33 @@ const formatDate = (date) => {
     minute: '2-digit'
   })
 }
+
+// Fetch devotee name for devotee role (similar to AppHeader logic)
+const fetchDevoteeName = async () => {
+  if (props.userRole === 'devotee' && authStore.user?.id) {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/v1/devotees/${authStore.user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data) {
+          devoteeFullName.value = data.data.full_name || data.data.fullName || ''
+          console.log('✅ WelcomeBanner: Fetched devotee name:', devoteeFullName.value)
+        }
+      }
+    } catch (error) {
+      console.error('❌ WelcomeBanner: Error fetching devotee name:', error)
+    }
+  }
+}
+
+// Lifecycle hook
+onMounted(() => {
+  fetchDevoteeName()
+})
 </script>
