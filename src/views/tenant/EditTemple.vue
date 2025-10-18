@@ -998,7 +998,7 @@ const handleFileUpload = (event, type) => {
     localPreviews[type] = form.documents[type] ? URL.createObjectURL(form.documents[type]) : ''
   }
 }
-
+const handleSubmit = async () => {
 // Navigation and validation
 const nextStep = () => { if (validateCurrentStep()) currentStep.value++ }
 const previousStep = () => { currentStep.value-- }
@@ -1027,7 +1027,7 @@ const validateCurrentStep = () => {
 }
 
 // Submit
-const handleSubmit = async () => {
+
   if (!validateCurrentStep()) return
   try {
     isSubmitting.value = true

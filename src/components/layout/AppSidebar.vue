@@ -264,26 +264,71 @@
 
       <!-- DEVOTEE Navigation -->
       <div v-else-if="actualRole === 'devotee'" class="space-y-1">
-        <router-link :to="`/entity/${entityId}/devotee/dashboard`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/dashboard`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+        <!-- Dashboard - Show on all pages except temple-selection -->
+        <router-link 
+          v-if="!isActiveRoute('/devotee/temple-selection')"
+          :to="`/entity/${entityId}/devotee/dashboard`" 
+          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+          :class="isActiveRoute(`/entity/${entityId}/devotee/dashboard`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+          @click="closeMobileMenu"
+        >
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/dashboard`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
           Dashboard
         </router-link>
         
-        <router-link 
-          to="/devotee/temple-selection" 
-          class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
-          :class="isActiveRoute('/devotee/temple-selection') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
-          @click="closeMobileMenu"
-        >
-          <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/temple-selection') ? 'text-indigo-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24" stroke="none">
-            <path d="M12 2L2 7h3v13h6V14h2v6h6V7h3L12 2zM12 4.5L18 8v10h-4v-4H10v4H6V8l6-3.5z" />
-          </svg>
-          Temple Selection
-        </router-link>
+        <!-- Show all links on dashboard and other pages, only Temple Profile on temple-selection -->
+        <template v-if="!isActiveRoute('/devotee/temple-selection')">
+          <router-link 
+            to="/devotee/temple-selection" 
+            class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+            :class="isActiveRoute('/devotee/temple-selection') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+            @click="closeMobileMenu"
+          >
+            <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/temple-selection') ? 'text-indigo-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24" stroke="none">
+              <path d="M12 2L2 7h3v13h6V14h2v6h6V7h3L12 2zM12 4.5L18 8v10h-4v-4H10v4H6V8l6-3.5z" />
+            </svg>
+            Temple Selection
+          </router-link>
 
+          <router-link 
+            to="/devotee/profile/create" 
+            class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
+            :class="isActiveRoute('/devotee/profile/create') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
+            @click="closeMobileMenu"
+          >
+            <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/profile/create') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            My Profile
+          </router-link>
+
+          <router-link :to="`/entity/${entityId}/devotee/seva-booking`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+            <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            Book Seva
+          </router-link>
+
+          <router-link :to="`/entity/${entityId}/devotee/donations`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/donations`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+            <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/donations`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            My Donations
+          </router-link>
+
+          <router-link :to="`/entity/${entityId}/devotee/events`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/events`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+            <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/events`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Temple Events
+          </router-link>
+        </template>
+
+        <!-- On temple-selection page, show only Temple Profile -->
         <router-link 
+          v-if="isActiveRoute('/devotee/temple-selection')"
           to="/devotee/profile/create" 
           class="flex items-center px-3 py-2 text-sm font-medium rounded-md" 
           :class="isActiveRoute('/devotee/profile/create') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" 
@@ -292,28 +337,7 @@
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/devotee/profile/create') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          My Profile
-        </router-link>
-
-        <router-link :to="`/entity/${entityId}/devotee/seva-booking`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
-          <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/seva-booking`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          Book Seva
-        </router-link>
-
-        <router-link :to="`/entity/${entityId}/devotee/donations`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/donations`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
-          <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/donations`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          My Donations
-        </router-link>
-
-        <router-link :to="`/entity/${entityId}/devotee/events`" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute(`/entity/${entityId}/devotee/events`) ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
-          <svg class="mr-3 h-5 w-5" :class="isActiveRoute(`/entity/${entityId}/devotee/events`) ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          Temple Events
+          Temple Profile
         </router-link>
       </div>
 
@@ -551,8 +575,8 @@ const actualRole = computed(() => {
   }
   const path = route.path;
   if (path.includes('/tenant/')) return 'tenant';
-  if (path.includes('/entity/') && path.includes('/devotee/')) return 'devotee';
-  if (path.includes('/entity/') && path.includes('/volunteer/')) return 'volunteer';
+  if (path.includes('/devotee/')) return 'devotee';
+  if (path.includes('/volunteer/')) return 'volunteer';
   if (path.includes('/entity/') && !path.includes('/devotee/') && !path.includes('/volunteer/')) return 'entity_admin';
   if (path.includes('/superadmin/')) return 'superadmin';
   return '';
@@ -595,43 +619,3 @@ const formatRoleName = (role) => {
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
 </script>
-
-<style scoped>
-aside::-webkit-scrollbar {
-  width: 4px;
-}
-
-aside::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-
-aside::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
-}
-
-aside::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: all 0.3s ease-out;
-}
-
-.slide-down-enter-from,
-.slide-down-leave-to {
-  transform: translateY(-20px);
-  opacity: 0;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>

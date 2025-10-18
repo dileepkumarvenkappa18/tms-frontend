@@ -19,20 +19,7 @@
       </div>
     </div>
 
-    <!-- Debug Panel (for development only, remove in production) -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 mb-2 bg-gray-800 text-white rounded-lg" style="font-family: monospace; font-size: 12px;">
-      <details>
-        <summary class="cursor-pointer">Debug Info (click to expand)</summary>
-        <div class="mt-2">
-          <div>Selected Tenant IDs: {{ JSON.stringify(selectedTenants) }}</div>
-          <div class="mt-1">Selected Report: {{ selectedReport }}</div>
-          <div class="mt-1">Total Tenants: {{ superAdminStore.tenants?.length || 0 }}</div>
-          <div class="mt-1">Filtered Tenants: {{ filteredTenants.length }}</div>
-          <div class="mt-1">Tenant Temple Map Keys: {{ Object.keys(tenantTempleMap) }}</div>
-          <div class="mt-1">Can Proceed: {{ canProceed }}</div>
-        </div>
-      </details>
-    </div>
+   
 
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

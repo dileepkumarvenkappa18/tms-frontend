@@ -1,4 +1,139 @@
-<template>
+// Time formatting utility functions
+const isValidDate = (dateString) => {
+  if (!dateString) return false;
+  
+  // Convert to string for consistent checking
+  const dateStr = String(dateString).trim();
+  
+  // Check for invalid date patterns (comprehensive)
+  const invalidPatterns = [
+    /^0000-/,           // Starts with 0000-
+    /^0001-/,           // Starts with 0001-
+    /0000-01-01/,       // Contains 0000-01-01
+    /0001-01-01/,       // Contains 0001-01-01
+    /^0000/,            // Starts with 0000
+    /^0001/,            // Starts with 0001
+  ];
+  
+  for (const pattern of invalidPatterns) {
+    if (pattern.test(dateStr)) {
+      return false;
+    }
+  }
+  
+  // Check exact matches
+  if (dateStr === '0000-01-01' || 
+      dateStr === '0001-01-01' ||
+      dateStr.startsWith('0000-01-01') ||
+      dateStr.startsWith('0001-01-01')) {
+    return false;
+  }
+  
+  try {
+    const date = new Date(dateStr);
+    return !isNaN(date.getTime()) && date.getFullYear() > 1900;
+  } catch {
+    return false;
+  }
+};
+
+const formatTime12Hour = (timeString) => {
+  if (!timeString) return '';
+  
+  // Convert to string and trim
+  const timeStr = String(timeString).trim();
+  
+  // Comprehensive check for invalid date patterns
+  const invalidPatterns = [
+    /^0000-/,                    // Starts with 0000-
+    /^0001-/,                    // Starts with 0001-
+    /0000-01-01/,                // Contains 0000-01-01
+    /0001-01-01/,                // Contains 0001-01-01
+    /^0000/,                     // Starts with 0000
+    /^0001/,                     // Starts with 0001
+    /0000-01-01T.*Z$/,           // 0000-01-01 with UTC time
+    /0001-01-01T.*Z$/,           // 0001-01-01 with UTC time
+  ];
+  
+  for (const pattern of invalidPatterns) {
+    if (pattern.test(timeStr)) {
+      console.log('Invalid time pattern detected:', timeStr);
+      return '';
+    }
+  }
+  
+  // Check exact matches and prefixes
+  if (timeStr === '0000-01-01' || 
+      timeStr === '0001-01-01' ||
+      timeStr.startsWith('0000-01-01') ||
+      timeStr.startsWith('0001-01-01')) {
+    console.log('Invalid time value detected:', timeStr);
+    return '';
+  }
+  
+  try {
+    // Handle different time formats
+    let hours, minutes, seconds;
+    
+    // Check if it's a full datetime string (with T or space and dash)
+    if (timeStr.includes('T') || (timeStr.includes(' ') && timeStr.includes('-'))) {
+      // Validate the date part first
+      if (!isValidDate(timeStr)) {
+        console.log('Invalid date in time string:', timeStr);
+        return '';
+      }
+      
+      const date = new Date(timeStr);
+      if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+        hours = date.getHours();
+        minutes = date.getMinutes();
+      } else {
+        console.log('Invalid date object:', timeStr);
+        return '';
+      }
+    } else if (timeStr.includes(':')) {
+      // Parse time string (HH:mm:ss or HH:mm)
+      const parts = timeStr.split(':');
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+      seconds = parts[2] ? parseInt(parts[2], 10) : 0;
+    } else {
+      // Not a recognizable time format
+      return '';
+    }
+    
+    // Validate time components
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return '';
+    }
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    
+    return `${displayHour}:${displayMinutes} ${ampm}`;
+  } catch (err) {
+    console.error('Error formatting time:', err, 'Input:', timeStr);
+    return '';
+  }
+};
+
+const formatDateTime = (dateTimeString) => {
+  if (!dateTimeString) return '';
+  
+  // Convert to string and trim
+  const dateTimeStr = String(dateTimeString).trim();
+  
+  // Comprehensive check for invalid date patterns
+  const invalidPatterns = [
+    /^0000-/,                    // Starts with 0000-
+    /^0001-/,                    // Starts with 0001-
+    /0000-01-01/,                // Contains 0000-01-01
+    /0001-01-01/,                // Contains 0001-01-01
+    /^0000/,                     // Starts with 0000
+    /^0001/,                     // Starts with 0001
+    /0000-01-01T.*Z$/,           // 0000-01-01 with UTC time
+    /<template>
   <div class="min-h-screen bg-gray-50">
     <!-- Back to SuperAdmin Reports button -->
     <div v-if="fromSuperadmin" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
@@ -77,6 +212,7 @@
         <p><strong>From Superadmin:</strong> {{ fromSuperadmin }}</p>
         <p><strong>Effective Tenant ID:</strong> {{ effectiveTenantId }}</p>
         <p><strong>Tenant IDs:</strong> {{ JSON.stringify(tenantIds) }}</p>
+        <p><strong>Selected Temple:</strong> {{ selectedTemple }}</p>
         <p><strong>Available Temples:</strong> {{ availableTemples.length }}</p>
         <p><strong>Route Query:</strong> {{ JSON.stringify(route.query) }}</p>
       </div>
@@ -313,7 +449,149 @@ const activeFilter = ref('monthly');
 const selectedFormat = ref('pdf');
 const debugMode = ref(false); // Set to true for debugging
 
-// Fixed: Proper date initialization
+// Time formatting utility functions
+const isValidDate = (dateString) => {
+  if (!dateString) return false;
+  
+  // Check for invalid date patterns
+  if (dateString.startsWith('0000-') || 
+      dateString.startsWith('0001-') || 
+      dateString === '0000-01-01' ||
+      dateString === '0001-01-01' ||
+      dateString.includes('0000-01-01') ||
+      dateString.includes('0001-01-01')) {
+    return false;
+  }
+  
+  const date = new Date(dateString);
+  return !isNaN(date.getTime()) && date.getFullYear() > 1900;
+};
+
+const formatTime12Hour = (timeString) => {
+  if (!timeString) return '';
+  
+  // Convert to string if needed
+  const timeStr = String(timeString);
+  
+  // Check for invalid date patterns - expanded to catch more cases
+  if (timeStr.startsWith('0000-') || 
+      timeStr.startsWith('0001-') ||
+      timeStr.includes('0000-01-01') ||
+      timeStr.includes('0001-01-01') ||
+      timeStr === '0000-01-01' ||
+      timeStr === '0001-01-01' ||
+      /^0000/.test(timeStr) ||
+      /^0001/.test(timeStr)) {
+    return '';
+  }
+  
+  try {
+    // Handle different time formats
+    let hours, minutes, seconds;
+    
+    // Check if it's a full datetime string
+    if (timeStr.includes('T') || (timeStr.includes(' ') && timeStr.includes('-'))) {
+      // Validate the date part first
+      if (!isValidDate(timeStr)) {
+        return '';
+      }
+      
+      const date = new Date(timeStr);
+      if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+        hours = date.getHours();
+        minutes = date.getMinutes();
+      } else {
+        return '';
+      }
+    } else if (timeStr.includes(':')) {
+      // Parse time string (HH:mm:ss or HH:mm)
+      const parts = timeStr.split(':');
+      hours = parseInt(parts[0], 10);
+      minutes = parseInt(parts[1], 10);
+      seconds = parts[2] ? parseInt(parts[2], 10) : 0;
+    } else {
+      // Not a recognizable time format
+      return '';
+    }
+    
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return '';
+    }
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    
+    return `${displayHour}:${displayMinutes} ${ampm}`;
+  } catch (err) {
+    console.error('Error formatting time:', err);
+    return '';
+  }
+};
+
+const formatDateTime = (dateTimeString) => {
+  if (!dateTimeString) return '';
+  
+  // Convert to string if needed
+  const dateTimeStr = String(dateTimeString);
+  
+  // Check for invalid date patterns - expanded to catch more cases
+  if (dateTimeStr.startsWith('0000-') || 
+      dateTimeStr.startsWith('0001-') ||
+      dateTimeStr.includes('0000-01-01') ||
+      dateTimeStr.includes('0001-01-01') ||
+      dateTimeStr === '0000-01-01' ||
+      dateTimeStr === '0001-01-01' ||
+      /^0000/.test(dateTimeStr) ||
+      /^0001/.test(dateTimeStr)) {
+    return '';
+  }
+  
+  try {
+    // Validate before parsing
+    if (!isValidDate(dateTimeStr)) {
+      return '';
+    }
+    
+    const date = new Date(dateTimeStr);
+    if (isNaN(date.getTime()) || date.getFullYear() < 1900) {
+      return '';
+    }
+    
+    return date.toLocaleString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (err) {
+    console.error('Error formatting datetime:', err);
+    return '';
+  }
+};
+
+// Additional helper function to clean time data before display
+const cleanTimeValue = (value) => {
+  if (!value) return '';
+  
+  const valueStr = String(value);
+  
+  // Remove any value that contains invalid dates
+  if (valueStr.includes('0000-01-01') || 
+      valueStr.includes('0001-01-01') ||
+      valueStr.startsWith('0000-') ||
+      valueStr.startsWith('0001-') ||
+      /^0000/.test(valueStr) ||
+      /^0001/.test(valueStr)) {
+    return '';
+  }
+  
+  return valueStr;
+};
+
+// Date initialization
 const initializeDates = () => {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
@@ -330,7 +608,7 @@ const endDate = ref(initialEndDate);
 
 const loading = ref(false);
 const error = ref(null);
-const allTemples = ref([]); // For multi-tenant temple lists
+const allTemples = ref([]);
 const isDownloading = ref(false);
 
 // Options
@@ -365,19 +643,17 @@ const isSuperAdmin = computed(() => {
 
 const fromSuperadmin = computed(() => !!isSuperAdmin.value);
 
-// Fixed: Tenant resolution with proper fallback chain
+// Tenant resolution
 const effectiveTenantId = computed(() => {
-  // If superadmin with multiple tenants, return null for multi-tenant scenario
   if (fromSuperadmin.value && route.query.tenants) {
     const tenantList = String(route.query.tenants).split(',').filter(Boolean);
     if (tenantList.length > 1) {
-      return null; // Multi-tenant scenario
+      return null;
     } else if (tenantList.length === 1) {
       return tenantList[0].trim();
     }
   }
   
-  // Single tenant resolution with proper priority
   return route.params.tenantId
     || route.query.tenantId
     || route.query.tenant_id
@@ -395,7 +671,7 @@ const tenantIds = computed(() => {
   return singleTenant ? [singleTenant] : [];
 });
 
-// Temple list logic implementing the 3 rules
+// Temple list logic
 const availableTemples = computed(() => {
   if (fromSuperadmin.value && tenantIds.value.length > 1) {
     return allTemples.value || [];
@@ -441,7 +717,6 @@ const setActivityType = (type) => {
   activityType.value = type;
 };
 
-// Fixed: Date range calculation
 const setActiveFilter = (filter) => {
   activeFilter.value = filter;
   const now = new Date();
@@ -462,11 +737,11 @@ const setActiveFilter = (filter) => {
 };
 
 const handleTempleChange = () => {
-  // Optional: Add any temple change logic here
+  console.log('Temple changed to:', selectedTemple.value);
+  clearError();
 };
 
 const handleDateChange = () => {
-  // Optional: Add any date validation logic here
   if (startDate.value && endDate.value && new Date(startDate.value) > new Date(endDate.value)) {
     error.value = 'Start date cannot be after end date';
   } else {
@@ -474,29 +749,17 @@ const handleDateChange = () => {
   }
 };
 
-// Fixed: Enhanced tenant parameter building
-const buildTenantQueryParams = (tenantId) => {
-  if (!tenantId) return {};
-  
-  return {
-    tenant_id: tenantId,
-    tenantId: tenantId,
-    entity_id: tenantId,
-    entityId: tenantId,
-  };
-};
-
+// Build helper functions
 const buildTenantHeaders = (tenantId) => {
   if (!tenantId) return {};
   
   return {
     'X-Tenant-ID': String(tenantId),
     'X-Entity-ID': String(tenantId),
-    //'Tenant-ID': String(tenantId),
   };
 };
 
-// Fixed: Build report parameters with proper tenant handling
+// CRITICAL FIX: Enhanced report parameters with proper entity filtering
 const buildReportParams = () => {
   const params = {
     type: activityType.value,
@@ -507,65 +770,98 @@ const buildReportParams = () => {
     isSuperAdmin: fromSuperadmin.value
   };
 
-  // Temple selection logic
-  if (selectedTemple.value === 'all') {
-    // All temples selected
-    if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      // Multi-tenant scenario
-      params.tenantIds = tenantIds.value.slice();
-      params.entityIds = tenantIds.value.slice();
-    } else if (effectiveTenantId.value) {
-      // Single tenant scenario
-      params.tenantId = effectiveTenantId.value;
-      params.entityId = effectiveTenantId.value;
-    }
-  } else {
-    // Specific temple selected
-    params.templeId = selectedTemple.value;
-    params.temple_id = selectedTemple.value;
+  // CRITICAL: Single temple selection - MUST filter by specific entity
+  if (selectedTemple.value !== 'all') {
+    const templeId = selectedTemple.value;
     
-    // Always include tenant info for proper scoping
-    if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      // Multi-tenant: find temple's owning tenant
-      const temple = allTemples.value.find(t => String(t.id) === String(selectedTemple.value));
-      const owningTenant = temple?.tenant_id || temple?.created_by || temple?.entityId;
-      
-      if (owningTenant) {
-        params.tenantId = owningTenant;
-        params.entityId = owningTenant;
-      } else {
-        // Use first available tenant as fallback
-        params.tenantId = tenantIds.value[0];
-        params.entityId = tenantIds.value[0];
+    // Find the temple to get its tenant information
+    const temple = availableTemples.value.find(t => String(t.id) === String(templeId));
+    
+    // Set temple/entity identifiers with multiple variations for backend compatibility
+    params.templeId = templeId;
+    params.temple_id = templeId;
+    params.entityId = templeId;
+    params.entity_id = templeId;
+    
+    // Set tenant context for proper scoping
+    if (temple) {
+      const templeTenantId = temple.tenant_id || temple.entityId || temple.created_by;
+      if (templeTenantId) {
+        params.tenantId = templeTenantId;
+        params.tenant_id = templeTenantId;
       }
     } else if (effectiveTenantId.value) {
-      // Single tenant scenario
       params.tenantId = effectiveTenantId.value;
-      params.entityId = effectiveTenantId.value;
+      params.tenant_id = effectiveTenantId.value;
     }
+    
+    // Ensure single temple filtering flag
+    params.singleTemple = true;
+    params.filterByEntity = true;
+    
+    console.log('Single temple selected - filtering by entity:', {
+      templeId,
+      templeTenantId: temple?.tenant_id,
+      params
+    });
+  } 
+  // All temples selected
+  else {
+    if (fromSuperadmin.value && tenantIds.value.length > 1) {
+      // Multi-tenant scenario - all temples across multiple tenants
+      params.tenantIds = tenantIds.value.slice();
+      params.entityIds = tenantIds.value.slice();
+      params.allTemples = true;
+    } else if (effectiveTenantId.value) {
+      // Single tenant scenario - all temples for one tenant
+      params.tenantId = effectiveTenantId.value;
+      params.tenant_id = effectiveTenantId.value;
+      params.entityId = effectiveTenantId.value;
+      params.entity_id = effectiveTenantId.value;
+      params.allTemples = true;
+    }
+    
+    console.log('All temples selected:', {
+      multiTenant: fromSuperadmin.value && tenantIds.value.length > 1,
+      tenantIds: tenantIds.value,
+      params
+    });
   }
 
   return params;
 };
 
-// Fixed: Download function with proper error handling
+// Download function with proper error handling
 const downloadReport = async () => {
   if (isDownloading.value) return;
   
   // Validation
   if (!startDate.value || !endDate.value) {
     error.value = 'Please select both start and end dates';
+    showToast('Please select both start and end dates', 'error');
     return;
   }
   
   if (new Date(startDate.value) > new Date(endDate.value)) {
     error.value = 'Start date cannot be after end date';
+    showToast('Start date cannot be after end date', 'error');
     return;
   }
 
   if (tenantIds.value.length === 0) {
     error.value = 'No tenant selected for report generation';
+    showToast('No tenant selected for report generation', 'error');
     return;
+  }
+  
+  // Validate single temple selection
+  if (selectedTemple.value !== 'all') {
+    const temple = availableTemples.value.find(t => String(t.id) === String(selectedTemple.value));
+    if (!temple) {
+      error.value = 'Selected temple not found. Please refresh and try again.';
+      showToast('Selected temple not found', 'error');
+      return;
+    }
   }
   
   isDownloading.value = true;
@@ -573,7 +869,7 @@ const downloadReport = async () => {
   
   try {
     const params = buildReportParams();
-    console.log('Download params:', params); // Debug logging
+    console.log('Downloading report with params:', params);
     
     let result;
 
@@ -581,10 +877,18 @@ const downloadReport = async () => {
       result = await reportsStore.downloadActivitiesReport(params);
     } else {
       // Direct API call with proper headers
-      const headers = {};
+      const headers = {
+        'Content-Type': 'application/json'
+      };
       
-      // Add tenant headers for single tenant scenario
-      if (effectiveTenantId.value && tenantIds.value.length === 1) {
+      // Add tenant headers for single temple or single tenant scenario
+      if (selectedTemple.value !== 'all') {
+        const temple = availableTemples.value.find(t => String(t.id) === String(selectedTemple.value));
+        const templeTenantId = temple?.tenant_id || temple?.entityId || temple?.created_by || effectiveTenantId.value;
+        if (templeTenantId) {
+          Object.assign(headers, buildTenantHeaders(templeTenantId));
+        }
+      } else if (effectiveTenantId.value && tenantIds.value.length === 1) {
         Object.assign(headers, buildTenantHeaders(effectiveTenantId.value));
       }
       
@@ -594,18 +898,18 @@ const downloadReport = async () => {
       });
       
       // Handle blob response
-      const blob = new Blob([response.data], { 
-        type: response.headers['content-type'] || 'application/octet-stream'
-      });
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
       
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       
-      // Generate filename
+      // Generate filename with temple info
       const timestamp = new Date().toISOString().split('T')[0];
       const activityLabel = getActivityTypeLabel(activityType.value).toLowerCase().replace(/\s+/g, '-');
-      link.download = `${activityLabel}-report-${timestamp}.${params.format}`;
+      const templeLabel = selectedTemple.value === 'all' ? 'all-temples' : `temple-${selectedTemple.value}`;
+      link.download = `${activityLabel}-${templeLabel}-${timestamp}.${params.format}`;
       
       document.body.appendChild(link);
       link.click();
@@ -616,7 +920,8 @@ const downloadReport = async () => {
     }
     
     if (result && result.success) {
-      showToast(`${getActivityTypeLabel(activityType.value)} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
+      const templeInfo = selectedTemple.value === 'all' ? 'all temples' : getTempleName(selectedTemple.value);
+      showToast(`${getActivityTypeLabel(activityType.value)} for ${templeInfo} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
     } else {
       throw new Error(result?.message || 'Failed to download report');
     }
@@ -630,7 +935,7 @@ const downloadReport = async () => {
   }
 };
 
-// Fixed: Fetch temples with proper tenant scoping and error handling
+// Fetch temples with proper tenant scoping
 const fetchTemples = async () => {
   loading.value = true;
   error.value = null;
@@ -699,7 +1004,7 @@ const fetchTemples = async () => {
   }
 };
 
-// New helper function to fetch temples for a single tenant
+// Fetch temples for a single tenant
 const fetchTemplesForSingleTenant = async (tenantId) => {
   console.log(`Fetching temples for tenant: ${tenantId}`);
   
@@ -844,7 +1149,7 @@ watch(tenantIds, async (newIds, oldIds) => {
   }
 }, { deep: true });
 
-// Also watch single-tenant transitions
+// Watch single-tenant transitions
 watch(effectiveTenantId, async (newTenantId, oldTenantId) => {
   if (newTenantId !== oldTenantId) {
     console.log('Effective tenant ID changed, refetching temples:', { old: oldTenantId, new: newTenantId });
@@ -859,4 +1164,16 @@ watch(() => route.query, async (newQuery, oldQuery) => {
     await fetchTemples();
   }
 }, { deep: true });
+
+// Export time formatting functions for use in parent components
+defineExpose({
+  formatTime12Hour,
+  formatDateTime,
+  cleanTimeValue,
+  isValidDate
+});
 </script>
+
+<style scoped>
+/* Add any component-specific styles here */
+</style>

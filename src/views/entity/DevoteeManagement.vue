@@ -56,7 +56,8 @@
       <!-- Search and Filters -->
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-4">
         <div class="p-3">
-          <div class="flex items-center space-x-3">
+          <!-- Search Bar -->
+          <div class="flex items-center space-x-3 mb-3">
             <div class="flex-1">
               <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -68,17 +69,72 @@
               </div>
             </div>
             <div class="flex items-center space-x-2">
-              <select v-model="statusFilter" class="block w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <button @click="showFilters = !showFilters" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                Filters
+                <span v-if="activeFiltersCount > 0" class="ml-1.5 px-1.5 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700 font-medium">
+                  {{ activeFiltersCount }}
+                </span>
+              </button>
               <select v-model="itemsPerPage" @change="resetPagination" class="block w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                 <option :value="10">10</option>
                 <option :value="25">25</option>
                 <option :value="50">50</option>
                 <option :value="100">100</option>
               </select>
+            </div>
+          </div>
+
+          <!-- Filter Panel -->
+          <div v-if="showFilters" class="border-t border-gray-200 pt-3 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-medium text-gray-900">Filter Options</h3>
+              <button v-if="activeFiltersCount > 0" @click="clearAllFilters" class="text-sm text-indigo-600 hover:text-indigo-700 flex items-center font-medium">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Clear All Filters
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <!-- Status Filter -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                <select v-model="statusFilter" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              <!-- Gotra Filter -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Gotra</label>
+                <select v-model="gotraFilter" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Gotras</option>
+                  <option v-for="gotra in uniqueGotras" :key="gotra" :value="gotra">{{ gotra }}</option>
+                </select>
+              </div>
+
+              <!-- Nakshatra Filter -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Nakshatra</label>
+                <select v-model="nakshatraFilter" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Nakshatras</option>
+                  <option v-for="nakshatra in uniqueNakshatras" :key="nakshatra" :value="nakshatra">{{ nakshatra }}</option>
+                </select>
+              </div>
+
+              <!-- Rashi (Lagna) Filter -->
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Rashi (Lagna)</label>
+                <select v-model="rashiFilter" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Rashis</option>
+                  <option v-for="rashi in uniqueRashis" :key="rashi" :value="rashi">{{ rashi }}</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -105,6 +161,7 @@
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                  <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th scope="col" class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -126,6 +183,17 @@
                   </td>
                   <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ devotee.email || 'Not provided' }}</td>
                   <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ devotee.phone || 'Not provided' }}</td>
+                  <td class="px-3 py-2 whitespace-nowrap">
+                    <button
+                      @click="handleViewProfile(devotee)"
+                      class="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded border border-indigo-300 transition-colors"
+                      title="View Profile">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                      View Profile
+                    </button>
+                  </td>
                   <td class="px-3 py-2 whitespace-nowrap">
                     <span :class="getStatusClass(devotee.status)" class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full">{{ devotee.status || 'active' }}</span>
                   </td>
@@ -161,6 +229,7 @@
               :devotee="devotee"
               :loading="statusUpdateLoading === getDevoteeId(devotee)"
               @toggle-status="handleToggleStatus"
+              @view-profile="handleViewProfile"
             />
           </div>
 
@@ -250,7 +319,7 @@
             </svg>
             <h3 class="mt-2 text-sm font-medium text-gray-900">No devotees found</h3>
             <p class="mt-1 text-sm text-gray-500">
-              {{ searchQuery || statusFilter ? 'Try adjusting your search criteria or status filter.' : 'No devotees have joined this temple yet.' }}
+              {{ searchQuery || activeFiltersCount > 0 ? 'Try adjusting your search criteria or filters.' : 'No devotees have joined this temple yet.' }}
             </p>
           </div>
         </div>
@@ -303,7 +372,10 @@ export default {
     const viewMode = ref('table')
     const searchQuery = ref('')
     const statusFilter = ref('')
-    const activeFilters = ref({})
+    const gotraFilter = ref('')
+    const nakshatraFilter = ref('')
+    const rashiFilter = ref('')
+    const showFilters = ref(false)
 
     // Pagination state
     const currentPage = ref(1)
@@ -314,7 +386,39 @@ export default {
       route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
     )
 
-    // Computed
+    // Computed - Unique filter values
+    const uniqueGotras = computed(() => {
+      const gotras = devoteeStore.devotees
+        .map(d => d.gotra)
+        .filter(Boolean)
+      return [...new Set(gotras)].sort()
+    })
+
+    const uniqueNakshatras = computed(() => {
+      const nakshatras = devoteeStore.devotees
+        .map(d => d.nakshatra)
+        .filter(Boolean)
+      return [...new Set(nakshatras)].sort()
+    })
+
+    const uniqueRashis = computed(() => {
+      const rashis = devoteeStore.devotees
+        .map(d => d.rashi)
+        .filter(Boolean)
+      return [...new Set(rashis)].sort()
+    })
+
+    // Computed - Active filters count
+    const activeFiltersCount = computed(() => {
+      let count = 0
+      if (statusFilter.value) count++
+      if (gotraFilter.value) count++
+      if (nakshatraFilter.value) count++
+      if (rashiFilter.value) count++
+      return count
+    })
+
+    // Computed - Filtered devotees
     const filteredDevotees = computed(() => {
       let devotees = devoteeStore.devotees || []
 
@@ -326,6 +430,8 @@ export default {
           devotee.email?.toLowerCase().includes(query) ||
           devotee.phone?.toLowerCase().includes(query) ||
           devotee.gotra?.toLowerCase().includes(query) ||
+          devotee.nakshatra?.toLowerCase().includes(query) ||
+          devotee.rashi?.toLowerCase().includes(query) ||
           devotee.nativePlace?.toLowerCase().includes(query)
         )
       }
@@ -337,22 +443,19 @@ export default {
         )
       }
 
-      // Apply other filters
-      if (activeFilters.value.gotra) {
-        devotees = devotees.filter(devotee => devotee.gotra === activeFilters.value.gotra)
+      // Apply gotra filter
+      if (gotraFilter.value) {
+        devotees = devotees.filter(devotee => devotee.gotra === gotraFilter.value)
       }
 
-      if (activeFilters.value.profileCompletion) {
-        const completionRange = activeFilters.value.profileCompletion
-        devotees = devotees.filter(devotee => {
-          const completion = devotee.profileCompletion || 0
-          switch (completionRange) {
-            case 'incomplete': return completion < 50
-            case 'partial': return completion >= 50 && completion < 100
-            case 'complete': return completion === 100
-            default: return true
-          }
-        })
+      // Apply nakshatra filter
+      if (nakshatraFilter.value) {
+        devotees = devotees.filter(devotee => devotee.nakshatra === nakshatraFilter.value)
+      }
+
+      // Apply rashi filter
+      if (rashiFilter.value) {
+        devotees = devotees.filter(devotee => devotee.rashi === rashiFilter.value)
       }
 
       return devotees
@@ -412,7 +515,7 @@ export default {
     })
 
     // Watch for filter changes and reset pagination
-    watch([searchQuery, statusFilter], () => {
+    watch([searchQuery, statusFilter, gotraFilter, nakshatraFilter, rashiFilter], () => {
       currentPage.value = 1
     })
 
@@ -446,6 +549,14 @@ export default {
 
     const getStatusToggleText = (status) => {
       return (status || 'active') === 'active' ? 'Deactivate' : 'Activate'
+    }
+
+    // Clear all filters
+    const clearAllFilters = () => {
+      statusFilter.value = ''
+      gotraFilter.value = ''
+      nakshatraFilter.value = ''
+      rashiFilter.value = ''
     }
 
     // Pagination methods
@@ -550,6 +661,18 @@ export default {
       }
     }
 
+    // View profile handler
+    const handleViewProfile = (devotee) => {
+      const devoteeId = getDevoteeId(devotee)
+      if (!devoteeId || devoteeId === 'unknown') {
+        toast.error('Invalid devotee ID')
+        return
+      }
+      
+      // Navigate to devotee profile page
+      router.push(`/profile/${devoteeId}`)
+    }
+
     // Lifecycle
     onMounted(async () => {
       if (!templeId.value) {
@@ -586,6 +709,10 @@ export default {
       viewMode,
       searchQuery,
       statusFilter,
+      gotraFilter,
+      nakshatraFilter,
+      rashiFilter,
+      showFilters,
 
       // Pagination
       currentPage,
@@ -597,6 +724,10 @@ export default {
 
       // Computed
       filteredDevotees,
+      uniqueGotras,
+      uniqueNakshatras,
+      uniqueRashis,
+      activeFiltersCount,
 
       // Helper methods
       getDevoteeId,
@@ -607,11 +738,12 @@ export default {
 
       // Action methods
       handleToggleStatus,
+      handleViewProfile,
       refreshData,
       goToPage,
-      resetPagination
+      resetPagination,
+      clearAllFilters
     }
   }
 }
 </script>
-
