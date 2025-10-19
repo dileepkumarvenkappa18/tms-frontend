@@ -998,7 +998,7 @@ const handleFileUpload = (event, type) => {
     localPreviews[type] = form.documents[type] ? URL.createObjectURL(form.documents[type]) : ''
   }
 }
-const handleSubmit = async () => {
+
 // Navigation and validation
 const nextStep = () => { if (validateCurrentStep()) currentStep.value++ }
 const previousStep = () => { currentStep.value-- }
@@ -1027,7 +1027,7 @@ const validateCurrentStep = () => {
 }
 
 // Submit
-
+const handleSubmit = async () => {
   if (!validateCurrentStep()) return
   try {
     isSubmitting.value = true
@@ -1035,6 +1035,7 @@ const validateCurrentStep = () => {
     if (form.establishedYear && !isNaN(parseInt(form.establishedYear))) {
       establishedYear = parseInt(form.establishedYear)
     }
+    // Use snake_case field names to match backend expectations
     const payload = {
       id: parseInt(templeId.value),
       name: (form.name || '').trim(),
@@ -1052,12 +1053,24 @@ const validateCurrentStep = () => {
       landmark: (form.landmark || '').trim(),
       maplink: (form.mapLink || '').trim()
     }
+    console.log('📤 Submitting update with payload:', payload)
     await templeService.updateTemple(templeId.value, payload)
     showToast('Temple information updated successfully!')
     router.push('/tenant/dashboard')
   } catch (error) {
     console.error('Failed to update temple', error)
-    const msg = typeof error === 'object' ? (error.message || 'Failed to update temple information. Please try again.') : 'Failed to update temple information. Please try again.'
+    // Extract more specific error message
+    const errorData = error?.response?.data
+    let msg = 'Failed to update temple information. Please try again.'
+    
+    if (errorData?.error) {
+      msg = errorData.error
+    } else if (errorData?.message) {
+      msg = errorData.message
+    } else if (error?.message) {
+      msg = error.message
+    }
+    
     showToast(msg, 'error')
   } finally {
     isSubmitting.value = false

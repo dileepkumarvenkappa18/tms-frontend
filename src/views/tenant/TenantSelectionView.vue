@@ -237,13 +237,14 @@ const selectTenant = (tenantId) => {
   selectedTenantId.value = Number(tenantId);
 };
 
-const proceedToTenantDashboard = () => {
+const proceedToTenantDashboard = async () => {
   if (!selectedTenantId.value) {
     showToast('Please select a tenant to proceed', 'warning');
     return;
   }
 
   try {
+    // Store tenant information
     localStorage.setItem('selected_tenant_id', selectedTenantId.value);
     localStorage.setItem('current_tenant_id', selectedTenantId.value);
     localStorage.setItem('current_entity_id', selectedTenantId.value);
@@ -259,16 +260,21 @@ const proceedToTenantDashboard = () => {
       localStorage.setItem('selected_tenant_name', selectedTenant.name);
     }
 
-    // ✅ Redirect to tenant dashboard
-    const redirectPath = `/tenant/${selectedTenantId.value}/dashboard`;
-    window.location.href = redirectPath;
+    // Update auth store with selected tenant
+    if (authStore.setSelectedTenant) {
+      authStore.setSelectedTenant(selectedTenantId.value);
+    }
+
+    // Use Vue Router for navigation
+    await router.push(`/tenant/${selectedTenantId.value}/dashboard`);
+    showToast(`Accessing ${selectedTenant?.name || 'tenant'} dashboard`, 'success');
   } catch (error) {
     console.error('Navigation error:', error);
     showToast('Failed to navigate to dashboard. Please try again.', 'error');
   }
 };
 
-const directNavigate = (tenantId) => {
+const directNavigate = async (tenantId) => {
   localStorage.setItem('selected_tenant_id', tenantId);
   localStorage.setItem('current_tenant_id', tenantId);
   localStorage.setItem('current_entity_id', tenantId);
@@ -278,9 +284,13 @@ const directNavigate = (tenantId) => {
     localStorage.setItem('selected_tenant_name', selectedTenant.name);
   }
 
-  // ✅ Redirect to tenant dashboard
-  const path = `/tenant/${tenantId}/dashboard`;
-  window.location.href = path;
+  // Update auth store
+  if (authStore.setSelectedTenant) {
+    authStore.setSelectedTenant(tenantId);
+  }
+
+  // Use Vue Router for navigation
+  await router.push(`/tenant/${tenantId}/dashboard`);
 };
 
 onMounted(() => {

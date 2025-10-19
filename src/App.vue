@@ -23,7 +23,7 @@
 
     <!-- Toast Notifications Container -->
     <Teleport to="body">
-      <div class="fixed top-4 right-4 md:right-8 lg:right-12 z-50 space-y-2">
+      <div class="fixed top-4 right-4 z-50 space-y-2">
         <TransitionGroup
           name="toast"
           enter-active-class="transition-all duration-300 ease-out"
@@ -220,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, markRaw, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, markRaw, shallowRef } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -263,10 +263,7 @@ const isModalOpen = ref(false)
 const showPWAPrompt = ref(false)
 let deferredPrompt = null
 
-// Track if user just logged in (to show welcome toast only once)
-const justLoggedIn = ref(false)
-
-// Layout management
+// Layout management - NEW CODE
 const layouts = {
   'AuthLayout': markRaw(AuthLayout),
   'PublicLayout': markRaw(PublicLayout),
@@ -404,7 +401,7 @@ const handleGlobalError = (error) => {
   addToast('error', 'Something went wrong', 'Please try again or contact support')
 }
 
-// Authentication initialization - WITHOUT welcome toast
+// Authentication initialization - MODIFIED for role-based redirection
 const initializeAuth = async () => {
   console.log('App mounting, initializing auth...')
   try {
@@ -416,30 +413,35 @@ const initializeAuth = async () => {
     
     // Check if we need to redirect
     if (isAuth) {
+      // Get user role
+      const userRole = authStore.userRole
+      console.log('Authenticated user with role:', userRole)
+      
+      // Determine dashboard path based on role
+      let dashboardPath
+      
+      if (userRole === 'superadmin' || userRole === 'super_admin') {
+        dashboardPath = '/superadmin/dashboard'
+      } else if (userRole === 'templeadmin' || userRole === 'tenant') {
+        dashboardPath = '/tenant/dashboard'
+      } else if (userRole === 'devotee') {
+        const entityId = authStore.user?.entityId || authStore.user?.current_entity?.id
+        dashboardPath = entityId ? `/entity/${entityId}/devotee/dashboard` : '/devotee/temple-selection'
+      } else if (userRole === 'volunteer') {
+        const entityId = authStore.user?.entityId || authStore.user?.current_entity?.id
+        dashboardPath = entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
+      } else {
+        dashboardPath = '/'
+      }
+      
       // If user is trying to access login/register while logged in, redirect to appropriate dashboard
       if (isAuthRoute.value) {
-        // Get user role
-        const userRole = authStore.userRole
-        console.log('Authenticated user with role:', userRole)
-        
-        // Determine dashboard path based on role
-        let dashboardPath
-        
-        if (userRole === 'superadmin' || userRole === 'super_admin') {
-          dashboardPath = '/superadmin/dashboard'
-        } else if (userRole === 'templeadmin' || userRole === 'tenant') {
-          dashboardPath = '/tenant/dashboard'
-        } else if (userRole === 'devotee') {
-          const entityId = authStore.user?.entityId || authStore.user?.current_entity?.id
-          dashboardPath = entityId ? `/entity/${entityId}/devotee/dashboard` : '/devotee/temple-selection'
-        } else if (userRole === 'volunteer') {
-          const entityId = authStore.user?.entityId || authStore.user?.current_entity?.id
-          dashboardPath = entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
-        } else {
-          dashboardPath = '/'
-        }
-        
-        console.log('Redirecting authenticated user to dashboard:', dashboardPath)
+        console.log('Redirecting authenticated user from auth route to dashboard:', dashboardPath)
+        router.replace(dashboardPath)
+      }
+      // If user is on landing page while authenticated, redirect to appropriate dashboard
+      else if (route.path === '/' || route.name === 'Landing') {
+        console.log('Redirecting authenticated user from landing page to dashboard:', dashboardPath)
         router.replace(dashboardPath)
       }
     } else {
@@ -448,6 +450,12 @@ const initializeAuth = async () => {
         console.log('Redirecting unauthenticated user from protected route to login')
         router.replace('/login')
       }
+    }
+    
+    // Show welcome toast for authenticated users
+    if (isAuth && !isAuthRoute.value) {
+      const userName = authStore.user?.fullName || authStore.user?.name || 'User'
+      addToast('success', `Welcome back, ${userName}!`)
     }
     
   } catch (error) {
@@ -459,22 +467,6 @@ const initializeAuth = async () => {
     isInitializing.value = false
   }
 }
-
-// Watch for authentication state changes to show welcome toast ONLY after login
-watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
-  // Only show toast when authentication changes from false to true (actual login)
-  // And not during initialization
-  if (newValue && !oldValue && !isInitializing.value) {
-    const userName = authStore.user?.fullName || authStore.user?.name || 'User'
-    addToast('success', `Welcome back, ${userName}!`, 'You have successfully logged in')
-    justLoggedIn.value = true
-    
-    // Reset the flag after a short delay
-    setTimeout(() => {
-      justLoggedIn.value = false
-    }, 1000)
-  }
-})
 
 // Helper methods for error recovery
 const refreshPage = () => {
@@ -555,7 +547,49 @@ window.hideModal = closeModal
 </script>
 
 <style scoped>
-/* Toast animations */
+/* Page Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-left-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.slide-left-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-right-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.slide-right-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* Toast Transitions */
+.toast-move,
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.3s ease;
@@ -571,53 +605,7 @@ window.hideModal = closeModal
   transform: translateX(100%);
 }
 
-/* Fade transition */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* Slide transitions */
-.slide-left-enter-active,
-.slide-left-leave-active,
-.slide-right-enter-active,
-.slide-right-leave-active,
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-left-enter-from {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-.slide-left-leave-to {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.slide-right-enter-from {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.slide-right-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translateY(100%);
-}
-
-/* Modal animations */
+/* Modal Transitions */
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.3s ease;
@@ -637,5 +625,107 @@ window.hideModal = closeModal
 .modal-content-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+/* Slide Up Transitions */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+/* Custom Scrollbar */
+:deep(*::-webkit-scrollbar) {
+  width: 8px;
+  height: 8px;
+}
+
+:deep(*::-webkit-scrollbar-track) {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+:deep(*::-webkit-scrollbar-thumb) {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+:deep(*::-webkit-scrollbar-thumb:hover) {
+  background: #94a3b8;
+}
+
+/* Focus styles */
+:deep(*:focus) {
+  outline: none;
+}
+
+:deep(*:focus-visible) {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+/* Selection styles */
+:deep(::selection) {
+  background-color: #4f46e5;
+  color: white;
+}
+
+/* Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .toast-container {
+    left: 1rem;
+    right: 1rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .fixed {
+    display: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .bg-indigo-600 {
+    background-color: #000 !important;
+  }
+  
+  .text-indigo-600 {
+    color: #000 !important;
+  }
+  
+  .border-indigo-600 {
+    border-color: #000 !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>

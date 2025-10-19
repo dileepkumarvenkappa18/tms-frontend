@@ -681,29 +681,31 @@ async createTemple(templeData) {
   }
 },
 
-  async updateTemple(id, updates) {
+ async updateTemple(id, updates) {
     try {
       console.log(`📡 Updating temple with ID: ${id}`);
       console.log('📦 Update data:', updates);
 
       // Convert frontend field names to backend field names
+      // CRITICAL: Check BOTH camelCase and snake_case variations
       const payload = {
         id: parseInt(id),
         name: updates.name || '',
-        main_deity: updates.mainDeity || updates.main_deity || '',
-        temple_type: updates.templeType || updates.temple_type || updates.category || '',
-        established_year: updates.establishedYear ? parseInt(updates.establishedYear) : null,
+        main_deity: updates.maindeity || updates.mainDeity || updates.main_deity || '',
+        temple_type: updates.templetype || updates.templeType || updates.temple_type || updates.category || '',
+        established_year: updates.establishedyear || updates.establishedYear || updates.established_year ? 
+          parseInt(updates.establishedyear || updates.establishedYear || updates.established_year) : null,
         phone: updates.contact?.phone || updates.phone || '',
         email: updates.contact?.email || updates.email || '',
         description: updates.description || '',
-        street_address: updates.address?.street || updates.streetAddress || updates.addressLine1 || updates.street_address || '',
+        street_address: updates.streetaddress || updates.streetAddress || updates.street_address || 
+          updates.address?.street || updates.addressLine1 || '',
         city: updates.address?.city || updates.city || '',
         district: updates.district || '',
         state: updates.address?.state || updates.state || '',
-        pincode: updates.address?.pincode || updates.pincode || '',
+        pincode: updates.pincode || updates.address?.pincode || '',
         landmark: updates.landmark || '',
-        map_link: updates.mapLink || updates.map_link || ''
-        
+        map_link: updates.maplink || updates.mapLink || updates.map_link || ''
       };
       
       console.log('📦 Final update payload:', payload);

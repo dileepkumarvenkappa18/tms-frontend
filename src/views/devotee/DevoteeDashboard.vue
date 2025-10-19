@@ -417,7 +417,7 @@
               </router-link>
               
               <router-link 
-                :to="`/entity/${route.params.id}/devotee/profile/create`"
+                :to="`/entity/${route.params.id}/devotee/profile/edit`"
                 class="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -286,7 +286,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -368,20 +367,16 @@ const setActiveFilter = (filter) => {
   activeFilter.value = filter;
   reportsStore.clearError();
   
-  const today = new Date();
+  const todayDate = new Date();
   const start = new Date();
   
-  if (filter === 'weekly') {
-    start.setDate(today.getDate() - 7);
-  } else if (filter === 'monthly') {
-    start.setDate(today.getDate() - 30);
-  } else if (filter === 'yearly') {
-    start.setDate(today.getDate() - 365);
-  }
+  if (filter === 'weekly') start.setDate(todayDate.getDate() - 7);
+  else if (filter === 'monthly') start.setDate(todayDate.getDate() - 30);
+  else if (filter === 'yearly') start.setDate(todayDate.getDate() - 365);
   
   if (filter !== 'custom') {
     startDate.value = start.toISOString().split('T')[0];
-    endDate.value = today.toISOString().split('T')[0];
+    endDate.value = todayDate.toISOString().split('T')[0];
   }
 };
 
@@ -415,13 +410,13 @@ const formatDate = (dateString) => {
   });
 };
 
+// Build API params with entityId included
 const buildReportParams = () => {
   const baseParams = {
     dateRange: activeFilter.value,
     startDate: startDate.value,
     endDate: endDate.value,
-    // Explicitly restrict to Tenant + Temple only
-    role: "", 
+    role: "", // optional role filter
   };
 
   if (activeStatus.value !== 'all') {
@@ -429,42 +424,54 @@ const buildReportParams = () => {
   }
 
   if (fromSuperadmin.value && tenantIds.value.length > 1) {
-    baseParams.entityIds = tenantIds.value;
+    baseParams.entityIds = tenantIds.value; // multiple entities
     baseParams.isSuperAdmin = true;
   } else {
-    baseParams.entityId = tenantId.value;
+    baseParams.entityId = tenantId.value; // single entity
   }
 
   return baseParams;
 };
 
+// Preview report
 const previewReport = async () => {
   if (!isFormValid.value) return;
 
   try {
     const params = buildReportParams();
-    
+
     console.log('Previewing Approval Status report with parameters:', {
       tenants: fromSuperadmin.value && tenantIds.value.length > 1 ? tenantIds.value.length : 1,
       dateRange: getTimeFilterLabel(activeFilter.value),
       status: getStatusFilterLabel(activeStatus.value),
-      period: `${formatDate(startDate.value)} - ${formatDate(endDate.value)}`
+      period: `${formatDate(startDate.value)} - ${formatDate(endDate.value)}`,
+      entityId: params.entityId || params.entityIds
     });
 
     await reportsStore.getApprovalStatusPreview(params);
-    
+
+    // Inject Entity ID column if missing
+    if (reportsStore.hasReportData && !reportsStore.reportPreview.columns.some(c => c.key === 'entity_id')) {
+      reportsStore.reportPreview.columns.unshift({ key: 'entity_id', label: 'Entity ID' });
+      reportsStore.reportPreview.data = reportsStore.reportPreview.data.map(row => ({
+        entity_id: row.entity_id || tenantId.value,
+        ...row
+      }));
+    }
+
     if (reportsStore.hasReportData) {
       showToast(`Preview loaded: ${reportsStore.reportPreview.totalRecords} records found`, 'success');
     } else {
       showToast('No data found for the selected criteria', 'info');
     }
-    
+
   } catch (error) {
     console.error('Preview failed:', error);
     showToast(`Preview failed: ${error.message}`, 'error');
   }
 };
 
+// Download report
 const downloadReport = async () => {
   if (!isFormValid.value) return;
 
@@ -473,18 +480,19 @@ const downloadReport = async () => {
       ...buildReportParams(),
       format: selectedFormat.value
     };
-    
+
     console.log('Downloading Approval Status report:', {
       tenants: fromSuperadmin.value && tenantIds.value.length > 1 ? tenantIds.value.length : 1,
       dateRange: getTimeFilterLabel(activeFilter.value),
       status: getStatusFilterLabel(activeStatus.value),
       format: getFormatLabel(selectedFormat.value),
-      period: `${formatDate(startDate.value)} - ${formatDate(endDate.value)}`
+      period: `${formatDate(startDate.value)} - ${formatDate(endDate.value)}`,
+      entityId: params.entityId || params.entityIds
     });
 
     const result = await reportsStore.downloadApprovalStatusReport(params);
     showToast(`Report downloaded successfully: ${result.filename}`, 'success');
-    
+
   } catch (error) {
     console.error('Download failed:', error);
     showToast(`Download failed: ${error.message}`, 'error');
@@ -497,5 +505,3 @@ onMounted(() => {
   reportsStore.clearReportData();
 });
 </script>
-
-
