@@ -16,8 +16,25 @@ const app = createApp(App)
 // Create Pinia store instance
 const pinia = createPinia()
 
-// Install plugins
+// Install Pinia FIRST (must be before accessing stores)
 app.use(pinia)
+
+// 🔥 CRITICAL FIX: Initialize auth BEFORE mounting app and router
+import { useAuthStore } from '@/stores/auth'
+
+// Initialize auth synchronously
+const authStore = useAuthStore()
+const authInitialized = authStore.initialize()
+
+console.log('🔐 Auth initialization result:', authInitialized)
+console.log('🔐 Auth state after init:', {
+  isAuthenticated: authStore.isAuthenticated,
+  user: authStore.user,
+  token: authStore.token,
+  userRole: authStore.userRole
+})
+
+// Install router AFTER auth initialization
 app.use(router)
 
 // Global error handler
@@ -28,7 +45,6 @@ app.config.errorHandler = (error, instance, info) => {
   
   // Toast notification for production errors
   if (process.env.NODE_ENV === 'production') {
-    // Use a safer way to access toast without potential circular dependency
     try {
       const { showToast } = useToast()
       showToast('An unexpected error occurred. Please try again.', 'error')
@@ -134,14 +150,14 @@ app.config.globalProperties.$constants = {
   }
 }
 
-// Provide global composables - Initialize after app is created but before mount
+// Provide global composables
 const authComposable = useAuth()
 const toastComposable = useToast()
 
 app.provide('auth', authComposable)
 app.provide('toast', toastComposable)
 
-// Global properties for easy access (safer initialization)
+// Global properties for easy access
 app.config.globalProperties.$auth = authComposable
 app.config.globalProperties.$toast = toastComposable
 
@@ -189,9 +205,6 @@ if (process.env.NODE_ENV === 'development') {
       }
     },
     
-    // ADDED: Login debugging tools
-    // ============================
-    
     // Analyze user data in local storage
     analyzeUser: () => {
       try {
@@ -207,7 +220,6 @@ if (process.env.NODE_ENV === 'development') {
         console.group('🔍 User Data Analysis')
         console.log('User object:', user)
         
-        // Check for role properties
         const roleProperties = ['role', 'roleId', 'role_id', 'userType', 'user_type', 'user_role', 'type']
         
         console.log('Role-related properties:')
@@ -217,7 +229,6 @@ if (process.env.NODE_ENV === 'development') {
           }
         })
         
-        // Check for entity/temple ID
         const entityProps = ['entityId', 'templeId', 'entity_id', 'temple_id']
         console.log('Entity-related properties:')
         entityProps.forEach(prop => {
@@ -226,7 +237,6 @@ if (process.env.NODE_ENV === 'development') {
           }
         })
         
-        // Current entity object
         if (user.current_entity) {
           console.log('Current entity:', user.current_entity)
         }
@@ -250,14 +260,8 @@ if (process.env.NODE_ENV === 'development') {
         }
         
         const user = JSON.parse(userData)
-        
-        // Backup original role
         const originalRole = user.role
-        
-        // Update role
         user.role = role
-        
-        // Save back to localStorage
         localStorage.setItem('user_data', JSON.stringify(user))
         
         console.log(`✅ Role changed from "${originalRole}" to "${role}"`)
@@ -281,11 +285,8 @@ if (process.env.NODE_ENV === 'development') {
         }
         
         const user = JSON.parse(userData)
-        
-        // Simple role normalization
         let role = user.role
         
-        // Map common role variations
         const roleMap = {
           'templeadmin': 'tenant',
           'temple_admin': 'tenant',
@@ -297,13 +298,9 @@ if (process.env.NODE_ENV === 'development') {
           'seva_volunteer': 'volunteer'
         }
         
-        // Apply mapping if it exists
         role = roleMap[role] || role
-        
-        // Get entity ID
         const entityId = user.entityId || (user.current_entity ? user.current_entity.id : null)
         
-        // Determine dashboard path
         let path
         
         switch (role) {
@@ -335,18 +332,16 @@ if (process.env.NODE_ENV === 'development') {
     showLoginHelp: () => {
       console.group('🛠️ Login Debug Tools')
       console.log('$devHelpers.analyzeUser() - Analyze current user data in localStorage')
-      console.log('$devHelpers.forceRole("role") - Override current user role (e.g., "tenant", "superadmin")')
+      console.log('$devHelpers.forceRole("role") - Override current user role')
       console.log('$devHelpers.getDashboardPath() - Get dashboard path for current user')
       console.log('$devHelpers.clearStorage() - Clear all authentication data')
       console.groupEnd()
     }
   }
   
-  // Auto-show debug help on startup
-  console.log('🔧 Development tools loaded! Access debugging tools via app.$devHelpers')
-  console.log('Try app.$devHelpers.showLoginHelp() for login debugging commands')
+  console.log('🔧 Development tools loaded! Access debugging tools via window.$devHelpers')
+  console.log('Try window.$devHelpers.showLoginHelp() for login debugging commands')
   
-  // Make tools available on window for console access
   window.$devHelpers = app.config.globalProperties.$devHelpers
 }
 
@@ -362,7 +357,6 @@ app.directive('permission', {
       }
     } catch (error) {
       console.error('Permission directive error:', error)
-      // Fail safely - hide element if permission check fails
       el.style.display = 'none'
     }
   },
@@ -431,7 +425,6 @@ function updateLoadingState(el, isLoading) {
     if (isLoading) {
       el.classList.add('opacity-50', 'pointer-events-none', 'cursor-not-allowed')
       
-      // Add loading spinner if not already present
       if (!el.querySelector('.loading-spinner')) {
         const spinner = document.createElement('div')
         spinner.className = 'loading-spinner absolute inset-0 flex items-center justify-center bg-white bg-opacity-75'
@@ -439,7 +432,6 @@ function updateLoadingState(el, isLoading) {
           <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
         `
         
-        // Ensure parent has relative positioning
         const currentPosition = window.getComputedStyle(el).position
         if (currentPosition === 'static') {
           el.style.position = 'relative'
@@ -462,7 +454,6 @@ function updateLoadingState(el, isLoading) {
 // Global mixin for common functionality
 app.mixin({
   methods: {
-    // Format currency
     formatCurrency(amount, currency = 'INR') {
       try {
         return new Intl.NumberFormat('en-IN', {
@@ -476,7 +467,6 @@ app.mixin({
       }
     },
     
-    // Format date
     formatDate(date, format = 'short') {
       try {
         const options = {
@@ -493,19 +483,16 @@ app.mixin({
       }
     },
     
-    // Truncate text
     truncate(text, length = 50) {
       if (!text) return ''
       return text.length > length ? text.substring(0, length) + '...' : text
     },
     
-    // Capitalize first letter
     capitalize(text) {
       if (!text) return ''
       return text.charAt(0).toUpperCase() + text.slice(1)
     },
     
-    // Generate avatar from name
     generateAvatar(name) {
       if (!name) return ''
       const initials = name.split(' ')
@@ -515,7 +502,6 @@ app.mixin({
       return initials.substring(0, 2)
     },
     
-    // Get status color
     getStatusColor(status) {
       const colors = {
         PENDING: 'bg-yellow-100 text-yellow-800',
@@ -528,7 +514,6 @@ app.mixin({
       return colors[status] || 'bg-gray-100 text-gray-800'
     },
     
-    // Safe navigation helper
     safeGet(obj, path, defaultValue = null) {
       try {
         return path.split('.').reduce((current, key) => current?.[key], obj) ?? defaultValue
@@ -539,21 +524,18 @@ app.mixin({
   }
 })
 
-// Mount the app with error handling
+// Mount the app
 try {
   app.mount('#app')
   
-  // Log startup in development
   if (process.env.NODE_ENV === 'development') {
     console.log(`🏛️ Temple SaaS Platform v${app.config.globalProperties.$constants.APP_VERSION} started`)
     console.log('🚀 Development mode enabled')
     console.log('🎨 Indigo theme loaded')
-    console.log('📱 Responsive design active')
   }
 } catch (error) {
   console.error('Failed to mount app:', error)
   
-  // Fallback error display
   const appElement = document.getElementById('app')
   if (appElement) {
     appElement.innerHTML = `
@@ -570,5 +552,4 @@ try {
   }
 }
 
-// Export app instance for testing
 export default app

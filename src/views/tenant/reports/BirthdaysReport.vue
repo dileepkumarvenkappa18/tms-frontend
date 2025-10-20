@@ -162,7 +162,7 @@
                 class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 @change="onTempleChange"
               >
-                
+                <option value="all">All Temples</option>
                 <option v-for="temple in safeTemples" :key="temple.id" :value="temple.id">
                   {{ temple.name }}
                 </option>
@@ -434,7 +434,6 @@ import { useToast } from '@/composables/useToast';
 import templeService from '@/services/temple.service';
 import api from '@/plugins/axios';
 
-// Composables
 const route = useRoute();
 const router = useRouter();
 const templeStore = useTempleStore();
@@ -442,7 +441,6 @@ const userStore = useAuthStore();
 const reportsStore = useReportsStore();
 const { showToast } = useToast();
 
-// Reactive state
 const activeReportType = ref('birthdays');
 const selectedTemple = ref('all');
 const activeFilter = ref('monthly');
@@ -451,7 +449,6 @@ const startDate = ref(new Date().toISOString().split('T')[0]);
 const endDate = ref(new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0]);
 const devoteeStatus = ref('all');
 
-// Filter options
 const timeFilters = [
   { label: 'Weekly', value: 'weekly' },
   { label: 'Monthly', value: 'monthly' },
@@ -472,7 +469,6 @@ const devoteeStatusOptions = [
   { label: 'New Members', value: 'new' },
 ];
 
-// Check for tenants parameter from superadmin
 const fromSuperadmin = computed(() => route.query.from === 'superadmin');
 
 const tenantIds = computed(() => {
@@ -482,36 +478,29 @@ const tenantIds = computed(() => {
   return [];
 });
 
-// Fix the effective tenant ID computation
 const effectiveTenantId = computed(() => {
-  // Priority 1: If coming from superadmin with single tenant
   if (fromSuperadmin.value && tenantIds.value.length === 1) {
     return tenantIds.value[0];
   }
   
-  // Priority 2: Current route tenant parameter
   if (route.params.tenantId) {
     return route.params.tenantId;
   }
   
-  // Priority 3: User's assigned tenant from auth store
   if (userStore.user?.assignedTenantId) {
     return userStore.user.assignedTenantId.toString();
   }
   
-  // Priority 4: Extract from localStorage tenant header
   const currentTenantId = localStorage.getItem('current_tenant_id');
   if (currentTenantId) {
     return currentTenantId;
   }
   
-  // Priority 5: Extract from axios default headers
   if (api.defaults.headers.common['X-Tenant-ID']) {
     const headerTenantId = api.defaults.headers.common['X-Tenant-ID'];
     return headerTenantId.toString();
   }
   
-  // Priority 6: User ID as fallback (based on your working activities report)
   if (userStore.user?.id) {
     return userStore.user.id.toString();
   }
@@ -520,7 +509,6 @@ const effectiveTenantId = computed(() => {
   return null;
 });
 
-// Enhanced safe computed properties with comprehensive null safety
 const safeError = computed(() => {
   try {
     return reportsStore?.error || null;
@@ -535,7 +523,6 @@ const safeTemples = computed(() => {
     if (!templeStore?.temples || !Array.isArray(templeStore.temples)) {
       return [];
     }
-    // Filter for approved/active temples only
     return templeStore.temples.filter(temple => {
       if (!temple) return false;
       const status = (temple.status || '').toLowerCase();
@@ -609,7 +596,6 @@ const reportPreviewData = computed(() => {
   }
 });
 
-// Enhanced methods with comprehensive error handling
 const clearError = () => {
   try {
     if (reportsStore && typeof reportsStore.clearError === 'function') {
@@ -718,6 +704,11 @@ const setActiveFilter = async (filter) => {
 
     if (filter === 'weekly') {
       startDate.value = new Date().toISOString().split('T')[0];
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      endDate.value = weekEnd.toISOString().split('T')[0];
+    } else if (filter === 'monthly') {
+      startDate.value = new Date().toISOString().split('T')[0];
       const monthEnd = new Date();
       monthEnd.setDate(monthEnd.getDate() + 30);
       endDate.value = monthEnd.toISOString().split('T')[0];
@@ -792,13 +783,8 @@ const formatDate = (dateString) => {
     return dateString || '';
   }
 };
-/*const buildReportParams = () => {
-buildReportParams_ext(false)
 
-}*/
-// Build robust parameters for ReportsService
-// Replace the buildReportParams function in your BirthdaysReport.vue
-
+// ⭐ CRITICAL FIX: Updated buildReportParams function
 const buildReportParams = () => {
   try {
     if (!effectiveTenantId.value) {
@@ -811,29 +797,43 @@ const buildReportParams = () => {
       endDate: endDate.value,
       format: selectedFormat.value || 'pdf',
       isSuperAdmin: fromSuperadmin.value,
-      tenantId: effectiveTenantId.value // Always include tenant context
+      tenantId: effectiveTenantId.value
     };
 
-    // Set entity ID properly based on context
+    // ⭐ KEY FIX: Proper entity ID handling for standard users
     if (fromSuperadmin.value) {
+      // SuperAdmin logic
       if (tenantIds.value.length > 1) {
-        // Multiple tenants - use the tenant IDs
         params.entityIds = tenantIds.value;
         params.entityId = 'multiple';
+        params.templeId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value.toString();
       } else {
-        // Single tenant from superadmin - use temple selection or tenant context
-        params.entityId = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
+        if (selectedTemple.value === 'all') {
+          params.entityId = effectiveTenantId.value;
+          params.templeId = 'all';
+        } else {
+          params.entityId = selectedTemple.value;
+          params.templeId = selectedTemple.value.toString();
+        }
       }
     } else {
-      // Regular user - use temple selection or tenant context
-      params.entityId = selectedTemple.value === 'all' ? effectiveTenantId.value : selectedTemple.value;
-    }
-
-    // Temple selection
-    if (selectedTemple.value && selectedTemple.value !== 'all') {
-      params.templeId = selectedTemple.value.toString();
-    } else {
-      params.templeId = 'all';
+      // ⭐ CRITICAL FIX: Standard user/tenant admin logic
+      if (selectedTemple.value === 'all') {
+        // For "All Temples" - use special 'all' identifier
+        // Backend should handle this by fetching all temples for the tenant
+        params.entityId = 'all';
+        params.templeId = 'all';
+        params.tenantId = effectiveTenantId.value;
+        
+        // Include accessible temple IDs for backend filtering
+        if (safeTemples.value.length > 0) {
+          params.templeIds = safeTemples.value.map(t => t.id.toString());
+        }
+      } else {
+        // Specific temple selected - use temple ID directly
+        params.entityId = selectedTemple.value;
+        params.templeId = selectedTemple.value.toString();
+      }
     }
 
     // Devotee status
@@ -845,13 +845,16 @@ const buildReportParams = () => {
       params.status = devoteeStatus.value;
     }
 
-    console.log('Built devotee report params:', params);
+    console.log('✅ Built devotee report params:', params);
+    console.log('Selected temple:', selectedTemple.value);
+    console.log('Available temples:', safeTemples.value.length);
     return params;
   } catch (error) {
     console.error('Error building report params:', error);
     throw error;
   }
 };
+
 const fetchTemples = async () => {
   try {
     if (!effectiveTenantId.value) {
@@ -859,11 +862,11 @@ const fetchTemples = async () => {
     }
 
     console.log('Fetching temples for tenant ID:', effectiveTenantId.value);
+    console.log('User role:', userStore.user?.role);
+    console.log('User assigned tenant:', userStore.user?.assignedTenantId);
     
-    // Clear existing temples first
     templeStore.clearTempleData();
     
-    // For superadmin with multiple tenants
     if (fromSuperadmin.value && tenantIds.value.length > 1) {
       console.log(`Fetching temples for ${tenantIds.value.length} tenants:`, tenantIds.value);
       const allTemples = [];
@@ -880,7 +883,6 @@ const fetchTemples = async () => {
       templeStore.temples = allTemples;
       console.log(`Set ${templeStore.temples.length} total temples for ${tenantIds.value.length} tenants`);
     } 
-    // Single tenant case
     else {
       const tenantId = effectiveTenantId.value;
       console.log(`Fetching temples for single tenant ${tenantId}`);
@@ -895,31 +897,74 @@ const fetchTemples = async () => {
           allEntities = response.data.data;
         }
         
-        // Filter entities by the correct tenant ID
-        const filteredTemples = allEntities.filter(temple => {
-          return String(temple.created_by) === String(tenantId) || 
-                 String(temple.tenant_id) === String(tenantId);
-        });
+        const userAssignedTenant = userStore.user?.assignedTenantId?.toString();
+        const isStandardUser = userStore.user?.role === 'standard_user';
+        
+        let filteredTemples;
+        
+        if (isStandardUser && userAssignedTenant) {
+          console.log(`🔒 Standard user detected - filtering for assigned tenant: ${userAssignedTenant}`);
+          
+          filteredTemples = allEntities.filter(temple => {
+            const templeCreator = String(temple.created_by);
+            const templeTenant = String(temple.tenant_id);
+            
+            const hasAccess = templeCreator === userAssignedTenant || 
+                            templeTenant === userAssignedTenant;
+            
+            if (!hasAccess) {
+              console.log(`❌ Filtered out temple ${temple.id} (${temple.name}) - not in assigned tenant`);
+            }
+            
+            return hasAccess;
+          });
+          
+          console.log(`🔒 Standard user can access ${filteredTemples.length} temples from their assigned tenant`);
+        } else {
+          filteredTemples = allEntities.filter(temple => {
+            return String(temple.created_by) === String(tenantId) || 
+                   String(temple.tenant_id) === String(tenantId);
+          });
+        }
         
         console.log(`Filtered ${filteredTemples.length} temples from ${allEntities.length} total entities for tenant ${tenantId}`);
         
-        // Set the filtered temples in the store
         templeStore.temples = filteredTemples.map(temple => templeService.normalizeTempleData(temple));
+        
+        if (isStandardUser && filteredTemples.length > 0 && selectedTemple.value === 'all') {
+          selectedTemple.value = filteredTemples[0].id.toString();
+          console.log(`✅ Auto-selected first accessible temple for standard user: ${filteredTemples[0].name}`);
+        }
         
       } catch (apiError) {
         console.error('Error fetching entities directly:', apiError);
         
-        // Fallback to store method
         console.log('Using store method as fallback');
         if (fromSuperadmin.value) {
           await templeStore.fetchTemplesForSuperAdmin(tenantId);
         } else {
           await templeStore.fetchTemples(tenantId);
         }
+        
+        const isStandardUser = userStore.user?.role === 'standard_user';
+        const userAssignedTenant = userStore.user?.assignedTenantId?.toString();
+        
+        if (isStandardUser && userAssignedTenant) {
+          templeStore.temples = templeStore.temples.filter(temple => {
+            const templeCreator = String(temple.created_by);
+            const templeTenant = String(temple.tenant_id);
+            return templeCreator === userAssignedTenant || 
+                   templeTenant === userAssignedTenant;
+          });
+          
+          if (templeStore.temples.length > 0 && selectedTemple.value === 'all') {
+            selectedTemple.value = templeStore.temples[0].id.toString();
+          }
+        }
       }
     }
     
-    console.log(`Successfully loaded ${templeStore.temples.length} temples for tenant ${effectiveTenantId.value}`);
+    console.log(`✅ Successfully loaded ${templeStore.temples.length} temples for tenant ${effectiveTenantId.value}`);
     
   } catch (err) {
     console.error('Error in fetchTemples:', err);
@@ -927,7 +972,6 @@ const fetchTemples = async () => {
   }
 };
 
-// Helper function to fetch temples for a single tenant
 const fetchTemplesForTenant = async (tenantId) => {
   try {
     console.log(`Fetching temples for tenant ${tenantId}`);
@@ -941,7 +985,6 @@ const fetchTemplesForTenant = async (tenantId) => {
       allEntities = response.data.data;
     }
     
-    // Filter entities by tenant ID using multiple possible fields
     const temples = allEntities.filter(temple => 
       String(temple.created_by) === String(tenantId) || 
       String(temple.tenant_id) === String(tenantId)
@@ -1129,7 +1172,6 @@ const downloadReport = async () => {
   }
 };
 
-// Watchers
 watch(activeReportType, () => {
   console.log('Report type changed to:', activeReportType.value);
   if (reportsStore && typeof reportsStore.clearReportData === 'function') {
@@ -1171,7 +1213,6 @@ watch(() => route.query.tenants, async (newTenants, oldTenants) => {
   }
 });
 
-// Lifecycle hook
 onMounted(async () => {
   console.log('Devotee Reports mounted');
   console.log('fromSuperadmin:', fromSuperadmin.value);
@@ -1197,7 +1238,6 @@ onMounted(async () => {
     reportsStore.clearReportData();
   }
 
-  // Validate tenant ID before proceeding
   if (!effectiveTenantId.value) {
     showToast('No valid tenant ID found. Please check your access permissions.', 'error');
     return;
@@ -1219,4 +1259,4 @@ onMounted(async () => {
     showToast('Failed to initialize reports page. Please refresh and try again.', 'error');
   }
 });
-</script>z
+</script>

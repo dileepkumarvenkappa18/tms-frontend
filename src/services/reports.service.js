@@ -1,4 +1,5 @@
 import api from '@/plugins/axios'
+import { useAuthStore } from '@/stores/auth' 
 
 class ReportsService {
 

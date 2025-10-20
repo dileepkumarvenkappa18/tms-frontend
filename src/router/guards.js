@@ -5,10 +5,9 @@ import { useDevoteeStore } from '@/stores/devotee'
 
 /**
  * Role mapping - map backend roles to frontend roles
- * This will handle the discrepancy between backend and frontend role names
  */
 const roleMapping = {
-  'templeadmin': 'tenant', // Backend returns 'templeadmin', but routes expect 'tenant'
+  'templeadmin': 'tenant',
   'standarduser': 'standard_user',
   'monitoringuser': 'monitoring_user'
 }
@@ -29,11 +28,21 @@ function isStatusEqual(status1, status2) {
 }
 
 /**
- * Authentication Guard - Updated for assigned tenant handling
- * Checks if user is authenticated before accessing protected routes
+ * Authentication Guard - UPDATED with localStorage check
  */
 export function requireAuth(to, from, next) {
   const authStore = useAuthStore()
+  
+  // 🔥 CRITICAL: Re-initialize if not authenticated but token exists
+  if (!authStore.isAuthenticated) {
+    const hasToken = localStorage.getItem('auth_token')
+    const hasUser = localStorage.getItem('user_data')
+    
+    if (hasToken && hasUser) {
+      console.log('🔄 Auth not loaded, reinitializing from localStorage...')
+      authStore.initialize()
+    }
+  }
   
   // Debug auth state
   console.log('🔐 Auth Check:', {
@@ -68,7 +77,6 @@ export function requireAuth(to, from, next) {
     console.log('- Needs tenant selection:', authStore.needsTenantSelection)
     console.log('- Assigned tenant ID:', authStore.assignedTenantId)
     
-    // Force redirect to tenant selection page using route name for consistency
     next({ name: 'TenantSelection' });
     return false;
   }
@@ -79,9 +87,6 @@ export function requireAuth(to, from, next) {
     next();
     return true;
   }
-  
-  // MODIFIED: Removed the condition that would redirect from temple selection to dashboard
-  // when a devotee has already joined a temple. Now they'll always go to temple selection first.
   
   console.log('✅ Auth guard passed for role:', authStore.userRole);
   next()
@@ -99,14 +104,23 @@ function normalizeRole(role) {
 }
 
 /**
- * Guest Guard - Updated with assigned tenant awareness
- * Redirects authenticated users away from guest-only pages (login, register)
+ * Guest Guard - Updated with localStorage check
  */
 export function requireGuest(to, from, next) {
   const authStore = useAuthStore()
   
+  // 🔥 CRITICAL: Check localStorage even if store says not authenticated
+  if (!authStore.isAuthenticated) {
+    const hasToken = localStorage.getItem('auth_token')
+    const hasUser = localStorage.getItem('user_data')
+    
+    if (hasToken && hasUser) {
+      console.log('🔄 Guest guard: Found auth in localStorage, reinitializing...')
+      authStore.initialize()
+    }
+  }
+  
   if (authStore.isAuthenticated) {
-    // Use auth store's getDashboardPath method
     const redirectPath = authStore.getDashboardPath(authStore.userRole)
     console.log('🚪 Guest guard: authenticated user redirected to:', redirectPath)
     next({ path: redirectPath })
@@ -119,7 +133,6 @@ export function requireGuest(to, from, next) {
 
 /**
  * SPECIFIC GUARD: Check Profile Completed (for devotee routes)
- * Ensures devotee has completed their profile before accessing certain features
  */
 export function checkProfileCompleted(to, from, next) {
   const authStore = useAuthStore()
@@ -156,11 +169,23 @@ export function checkProfileCompleted(to, from, next) {
 export function setupRouteGuards(router) {
   router.beforeEach((to, from, next) => {
     const authStore = useAuthStore();
+    
+    // 🔥 CRITICAL: Always check localStorage first
+    if (!authStore.isAuthenticated) {
+      const hasToken = localStorage.getItem('auth_token')
+      const hasUser = localStorage.getItem('user_data')
+      
+      if (hasToken && hasUser) {
+        console.log('🔄 Route guard: Reinitializing auth from localStorage...')
+        authStore.initialize()
+      }
+    }
+    
     const isAuthenticated = authStore.isAuthenticated;
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
     const userRole = authStore.userRole?.toLowerCase() || '';
     
-    console.log('🔐 Auth Check:', {
+    console.log('🔐 Route Guard Check:', {
       isAuthenticated,
       userRole,
       route: to.path,
@@ -193,7 +218,6 @@ export function setupRouteGuards(router) {
 
 /**
  * Role-based Access Guard
- * Checks if user has required role to access the route
  */
 export function requireRole(roles) {
   return (to, from, next) => {
@@ -211,15 +235,12 @@ export function requireRole(roles) {
     const userRole = authStore.userRole || ''
     const normalizedRole = userRole.toLowerCase().trim()
     
-    // BUILD: Complete list of user roles (including variations)
     const userRoles = [normalizedRole]
     
-    // Add mapped version of the role if it exists
     if (roleMapping[normalizedRole]) {
       userRoles.push(roleMapping[normalizedRole])
     }
     
-    // ENHANCED: For special roles, also check the alternative format
     const roleVariations = {
       'standard_user': ['standarduser'],
       'monitoring_user': ['monitoringuser'],
@@ -233,10 +254,8 @@ export function requireRole(roles) {
       userRoles.push(...roleVariations[normalizedRole])
     }
     
-    // Normalize required roles for comparison
     const normalizedRequiredRoles = roles.map(role => role.toLowerCase().trim())
     
-    // Check if any of the user's roles are included in required roles
     const hasRequiredRole = normalizedRequiredRoles.some(requiredRole => 
       userRoles.includes(requiredRole)
     )
@@ -260,7 +279,6 @@ export function requireRole(roles) {
 
 /**
  * SPECIFIC GUARD: Check Role (for route files)
- * This is the specific function your route files are importing
  */
 export function checkRole(to, from, next, requiredRole) {
   const authStore = useAuthStore()
@@ -278,15 +296,12 @@ export function checkRole(to, from, next, requiredRole) {
   const normalizedRole = userRole.toLowerCase().trim()
   const normalizedRequiredRole = requiredRole.toLowerCase().trim()
   
-  // BUILD: Complete list of user roles (including variations)
   const userRoles = [normalizedRole]
   
-  // Add mapped version of the role if it exists
   if (roleMapping[normalizedRole]) {
     userRoles.push(roleMapping[normalizedRole])
   }
   
-  // ENHANCED: For special roles, also check the alternative format
   const roleVariations = {
     'standard_user': ['standarduser'],
     'monitoring_user': ['monitoringuser'],
@@ -300,7 +315,6 @@ export function checkRole(to, from, next, requiredRole) {
     userRoles.push(...roleVariations[normalizedRole])
   }
   
-  // Compare user roles with required role
   if (!userRoles.includes(normalizedRequiredRole)) {
     showToast(`Access denied: User has role "${userRole}" but route requires: ${requiredRole}`, 'error')
     next({ name: 'Unauthorized' })
@@ -334,7 +348,6 @@ export function getDefaultRoute(role) {
     
     // Use assigned tenant ID if available
     if (authStore.assignedTenantId) {
-      // UPDATED: Redirect to tenant dashboard instead of entity dashboard
       return `/tenant/${authStore.assignedTenantId}/dashboard`;
     }
     return '/tenant-selection';

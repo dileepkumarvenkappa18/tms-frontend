@@ -1,5 +1,5 @@
 import SuperAdminDashboard from '@/views/superadmin/SuperAdminDashboard.vue';
-import TenantApprovals from '@/components/superadmin/TenantApprovals.vue'; // Direct import from components
+import TenantApprovals from '@/components/superadmin/TenantApprovals.vue';
 
 export default [
   {
@@ -38,7 +38,6 @@ export default [
     component: () => import('@/views/superadmin/ResetPasswordForm.vue'),
     meta: { requiresAuth: true, role: 'superadmin', title: 'Reset User Password' }
   },
-  // New route for tenant assignment
   {
     path: 'users/:userId/assign-tenants',
     name: 'AssignTenants',
@@ -49,7 +48,6 @@ export default [
       title: 'Assign Tenants to User'
     }
   },
-  // New route for audit logs
   {
     path: 'audit-logs',
     name: 'AuditLogs',
@@ -61,7 +59,6 @@ export default [
       breadcrumb: 'Audit Logs'
     }
   },
-  // Reports management routes
   {
     path: 'reports',
     name: 'superadmin-reports',
@@ -105,7 +102,7 @@ export default [
   {
     path: 'reports/user-details',
     name: 'SuperadminUserDetails',
-    component: () => import('@/views/tenant/reports/UserDetailsReport.vue'),
+    component: () => import('@/views/superadmin/reports/UserDetailsReport.vue'), // FIXED PATH
     meta: {
       requiresAuth: true,
       role: 'superadmin',
@@ -115,7 +112,7 @@ export default [
   {
     path: 'reports/approval-status',
     name: 'SuperadminApprovalStatus',
-    component: () => import('@/views/tenant/reports/ApprovalStatusReport.vue'),
+    component: () => import('@/views/superadmin/reports/ApprovalStatusReport.vue'), // FIXED PATH
     meta: {
       requiresAuth: true,
       role: 'superadmin',

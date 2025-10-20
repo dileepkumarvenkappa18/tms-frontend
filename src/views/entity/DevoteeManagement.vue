@@ -593,28 +593,23 @@ export default {
     }
 
     // Data loading methods
+// Data loading methods
     const loadDevotees = async () => {
-      if (!templeId.value) return
+      if (!templeId.value) {
+        console.error('No temple ID available')
+        return
+      }
 
       try {
+        console.log('Loading devotees for temple:', templeId.value)
         await devoteeStore.fetchDevoteesByEntity(templeId.value)
+        console.log('Devotees loaded:', devoteeStore.devotees.length)
       } catch (error) {
         console.error('Error loading devotees:', error)
         toast.error('Failed to load devotees')
+        throw error
       }
     }
-
-    const loadDevoteeStats = async () => {
-      if (!templeId.value) return
-
-      try {
-        await devoteeStore.fetchDevoteeStats(templeId.value)
-      } catch (error) {
-        console.error('Error loading devotee stats:', error)
-        toast.error('Failed to load devotee statistics')
-      }
-    }
-
     const refreshData = async () => {
       loading.value = true
       try {

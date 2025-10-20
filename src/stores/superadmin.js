@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import superAdminService from '@/services/superadmin.service'
 
+
 export const useSuperAdminStore = defineStore('superadmin', () => {
   // State
   const tenants = ref([])
