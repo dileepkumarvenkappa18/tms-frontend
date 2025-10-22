@@ -877,23 +877,27 @@ export function useRouteHelpers() {
   }
 }
 
+import { getRoleBasedRedirectPath } from '@/utils/redirectHelpers'
+
+// Enhanced role-based redirect system for authenticated users
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 
-  
+  // Handle authenticated users visiting the root path
   if (authStore.isAuthenticated && to.path === '/') {
+    console.log('🎯 Authenticated user visiting root path, determining redirect...')
     
-    const role = (authStore.user?.role || '').toLowerCase().trim()
-
-    if (role === 'tenant' || role === 'templeadmin') {
-      return next('/tenant/dashboard')
-    } else if (role === 'superadmin' || role === 'super_admin') {
-      return next('/superadmin/dashboard')
-    } else if (role === 'devotee') {
-      return next('/devotee/temple-selection')
-    } else {
-      return next('/login') // fallback
-    }
+    const userRole = authStore.userRole
+    const user = authStore.user
+    
+    console.log('👤 User role:', userRole)
+    console.log('👤 User data:', user)
+    
+    // Get redirect path based on role
+    const redirectPath = getRoleBasedRedirectPath(userRole, user)
+    
+    console.log('🔄 Redirecting to:', redirectPath)
+    return next(redirectPath)
   }
 
   next()

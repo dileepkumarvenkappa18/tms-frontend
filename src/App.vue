@@ -223,6 +223,7 @@
 import { ref, onMounted, onUnmounted, computed, markRaw, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { getRoleBasedRedirectPath } from '@/utils/redirectHelpers'
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -418,26 +419,13 @@ const initializeAuth = async () => {
     if (isAuth) {
       // If user is trying to access login/register while logged in, redirect to appropriate dashboard
       if (isAuthRoute.value) {
-        // Get user role
+        // Get user role and data
         const userRole = authStore.userRole
+        const user = authStore.user
         console.log('Authenticated user with role:', userRole)
         
-        // Determine dashboard path based on role
-        let dashboardPath
-        
-        if (userRole === 'superadmin' || userRole === 'super_admin') {
-          dashboardPath = '/superadmin/dashboard'
-        } else if (userRole === 'templeadmin' || userRole === 'tenant') {
-          dashboardPath = '/tenant/dashboard'
-        } else if (userRole === 'devotee') {
-          const entityId = authStore.user?.entityId || authStore.user?.current_entity?.id
-          dashboardPath = entityId ? `/entity/${entityId}/devotee/dashboard` : '/devotee/temple-selection'
-        } else if (userRole === 'volunteer') {
-          const entityId = authStore.user?.entityId || authStore.user?.current_entity?.id
-          dashboardPath = entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
-        } else {
-          dashboardPath = '/'
-        }
+        // Use centralized redirect logic
+        const dashboardPath = getRoleBasedRedirectPath(userRole, user)
         
         console.log('Redirecting authenticated user to dashboard:', dashboardPath)
         router.replace(dashboardPath)

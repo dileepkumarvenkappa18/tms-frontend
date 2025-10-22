@@ -415,8 +415,16 @@ const reportColumnDefinitions = {
   ]
 };
 
+// Check if user is super admin
+const isSuperAdmin = computed(() => {
+  const role = userStore.user?.role || userStore.user?.roleName;
+  return role === 'super_admin' || role === 'superadmin';
+});
+
 // Check for tenants parameter from superadmin
-const fromSuperadmin = computed(() => route.query.from === 'superadmin');
+const fromSuperadmin = computed(() => {
+  return route.query.from === 'superadmin' || isSuperAdmin.value;
+});
 
 const tenantIds = computed(() => {
   if (route.query.tenants) {
@@ -479,11 +487,9 @@ const previewRows = computed(() => {
   
   const rawData = reportsStore.reportPreview.data.slice(0, 5);
   
-  // Enhanced data formatting with temple name resolution
   return rawData.map(row => {
     const formattedRow = { ...row };
     
-    // Resolve temple name if temple_id exists
     if (row.temple_id && !row.temple_name) {
       const temple = templeStore.temples.find(t => 
         t.id.toString() === row.temple_id.toString()
@@ -491,7 +497,6 @@ const previewRows = computed(() => {
       formattedRow.temple_name = temple ? temple.name : `Temple ${row.temple_id}`;
     }
     
-    // Format dates
     if (row.event_date) {
       formattedRow.event_date = formatDateTime(row.event_date, 'date');
     }
@@ -499,7 +504,6 @@ const previewRows = computed(() => {
       formattedRow.donation_date = formatDateTime(row.donation_date, 'date');
     }
     
-    // Format times
     if (row.start_time) {
       formattedRow.start_time = formatDateTime(row.start_time, 'time');
     }
@@ -507,7 +511,6 @@ const previewRows = computed(() => {
       formattedRow.booking_time = formatDateTime(row.booking_time, 'datetime');
     }
     
-    // Format currency
     if (row.price) {
       formattedRow.price = formatCurrency(row.price);
     }
@@ -515,7 +518,6 @@ const previewRows = computed(() => {
       formattedRow.amount = formatCurrency(row.amount);
     }
     
-    // Format status
     if (row.is_active !== undefined) {
       formattedRow.is_active = row.is_active ? 'Active' : 'Inactive';
     }
@@ -527,13 +529,12 @@ const previewRows = computed(() => {
   });
 });
 
-// Helper function to format cell values
+// Helper functions
 const formatCellValue = (row, key) => {
   const value = row[key] || row[key.replace('_', '')];
   
   if (value === null || value === undefined) return '-';
   
-  // Handle specific formatting based on column key
   if (key.includes('date') && !key.includes('time')) {
     return formatDateTime(value, 'date');
   }
@@ -560,7 +561,6 @@ const formatCellValue = (row, key) => {
   return value;
 };
 
-// Enhanced date/time formatting function
 const formatDateTime = (value, type = 'datetime') => {
   if (!value) return '-';
   
@@ -603,7 +603,6 @@ const formatDateTime = (value, type = 'datetime') => {
   }
 };
 
-// Currency formatting
 const formatCurrency = (value) => {
   if (!value && value !== 0) return '-';
   
@@ -621,7 +620,6 @@ const formatCurrency = (value) => {
   }
 };
 
-// Capitalize first letter
 const capitalizeFirst = (str) => {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -646,6 +644,7 @@ const setActiveFilter = (filter) => {
 };
 
 const handleTempleChange = () => {
+  console.log('Temple changed to:', selectedTemple.value);
   loadReportPreview();
 };
 
@@ -693,36 +692,63 @@ const clearError = () => {
 
 const loadReportPreview = async () => {
   try {
-    if (!effectiveTenantId.value) {
+    if (!effectiveTenantId.value && !fromSuperadmin.value) {
       throw new Error('No valid tenant ID available');
     }
+
+    console.log('User type - fromSuperadmin:', fromSuperadmin.value);
+    console.log('User role:', userStore.user?.role || userStore.user?.roleName);
 
     let params = {
       type: activityType.value,
       dateRange: activeFilter.value,
       startDate: startDate.value,
       endDate: endDate.value,
-      isSuperAdmin: fromSuperadmin.value,
-      tenantId: effectiveTenantId.value,
-      temple_Id: selectedTemple.value,
       includeTempleName: shouldShowTempleName.value
     };
     
-    if (fromSuperadmin.value) {
+    // FIXED: Handle SuperAdmin separately
+    if (fromSuperadmin.value || isSuperAdmin.value) {
+      console.log('SuperAdmin mode - fetching all reports');
+      
       if (tenantIds.value.length > 1) {
+        // Multiple tenants selected
         params.entityIds = tenantIds.value;
         params.entityId = 'multiple';
-      } else {
+        params.isSuperAdmin = true;
+      } else if (tenantIds.value.length === 1) {
+        // Single tenant selected from superadmin
+        params.tenantId = tenantIds.value[0];
         params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-        params.tenantId = effectiveTenantId.value;
+        params.isSuperAdmin = true;
+      } else {
+        // SuperAdmin viewing all without tenant filter
+        params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
+        params.isSuperAdmin = true;
       }
     } else {
-      params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-      params.tenantId = effectiveTenantId.value;
+      // FIXED: Standard/Monitoring user - always use /entities/all/reports for "all" selection
+      console.log('Standard/Monitoring user - Single temple mode:', selectedTemple.value);
+      
+      if (selectedTemple.value === 'all') {
+        // Use the working /entities/all/reports endpoint
+        console.log('Standard/Monitoring user - All temples mode');
+        params.entityId = 'all';
+        params.tenantId = effectiveTenantId.value;
+      } else {
+        // FIXED: For single temple, use tenant-scoped endpoint
+        console.log('Standard/Monitoring user - Single temple mode:', selectedTemple.value);
+        params.entityId = selectedTemple.value;
+        params.tenantId = effectiveTenantId.value;
+        // Add temple_id to filter by specific temple within tenant scope
+        params.temple_Id = selectedTemple.value;
+      }
     }
     
     console.log('Loading report preview with params:', params);
     await reportsStore.getReportPreview(params);
+    
+    console.log('Report preview loaded successfully:', reportsStore.reportPreview?.data?.length || 0, 'records');
   } catch (error) {
     console.error('Error loading report preview:', error);
     showToast(`Failed to load report preview: ${error.message}`, 'error');
@@ -734,31 +760,67 @@ const fetchTemples = async () => {
   error.value = null;
   
   try {
-    if (!effectiveTenantId.value) {
-      throw new Error('No tenant ID available to fetch temples');
-    }
-
     console.log('Fetching temples for tenant ID:', effectiveTenantId.value);
+    console.log('User type - fromSuperadmin:', fromSuperadmin.value);
+    console.log('User role:', userStore.user?.role || userStore.user?.roleName);
     
     templeStore.clearTempleData();
     
-    if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      console.log(`Fetching temples for ${tenantIds.value.length} tenants:`, tenantIds.value);
-      const allTemples = [];
+    // FIXED: SuperAdmin can fetch all temples without tenant restriction
+    if (fromSuperadmin.value || isSuperAdmin.value) {
+      console.log('SuperAdmin - Fetching all temples');
       
-      for (const tenantId of tenantIds.value) {
+      if (tenantIds.value.length > 1) {
+        console.log(`Fetching temples for ${tenantIds.value.length} tenants:`, tenantIds.value);
+        const allTemples = [];
+        
+        for (const tenantId of tenantIds.value) {
+          try {
+            const temples = await fetchTemplesForTenant(tenantId);
+            allTemples.push(...temples);
+          } catch (err) {
+            console.warn(`Failed to fetch temples for tenant ${tenantId}:`, err);
+          }
+        }
+        
+        templeStore.temples = allTemples;
+        console.log(`Set ${templeStore.temples.length} total temples for ${tenantIds.value.length} tenants`);
+      } else {
+        // FIXED: SuperAdmin fetching all temples
         try {
-          const temples = await fetchTemplesForTenant(tenantId);
-          allTemples.push(...temples);
+          const response = await api.get('/superadmin/entities');
+          let allEntities = [];
+          
+          if (response.data && Array.isArray(response.data)) {
+            allEntities = response.data;
+          } else if (response.data && Array.isArray(response.data.data)) {
+            allEntities = response.data.data;
+          }
+          
+          console.log(`SuperAdmin: Fetched ${allEntities.length} total temples`);
+          templeStore.temples = allEntities.map(temple => templeService.normalizeTempleData(temple));
         } catch (err) {
-          console.warn(`Failed to fetch temples for tenant ${tenantId}:`, err);
+          console.error('Error fetching superadmin entities:', err);
+          // Fallback to regular entities endpoint
+          const response = await api.get('/entities');
+          let allEntities = [];
+          
+          if (response.data && Array.isArray(response.data)) {
+            allEntities = response.data;
+          } else if (response.data && Array.isArray(response.data.data)) {
+            allEntities = response.data.data;
+          }
+          
+          console.log(`SuperAdmin fallback: Fetched ${allEntities.length} temples`);
+          templeStore.temples = allEntities.map(temple => templeService.normalizeTempleData(temple));
         }
       }
+    } else {
+      // Standard/Monitoring user
+      if (!effectiveTenantId.value) {
+        throw new Error('No tenant ID available to fetch temples');
+      }
       
-      templeStore.temples = allTemples;
-      console.log(`Set ${templeStore.temples.length} total temples for ${tenantIds.value.length} tenants`);
-    } 
-    else {
       const tenantId = effectiveTenantId.value;
       console.log(`Fetching temples for single tenant ${tenantId}`);
       
@@ -772,42 +834,33 @@ const fetchTemples = async () => {
           allEntities = response.data.data;
         }
         
+        console.log(`Fetched ${allEntities.length} total entities from API`);
+        
+        // FIXED: Filter temples that belong to this tenant
         const filteredTemples = allEntities.filter(temple => {
           return String(temple.created_by) === String(tenantId) || 
                  String(temple.tenant_id) === String(tenantId) ||
                  String(temple.id) === String(tenantId);
         });
         
-        console.log(`Filtered ${filteredTemples.length} temples from ${allEntities.length} total entities for tenant ${tenantId}`);
+        console.log(`Filtered ${filteredTemples.length} temples for tenant ${tenantId}`);
         
-        if (filteredTemples.length === 0 && userStore.user?.id) {
-          console.log('No temples found with tenant filtering, trying user-specific filtering');
-          const userFilteredTemples = allEntities.filter(temple => {
-            return true;
-          });
-          
-          console.log(`Found ${userFilteredTemples.length} temples with user-specific filtering`);
-          templeStore.temples = userFilteredTemples.map(temple => templeService.normalizeTempleData(temple));
-        } else {
-          templeStore.temples = filteredTemples.map(temple => templeService.normalizeTempleData(temple));
-        }
+        templeStore.temples = filteredTemples.map(temple => templeService.normalizeTempleData(temple));
       } catch (apiError) {
         console.error('Error fetching entities directly:', apiError);
         
         console.log('Using store method as fallback');
-        if (fromSuperadmin.value) {
-          await templeStore.fetchTemplesForSuperAdmin(tenantId);
-        } else {
-          await templeStore.fetchTemples(tenantId);
-        }
+        await templeStore.fetchTemples(tenantId);
       }
     }
     
-    console.log(`Successfully loaded ${templeStore.temples.length} temples for tenant ${effectiveTenantId.value}`);
+    console.log(`Successfully loaded ${templeStore.temples.length} temples`);
     
     if (templeStore.temples.length === 0) {
-      console.warn(`No temples found for tenant ID ${effectiveTenantId.value}`);
-      error.value = `No temples found for tenant ID ${effectiveTenantId.value}. Please verify tenant access.`;
+      console.warn(`No temples found`);
+      if (!fromSuperadmin.value && !isSuperAdmin.value) {
+        error.value = `No temples found for tenant ID ${effectiveTenantId.value}. Please verify tenant access.`;
+      }
     }
   } catch (err) {
     console.error('Error in fetchTemples:', err);
@@ -867,25 +920,6 @@ const fetchTemplesForTenant = async (tenantId) => {
       console.warn(`Method 2 failed for tenant ${tenantId}:`, err);
     }
     
-    try {
-      const response = await api.get(`/entities?created_by=${tenantId}`);
-      let entities = [];
-      
-      if (response.data && Array.isArray(response.data)) {
-        entities = response.data;
-      } else if (response.data && Array.isArray(response.data.data)) {
-        entities = response.data.data;
-      }
-      
-      console.log(`Method 3: Found ${entities.length} temples for tenant ${tenantId}`);
-      
-      if (entities.length > 0) {
-        return entities.map(temple => templeService.normalizeTempleData(temple));
-      }
-    } catch (err) {
-      console.warn(`Method 3 failed for tenant ${tenantId}:`, err);
-    }
-    
     console.warn(`No temples found for tenant ${tenantId} using any method`);
     return [];
   } catch (err) {
@@ -896,7 +930,7 @@ const fetchTemplesForTenant = async (tenantId) => {
 
 const downloadReport = async () => {
   try {
-    if (!effectiveTenantId.value) {
+    if (!effectiveTenantId.value && !fromSuperadmin.value && !isSuperAdmin.value) {
       throw new Error('No valid tenant ID available for download');
     }
 
@@ -906,21 +940,35 @@ const downloadReport = async () => {
       format: selectedFormat.value,
       startDate: startDate.value,
       endDate: endDate.value,
-      isSuperAdmin: fromSuperadmin.value,
-      tenantId: effectiveTenantId.value,
-      temple_Id: selectedTemple.value,
       includeTempleName: shouldShowTempleName.value
     };
     
-    if (fromSuperadmin.value) {
+    // FIXED: Handle SuperAdmin downloads
+    if (fromSuperadmin.value || isSuperAdmin.value) {
+      console.log('SuperAdmin download');
+      
       if (tenantIds.value.length > 1) {
         params.entityIds = tenantIds.value;
         params.entityId = 'multiple';
+        params.isSuperAdmin = true;
+      } else if (tenantIds.value.length === 1) {
+        params.tenantId = tenantIds.value[0];
+        params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
+        params.isSuperAdmin = true;
       } else {
         params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
+        params.isSuperAdmin = true;
       }
     } else {
-      params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
+      // Standard/Monitoring user download
+      if (selectedTemple.value === 'all') {
+        params.entityId = 'all';
+        params.tenantId = effectiveTenantId.value;
+      } else {
+        params.entityId = selectedTemple.value;
+        params.tenantId = effectiveTenantId.value;
+        params.temple_Id = selectedTemple.value;
+      }
     }
     
     console.log('Downloading report with params:', params);
@@ -946,7 +994,7 @@ onMounted(async () => {
   console.log('User store:', userStore.user);
   console.log('Current X-Tenant-ID header:', api.defaults.headers.common['X-Tenant-ID']);
   
-  if (!effectiveTenantId.value) {
+  if (!effectiveTenantId.value && !fromSuperadmin.value && !isSuperAdmin.value) {
     error.value = 'No valid tenant ID found. Please check your access permissions.';
     return;
   }
@@ -972,11 +1020,5 @@ watch(() => route.params.tenantId, async (newTenantId, oldTenantId) => {
     await fetchTemples();
     await loadReportPreview();
   }
-});
-
-onMounted(() => {
-  return () => {
-    reportsStore.clearReportData();
-  };
 });
 </script>
