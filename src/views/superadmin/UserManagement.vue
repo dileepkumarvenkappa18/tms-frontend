@@ -5,12 +5,12 @@
         <h3 class="text-lg font-semibold text-gray-900 font-roboto">User Management</h3>
         <p class="text-sm text-gray-600 mt-1">Create and manage system users</p>
       </div>
-      
+
       <!-- Action Buttons -->
       <div class="flex space-x-3">
         <!-- Bulk Upload CSV Button -->
-        <button 
-          @click="openBulkUploadModal" 
+        <button
+          @click="openBulkUploadModal"
           class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,10 +18,10 @@
           </svg>
           Bulk Upload User
         </button>
-        
+
         <!-- Regular Create User Button -->
-        <button 
-          @click="openCreateModal" 
+        <button
+          @click="openCreateModal"
           class="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
           <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,7 +31,7 @@
         </button>
       </div>
     </div>
-    
+
     <div class="p-6">
       <!-- Users List Table -->
       <div class="overflow-x-auto">
@@ -52,12 +52,15 @@
                 <div class="h-4 bg-gray-200 rounded w-3/4"></div>
               </td>
             </tr>
-            <tr v-else-if="users.length === 0">
+
+            <!-- Use filteredUsers -->
+            <tr v-else-if="filteredUsers.length === 0">
               <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
                 No users found. Create your first user by clicking the 'Create User' button or upload users in bulk via CSV.
               </td>
             </tr>
-            <tr v-for="user in users" :key="user.id" class="hover:bg-gray-50">
+
+            <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900">{{ user.full_name }}</div>
               </td>
@@ -74,28 +77,32 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input 
-                    type="checkbox" 
-                    :id="`toggle-${user.id}`" 
-                    :checked="user.status === 'active'" 
+                  <input
+                    type="checkbox"
+                    :id="`toggle-${user.id}`"
+                    :checked="(user.status || '').toLowerCase() === 'active'"
                     @change="toggleUserStatus(user)"
                     class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
                   />
-                  <label 
-                    :for="`toggle-${user.id}`" 
+                  <label
+                    :for="`toggle-${user.id}`"
                     class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
                   ></label>
                 </div>
-                <span class="text-xs ml-1">{{ user.status === 'active' ? 'Active' : 'Inactive' }}</span>
+                <span class="text-xs ml-1">{{ (user.status || '').toLowerCase() === 'active' ? 'Active' : 'Inactive' }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button 
-                  @click="editUser(user)" 
+                <button
+                  @click="editUser(user)"
                   class="text-indigo-600 hover:text-indigo-900 mr-3"
                 >
                   Edit
                 </button>
-                <user-assign-button :user="user" />
+
+                <!-- Disable Tenant Assigned when inactive standard/monitoring user -->
+                <div :class="{'opacity-50 pointer-events-none select-none': isAssignDisabled(user)}">
+                  <user-assign-button :user="user" :disabled="isAssignDisabled(user)" />
+                </div>
               </td>
             </tr>
           </tbody>
@@ -115,7 +122,7 @@
             </svg>
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="px-6 py-4">
           <!-- Upload Result Alert -->
@@ -142,11 +149,11 @@
                     </span>
                   </p>
                   <p v-else>{{ bulkUploadResult.message }}</p>
-                  
+
                   <!-- Show errors if any -->
                   <ul v-if="bulkUploadResult.data?.errors && bulkUploadResult.data.errors.length > 0" class="mt-2 list-disc list-inside">
-                    <li v-for="(error, index) in bulkUploadResult.data.errors" :key="index" class="text-xs">
-                      {{ error }}
+                    <li v-for="(err, index) in bulkUploadResult.data.errors" :key="index" class="text-xs">
+                      {{ err }}
                     </li>
                   </ul>
                 </div>
@@ -185,7 +192,7 @@
                 <h4 class="text-sm font-medium text-gray-800">Need a template?</h4>
                 <p class="text-sm text-gray-600">Download a sample CSV file with the correct format.</p>
               </div>
-              <button 
+              <button
                 @click="downloadSampleCSV"
                 class="flex items-center px-3 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
               >
@@ -198,9 +205,10 @@
 
             <!-- File Upload Area -->
             <div class="mt-6">
-              <div 
+              <div
                 @click="$refs.fileInput.click()"
-                @dragover.prevent
+                @dragover.prevent="isDragOver = true"
+                @dragleave.prevent="isDragOver = false"
                 @drop.prevent="handleFileDrop"
                 class="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 cursor-pointer transition-colors"
                 :class="{ 'border-green-400 bg-green-50': isDragOver }"
@@ -212,17 +220,17 @@
                   @change="handleFileSelect"
                   class="hidden"
                 />
-                
+
                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                   <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
-                
+
                 <div class="mt-4">
                   <p class="text-lg text-gray-600">Drop your CSV file here or click to browse</p>
                   <p class="text-sm text-gray-500 mt-1">Only .csv files are accepted</p>
                 </div>
               </div>
-              
+
               <!-- File validation errors -->
               <div v-if="fileError" class="mt-2 text-sm text-red-600">
                 {{ fileError }}
@@ -238,7 +246,7 @@
                 <h4 class="text-lg font-medium text-gray-900">CSV Data Preview</h4>
                 <p class="text-sm text-gray-600">{{ csvData.length }} rows found. Review the data before uploading.</p>
               </div>
-              <button 
+              <button
                 @click="clearCsvData"
                 class="text-sm text-gray-500 hover:text-gray-700"
               >
@@ -266,7 +274,7 @@
                     <td class="px-4 py-3 text-sm text-gray-500">{{ row.phone }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">{{ row.password ? '****' : 'Missing' }}</td>
                     <td class="px-4 py-3 text-sm">
-                      <span class="px-2 py-1 text-xs rounded-full" 
+                      <span class="px-2 py-1 text-xs rounded-full"
                             :class="isValidRole(row.role) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
                         {{ row.role }}
                       </span>
@@ -281,20 +289,20 @@
                 </tbody>
               </table>
             </div>
-            
+
             <p v-if="csvData.length > 10" class="text-sm text-gray-500 text-center">
               Showing first 10 rows. {{ csvData.length - 10 }} more rows will be processed.
             </p>
 
             <!-- Upload Button -->
             <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <button 
+              <button
                 @click="clearCsvData"
                 class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 @click="uploadBulkUsers"
                 :disabled="isBulkUploading || !csvData.length"
                 class="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -311,7 +319,7 @@
       </div>
     </div>
 
-    <!-- Single User Create/Edit Modal (existing code) -->
+    <!-- Single User Create/Edit Modal -->
     <div v-if="showCreateModal" class="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center">
       <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <!-- Modal Header -->
@@ -323,7 +331,7 @@
             </svg>
           </button>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="px-6 py-4">
           <!-- Success Alert -->
@@ -404,8 +412,8 @@
               <div v-if="errors.password" class="mt-1 text-sm text-red-600">
                 {{ errors.password }}
               </div>
-              <PasswordStrengthMeter 
-                :password="form.password" 
+              <PasswordStrengthMeter
+                :password="form.password"
                 class="mt-2"
               />
             </div>
@@ -443,9 +451,9 @@
                 :disabled="isRolesLoading"
               >
                 <option value="" disabled>{{ isRolesLoading ? 'Loading roles...' : 'Select a role' }}</option>
-                <option 
-                  v-for="role in roles" 
-                  :key="role.id" 
+                <option
+                  v-for="role in roles"
+                  :key="role.id"
                   :value="role.role_name"
                 >
                   {{ role.role_name }}
@@ -459,10 +467,10 @@
               </div>
             </div>
 
-            <!-- Temple details section (conditional - only for temple admin role) -->
+            <!-- Temple details section (only for temple admin role) -->
             <div v-if="form.role === 'templeadmin'" class="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <h4 class="font-medium text-gray-900">Temple Details</h4>
-              
+
               <!-- Temple Name -->
               <div>
                 <label for="templeName" class="block text-sm font-medium text-gray-700 mb-2">
@@ -481,7 +489,7 @@
                   {{ errors.templeName }}
                 </div>
               </div>
-              
+
               <!-- Temple Place -->
               <div>
                 <label for="templePlace" class="block text-sm font-medium text-gray-700 mb-2">
@@ -500,7 +508,7 @@
                   {{ errors.templePlace }}
                 </div>
               </div>
-              
+
               <!-- Temple Address -->
               <div>
                 <label for="templeAddress" class="block text-sm font-medium text-gray-700 mb-2">
@@ -519,7 +527,7 @@
                   {{ errors.templeAddress }}
                 </div>
               </div>
-              
+
               <!-- Temple Phone -->
               <div>
                 <label for="templePhoneNumber" class="block text-sm font-medium text-gray-700 mb-2">
@@ -538,7 +546,7 @@
                   {{ errors.templePhoneNumber }}
                 </div>
               </div>
-              
+
               <!-- Temple Description -->
               <div>
                 <label for="templeDescription" class="block text-sm font-medium text-gray-700 mb-2">
@@ -562,14 +570,14 @@
             <div v-if="isEditing" class="flex items-center space-x-2">
               <label for="status" class="text-sm font-medium text-gray-700">User Status:</label>
               <div class="relative inline-block w-10 mr-2 align-middle select-none">
-                <input 
-                  type="checkbox" 
-                  id="status" 
-                  v-model="form.isActive" 
+                <input
+                  type="checkbox"
+                  id="status"
+                  v-model="form.isActive"
                   class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
                 />
-                <label 
-                  for="status" 
+                <label
+                  for="status"
                   class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
                 ></label>
               </div>
@@ -578,15 +586,15 @@
 
             <!-- Form Actions -->
             <div class="flex justify-end space-x-3 pt-3">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                 @click="cancelUserForm"
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
                 :disabled="isLoading"
               >
@@ -610,7 +618,6 @@ import { useToast } from '@/composables/useToast'
 import { useSuperAdminStore } from '@/stores/superadmin'
 import UserAssignButton from '@/components/superadmin/UserAssignButton.vue'
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter.vue'
-//import UserAssignButton from '@/components/superadmin/UserAssignButton.vue'
 
 const { success, error } = useToast()
 const superAdminStore = useSuperAdminStore()
@@ -633,11 +640,75 @@ const isBulkUploading = ref(false)
 const bulkUploadResult = ref(null)
 
 // Reactive data from store
-const roles = computed(() => superAdminStore.userRoles)
-const users = computed(() => superAdminStore.users)
+const roles = computed(() => superAdminStore.userRoles || [])
+const users = computed(() => superAdminStore.users || [])
 
 // Available roles for validation
 const availableRoles = computed(() => roles.value.map(role => role.role_name))
+
+// Helpers: role normalization and approval resolution
+const normalizeRoleName = (role) => {
+  let name = ''
+  if (typeof role === 'object' && role) {
+    name = role.role_name || role.name || role.description || ''
+  } else {
+    name = role || ''
+  }
+  return String(name).toLowerCase().replace(/[\s\-_]/g, '')
+}
+
+const isTempleAdminRole = (user) => normalizeRoleName(user?.role) === 'templeadmin'
+
+const resolveTempleApproval = (u) => {
+  const s = (v) => (typeof v === 'string' ? v.toLowerCase().trim() : null)
+  const b = (v) => (typeof v === 'boolean' ? v : null)
+
+  const statusCandidates = [
+    s(u?.temple_details?.approval_status),
+    s(u?.temple_details?.approvalStatus),
+    s(u?.temple_details?.approval),
+    s(u?.approval_status),
+    s(u?.approvalStatus),
+  ].filter(Boolean)
+
+  const boolCandidates = [
+    b(u?.temple_details?.is_approved),
+    b(u?.is_approved),
+  ].filter((v) => v !== null)
+
+  // Explicit boolean true => approved
+  if (boolCandidates.includes(true)) return { known: true, approved: true }
+
+  // Approved strings
+  const hasApproved =
+    statusCandidates.some((x) =>
+      x === 'approved' ||
+      x === 'approve' ||
+      (x.includes('approve') && !x.includes('not') && !x.includes('un') && !x.includes('reject') && !x.includes('pending'))
+    )
+  if (hasApproved) return { known: true, approved: true }
+
+  // Pending/rejected/not approved => hide
+  const negativeSet = ['pending', 'under_review', 'underreview', 'awaiting_approval', 'awaitingapproval', 'not_approved', 'notapproved', 'rejected', 'declined']
+  const isPendingOrRejected = statusCandidates.some((x) => negativeSet.includes(x))
+  if (isPendingOrRejected) return { known: true, approved: false }
+
+  // Unknown => visible
+  return { known: false, approved: false }
+}
+
+// Filtered users per requirements:
+// - Hide temple admins when approval is pending/not approved/rejected
+// - Show temple admins when approved or approval status unknown
+// - Non-templeadmin rows always visible
+const filteredUsers = computed(() => {
+  return (users.value || []).filter((u) => {
+    if (!isTempleAdminRole(u)) return true
+    const st = resolveTempleApproval(u)
+    if (st.known) return st.approved
+    return true
+  })
+})
 
 // Form state
 const form = ref({
@@ -660,17 +731,14 @@ const errors = ref({})
 
 // Explicitly defined function to open the modal
 const openCreateModal = () => {
-  console.log('Opening create modal')
   showCreateModal.value = true
 }
 
 // Bulk upload modal functions
 const openBulkUploadModal = () => {
-  console.log('Opening bulk upload modal')
   showBulkUploadModal.value = true
   bulkUploadResult.value = null
 }
-
 const closeBulkUploadModal = () => {
   showBulkUploadModal.value = false
   clearCsvData()
@@ -684,25 +752,23 @@ onMounted(async () => {
 
 // Helper function to get role display name
 const getRoleDisplay = (role) => {
-  if (typeof role === 'object' && role.description) {
-    return role.description
-  }
-  if (typeof role === 'object' && role.role_name) {
-    return role.role_name
-  }
-  // Fallback for string roles
+  if (typeof role === 'object' && role?.description) return role.description
+  if (typeof role === 'object' && role?.role_name) return role.role_name
   const roleObj = roles.value.find(r => r.role_name === role)
-  return roleObj ? roleObj.description || roleObj.role_name : role
+  return roleObj ? (roleObj.description || roleObj.role_name) : role
+}
+
+// Disable Tenant Assigned when user is inactive AND role is standard/monitoring
+const isAssignDisabled = (user) => {
+  const rn = normalizeRoleName(user?.role)
+  const isStdOrMon = rn === 'standarduser' || rn === 'monitoringuser'
+  const inactive = (user?.status || '').toLowerCase() !== 'active'
+  return isStdOrMon && inactive
 }
 
 // CSV validation functions
-const isValidRole = (role) => {
-  return availableRoles.value.includes(role)
-}
-
-const isValidStatus = (status) => {
-  return ['active', 'inactive'].includes(status?.toLowerCase())
-}
+const isValidRole = (role) => availableRoles.value.includes(role)
+const isValidStatus = (status) => ['active', 'inactive'].includes(status?.toLowerCase())
 
 // Download sample CSV template
 const downloadSampleCSV = () => {
@@ -712,17 +778,13 @@ const downloadSampleCSV = () => {
     ['Jane Smith', 'jane.smith@example.com', '+1234567891', 'password456', 'admin', 'active'],
     ['Mike Johnson', 'mike.johnson@example.com', '+1234567892', 'password789', 'templeadmin', 'inactive']
   ]
-  
   const csvString = csvContent.map(row => row.map(field => `"${field}"`).join(',')).join('\n')
-  
   const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
-  
   link.setAttribute('href', url)
   link.setAttribute('download', 'bulk_users_template.csv')
   link.style.visibility = 'hidden'
-  
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -731,85 +793,62 @@ const downloadSampleCSV = () => {
 // File upload handlers
 const handleFileSelect = (event) => {
   const file = event.target.files[0]
-  if (file) {
-    processFile(file)
-  }
+  if (file) processFile(file)
 }
-
 const handleFileDrop = (event) => {
   isDragOver.value = false
   const files = event.dataTransfer.files
-  if (files.length > 0) {
-    processFile(files[0])
-  }
+  if (files.length > 0) processFile(files[0])
 }
 
 // Process uploaded CSV file
 const processFile = (file) => {
   fileError.value = ''
-  
-  // Validate file type
   if (!file.name.toLowerCase().endsWith('.csv')) {
     fileError.value = 'Please upload a CSV file (.csv extension required)'
     return
   }
-  
-  // Validate file size (max 5MB)
   if (file.size > 5 * 1024 * 1024) {
     fileError.value = 'File size must be less than 5MB'
     return
   }
-  
-  // Read and parse CSV
   const reader = new FileReader()
   reader.onload = (e) => {
     try {
       const csvText = e.target.result
       parseCsvData(csvText)
     } catch (err) {
-      console.error('Error reading file:', err)
       fileError.value = 'Error reading the file. Please try again.'
     }
   }
-  
   reader.onerror = () => {
     fileError.value = 'Error reading the file. Please try again.'
   }
-  
   reader.readAsText(file)
 }
 
-// Parse CSV content using simple parsing (you might want to use a library like Papa Parse)
+// Parse CSV content
 const parseCsvData = (csvText) => {
   try {
     const lines = csvText.split('\n').filter(line => line.trim())
-    
     if (lines.length < 2) {
       fileError.value = 'CSV file must contain at least a header row and one data row'
       return
     }
-    
-    // Parse header
-    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
+    const headers = lines[0].split(',').map(h => h.replace(/\"/g, '').trim())
     const expectedHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
-    
-    // Validate headers
     const headerMismatch = expectedHeaders.some(expected => !headers.includes(expected))
     if (headerMismatch) {
       fileError.value = `CSV headers must match exactly: ${expectedHeaders.join(', ')}`
       return
     }
-    
-    // Parse data rows
     const data = []
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim())
-      
+      const values = lines[i].split(',').map(v => v.replace(/\"/g, '').trim())
       if (values.length !== headers.length) {
         fileError.value = `Row ${i + 1} has ${values.length} columns but expected ${headers.length}`
         return
       }
-      
       const rowData = {
         full_name: values[headers.indexOf('Full Name')],
         email: values[headers.indexOf('Email')],
@@ -818,21 +857,14 @@ const parseCsvData = (csvText) => {
         role: values[headers.indexOf('Role')],
         status: values[headers.indexOf('Status')]
       }
-      
-      // Basic validation
       if (!rowData.full_name || !rowData.email || !rowData.phone || !rowData.password || !rowData.role) {
         fileError.value = `Row ${i + 1} is missing required fields`
         return
       }
-      
       data.push(rowData)
     }
-    
     csvData.value = data
-    console.log('Parsed CSV data:', data)
-    
   } catch (err) {
-    console.error('Error parsing CSV:', err)
     fileError.value = 'Error parsing CSV file. Please check the format and try again.'
   }
 }
@@ -852,158 +884,76 @@ const uploadBulkUsers = async () => {
     error('No CSV data to upload')
     return
   }
-  
   isBulkUploading.value = true
   bulkUploadResult.value = null
-  
   try {
-    console.log('Uploading bulk users:', csvData.value)
-    
-    // Call your store method to upload bulk users
     const result = await superAdminStore.createBulkUsers(csvData.value)
-    
     if (result.success) {
-      bulkUploadResult.value = {
-        success: true,
-        message: 'Bulk upload completed successfully',
-        data: result.data
-      }
-      
+      bulkUploadResult.value = { success: true, message: 'Bulk upload completed successfully', data: result.data }
       success(`Successfully uploaded ${result.data.success_count} out of ${result.data.total_rows} users`)
-      
-      // Refresh users list
       await superAdminStore.refreshUserData()
-      
-      // Clear CSV data after successful upload
-      setTimeout(() => {
-        clearCsvData()
-      }, 3000)
-      
+      setTimeout(() => { clearCsvData() }, 3000)
     } else {
-      bulkUploadResult.value = {
-        success: false,
-        message: result.error || 'Bulk upload failed',
-        data: result.data
-      }
+      bulkUploadResult.value = { success: false, message: result.error || 'Bulk upload failed', data: result.data }
       error(result.error || 'Failed to upload users')
     }
-    
   } catch (err) {
-    console.error('Error uploading bulk users:', err)
-    bulkUploadResult.value = {
-      success: false,
-      message: 'An error occurred during bulk upload',
-      data: null
-    }
+    bulkUploadResult.value = { success: false, message: 'An error occurred during bulk upload', data: null }
     error('Failed to upload users. Please try again.')
   } finally {
     isBulkUploading.value = false
   }
 }
 
-// Form validation
+// Validation
 const isFormValid = computed(() => {
-  // Basic validation
-  if (!form.value.fullName || !form.value.email || (!isEditing.value && !form.value.password) || !form.value.phone || !form.value.role) {
-    return false
-  }
-  
-  // Temple admin specific validation
+  if (!form.value.fullName || !form.value.email || (!isEditing.value && !form.value.password) || !form.value.phone || !form.value.role) return false
   if (form.value.role === 'templeadmin') {
-    if (!form.value.templeDetails.name || !form.value.templeDetails.place || 
-        !form.value.templeDetails.address || !form.value.templeDetails.phoneNumber || 
-        !form.value.templeDetails.description) {
-      return false
-    }
+    if (!form.value.templeDetails.name || !form.value.templeDetails.place || !form.value.templeDetails.address || !form.value.templeDetails.phoneNumber || !form.value.templeDetails.description) return false
   }
-  
-  // No errors
   return Object.keys(errors.value).length === 0
 })
 
 const validateForm = () => {
   errors.value = {}
-  
-  // Full name validation
-  if (!form.value.fullName.trim()) {
-    errors.value.fullName = 'Full name is required'
-  } else if (form.value.fullName.trim().length < 2) {
-    errors.value.fullName = 'Full name must be at least 2 characters'
-  }
-  
-  // Email validation
-  if (!form.value.email) {
-    errors.value.email = 'Email is required'
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
-    errors.value.email = 'Please enter a valid email address'
-  }
-  
-  // Password validation (only for new users)
+  if (!form.value.fullName.trim()) errors.value.fullName = 'Full name is required'
+  else if (form.value.fullName.trim().length < 2) errors.value.fullName = 'Full name must be at least 2 characters'
+
+  if (!form.value.email) errors.value.email = 'Email is required'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) errors.value.email = 'Please enter a valid email address'
+
   if (!isEditing.value) {
-    if (!form.value.password) {
-      errors.value.password = 'Password is required'
-    } else if (form.value.password.length < 6) {
-      errors.value.password = 'Password must be at least 6 characters'
-    }
+    if (!form.value.password) errors.value.password = 'Password is required'
+    else if (form.value.password.length < 6) errors.value.password = 'Password must be at least 6 characters'
   }
-  
-  // Phone validation
-  if (!form.value.phone) {
-    errors.value.phone = 'Phone number is required'
-  } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(form.value.phone.replace(/\s/g, ''))) {
-    errors.value.phone = 'Please enter a valid phone number'
-  }
-  
-  // Role validation
-  if (!form.value.role) {
-    errors.value.role = 'Please select a user role'
-  }
-  
-  // Validate temple details if role is templeadmin
+
+  if (!form.value.phone) errors.value.phone = 'Phone number is required'
+  else if (!/^[\+]?[1-9][\d]{0,15}$/.test(form.value.phone.replace(/\s/g, ''))) errors.value.phone = 'Please enter a valid phone number'
+
+  if (!form.value.role) errors.value.role = 'Please select a user role'
+
   if (form.value.role === 'templeadmin') {
-    if (!form.value.templeDetails.name) {
-      errors.value.templeName = 'Temple name is required'
-    }
-    
-    if (!form.value.templeDetails.place) {
-      errors.value.templePlace = 'Temple location is required'
-    }
-    
-    if (!form.value.templeDetails.address) {
-      errors.value.templeAddress = 'Temple address is required'
-    }
-    
-    if (!form.value.templeDetails.phoneNumber) {
-      errors.value.templePhoneNumber = 'Temple phone number is required'
-    }
-    
-    if (!form.value.templeDetails.description?.trim()) {
-      errors.value.templeDescription = 'Temple description is required'
-    }
+    if (!form.value.templeDetails.name) errors.value.templeName = 'Temple name is required'
+    if (!form.value.templeDetails.place) errors.value.templePlace = 'Temple location is required'
+    if (!form.value.templeDetails.address) errors.value.templeAddress = 'Temple address is required'
+    if (!form.value.templeDetails.phoneNumber) errors.value.templePhoneNumber = 'Temple phone number is required'
+    if (!form.value.templeDetails.description?.trim()) errors.value.templeDescription = 'Temple description is required'
   }
-  
+
   return Object.keys(errors.value).length === 0
 }
 
-// Handle form submission (create or update user)
+// Submit
 const handleSubmitUser = async () => {
   if (!validateForm()) return
-  
   try {
-    // Prepare user data according to backend structure
     const userData = {
       fullName: form.value.fullName,
       email: form.value.email,
       phone: form.value.phone,
       role: form.value.role
     }
-    
-    // Add password for new users
-    if (!isEditing.value) {
-      userData.password = form.value.password
-    }
-    
-    // Add temple details if applicable
+    if (!isEditing.value) userData.password = form.value.password
     if (form.value.role === 'templeadmin') {
       userData.templeName = form.value.templeDetails.name
       userData.templePlace = form.value.templeDetails.place
@@ -1011,27 +961,15 @@ const handleSubmitUser = async () => {
       userData.templePhoneNo = form.value.templeDetails.phoneNumber
       userData.templeDescription = form.value.templeDetails.description
     }
-    
-    console.log(`${isEditing.value ? 'Updating' : 'Creating'} user with data:`, userData)
-    
     let result
-    
     if (isEditing.value) {
-      // Update existing user
       result = await superAdminStore.updateUser(editingUserId.value, userData)
     } else {
-      // Create new user
       result = await superAdminStore.createUser(userData)
     }
-    
     if (result.success) {
-      // Set success state
       registrationSuccess.value = true
-      
-      // Show success notification
       success(result.message || `User ${isEditing.value ? 'updated' : 'created'} successfully!`)
-      
-      // Auto-close modal after success
       setTimeout(() => {
         resetForm()
         showCreateModal.value = false
@@ -1040,9 +978,7 @@ const handleSubmitUser = async () => {
     } else {
       error(result.error || `Failed to ${isEditing.value ? 'update' : 'create'} user`)
     }
-    
   } catch (apiError) {
-    console.error(`Error ${isEditing.value ? 'updating' : 'creating'} user:`, apiError)
     error(`Failed to ${isEditing.value ? 'update' : 'create'} user. Please try again.`)
   }
 }
@@ -1050,17 +986,14 @@ const handleSubmitUser = async () => {
 // Toggle user active status
 const toggleUserStatus = async (user) => {
   try {
-    const newStatus = user.status === 'active' ? 'inactive' : 'active'
-    
+    const newStatus = (user.status || '').toLowerCase() === 'active' ? 'inactive' : 'active'
     const result = await superAdminStore.updateUserStatus(user.id, newStatus)
-    
     if (result.success) {
       success(result.message || `User status updated to ${newStatus}`)
     } else {
       error(result.error || 'Failed to update user status')
     }
   } catch (err) {
-    console.error('Error toggling user status:', err)
     error('Failed to update user status')
   }
 }
@@ -1069,14 +1002,12 @@ const toggleUserStatus = async (user) => {
 const editUser = (user) => {
   isEditing.value = true
   editingUserId.value = user.id
-  
-  // Clone user data to form
   form.value = {
     fullName: user.full_name,
     email: user.email,
     phone: user.phone,
-    role: user.role.role_name,
-    isActive: user.status === 'active',
+    role: (typeof user.role === 'object' ? user.role?.role_name : user.role) || '',
+    isActive: (user.status || '').toLowerCase() === 'active',
     templeDetails: {
       name: user.temple_details?.temple_name || '',
       place: user.temple_details?.temple_place || '',
@@ -1085,15 +1016,11 @@ const editUser = (user) => {
       description: user.temple_details?.temple_description || ''
     }
   }
-  
-  // Show modal
-  console.log('Opening edit modal for user:', user.id)
   showCreateModal.value = true
 }
 
 // Cancel form
 const cancelUserForm = () => {
-  console.log('Canceling form, closing modal')
   showCreateModal.value = false
   setTimeout(() => {
     resetForm()
@@ -1125,25 +1052,11 @@ const resetForm = () => {
 </script>
 
 <style scoped>
-.toggle-checkbox:checked {
-  right: 0;
-  border-color: #4f46e5;
-}
-.toggle-checkbox:checked + .toggle-label {
-  background-color: #4f46e5;
-}
+.toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
+.toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
 
 /* Modal styles */
-.fixed {
-  position: fixed;
-}
-.inset-0 {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-}
-.z-50 {
-  z-index: 50;
-}
+.fixed { position: fixed; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.z-50 { z-index: 50; }
 </style>

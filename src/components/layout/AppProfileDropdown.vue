@@ -250,7 +250,7 @@ const getCurrentRoleDisplayName = () => {
     'superadmin': 'Super Admin',
     'super_admin': 'Super Admin',
     'templeadmin': 'Tenant',
-    'tenant': 'templeadmin',
+    'tenant': 'Temple Admin',
     'devotee': 'Devotee',
     'volunteer': 'Volunteer',
     
@@ -272,7 +272,7 @@ const getCurrentRoleDisplayName = () => {
   return displayName
 }
 
-// ✅ UPDATED: Profile link function to handle new roles
+// ✅ UPDATED: Profile link function to handle new roles and devotee endpoint
 const getProfileLink = () => {
   const entityId = route.params.entityId || route.params.id
   const role = currentRole.value
@@ -289,9 +289,14 @@ const getProfileLink = () => {
     case 'entity_admin':
       return entityId ? `/entity/${entityId}/profile` : '/profile'
     case 'devotee':
-      return '/profile'
-    case 'volunteer':
-      return entityId ? `/entity/${entityId}/volunteer/profile` : '/profile'
+  // ✅ UPDATED: Route devotee to /profiles/user/:user_id endpoint
+  const userId = currentUser.value?.id || currentUser.value?.userId || authStore.userId;
+  console.log('👤 Devotee profile - userId:', userId); // Debug log
+  return userId ? `/profiles/user/${userId}` : '/profile';
+
+case 'volunteer':
+  return entityId ? `/entity/${entityId}/volunteer/profile` : '/profile';
+
     // ✅ NEW: Handle standard_user and monitoring_user
     case 'standard_user':
     case 'standarduser':

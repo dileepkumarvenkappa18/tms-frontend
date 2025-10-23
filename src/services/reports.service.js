@@ -928,6 +928,7 @@ async downloadTempleRegisteredReport(params) {
       throw error
     }
   }
+
   // DEVOTEE BIRTHDAYS METHODS
   async getDevoteeBirthdaysReport(params) {
     const { entityId, entityIds, dateRange = 'monthly', startDate, endDate, isSuperAdmin } = params
@@ -1173,6 +1174,7 @@ async downloadTempleRegisteredReport(params) {
       throw error
     }
   }
+
   // DEVOTEE LIST METHODS
   async getDevoteeList(params) {
     console.trace()
