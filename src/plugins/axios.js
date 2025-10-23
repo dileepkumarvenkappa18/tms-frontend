@@ -35,23 +35,30 @@ api.interceptors.request.use(
 
     const isAuthEndpoint = config.url.includes('/auth/') || config.url.includes('/v1/auth/')
     
-    if (!isAuthEndpoint) {
-      const tenantId = localStorage.getItem('current_tenant_id')
-      if (tenantId) {
-        config.headers['X-Tenant-ID'] = tenantId
-        if (import.meta.env.DEV) {
-          console.log(`Request with Tenant ID: ${tenantId}`)
-        }
-      }
+ if (!isAuthEndpoint) {
+  const tenantId = localStorage.getItem('current_tenant_id')
+  const entityId = localStorage.getItem('current_entity_id')
 
-      const entityId = localStorage.getItem('current_entity_id')
-      if (entityId) {
-        config.headers['X-Entity-ID'] = entityId
-        if (import.meta.env.DEV) {
-          console.log(`Request with Entity ID: ${entityId}`)
-        }
-      }
-    }
+  if (tenantId) {
+    config.headers['X-Tenant-ID'] = tenantId
+  }
+
+  // Try to extract entity ID from request URL if missing or mismatched
+  const match = config.url?.match(/\/entities\/(\d+)/)
+  const entityFromUrl = match ? match[1] : null
+
+  const finalEntityId = entityFromUrl || entityId
+  if (finalEntityId) {
+    config.headers['X-Entity-ID'] = finalEntityId
+  }
+
+  if (import.meta.env.DEV) {
+    console.log('🔹Request Headers ->', {
+      'X-Tenant-ID': config.headers['X-Tenant-ID'],
+      'X-Entity-ID': config.headers['X-Entity-ID']
+    })
+  }
+}
 
     if (import.meta.env.DEV) {
       console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`)

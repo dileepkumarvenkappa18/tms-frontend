@@ -3,13 +3,29 @@ import { ref, computed } from 'vue'
 import { apiClient } from '@/plugins/axios'
 
 export const useNotificationStore = defineStore('notification', () => {
-  // State
+  // ============================================================================
+  // STATE
+  // ============================================================================
+  
+  // In-app notifications (bell icon)
   const notifications = ref([])
   const unreadCount = ref(0)
   const isLoading = ref(false)
   const lastFetch = ref(null)
+  
+  // SSE connection management
+  let eventSource = null
+  let reconnectTimer = null
+  let reconnectAttempts = 0
+  const MAX_RECONNECT_ATTEMPTS = 5
+  const RECONNECT_DELAY = 3000
+  const isConnected = ref(false)
+  const connectionError = ref(null)
 
-  // Notification types based on the temple SaaS platform
+  // ============================================================================
+  // NOTIFICATION TYPES & CONSTANTS
+  // ============================================================================
+  
   const NOTIFICATION_TYPES = {
     // Temple Admin notifications
     TEMPLE_APPROVED: 'temple_approved',
@@ -48,7 +64,6 @@ export const useNotificationStore = defineStore('notification', () => {
     INFO: 'info'
   }
 
-  // Priority levels
   const PRIORITY_LEVELS = {
     LOW: 'low',
     MEDIUM: 'medium',
@@ -56,7 +71,6 @@ export const useNotificationStore = defineStore('notification', () => {
     URGENT: 'urgent'
   }
 
-  // Notification categories
   const CATEGORIES = {
     TEMPLE: 'temple',
     SEVA: 'seva',
@@ -68,7 +82,10 @@ export const useNotificationStore = defineStore('notification', () => {
     COMMUNICATION: 'communication'
   }
 
-  // Getters
+  // ============================================================================
+  // COMPUTED PROPERTIES
+  // ============================================================================
+  
   const unreadNotifications = computed(() => 
     notifications.value.filter(n => !n.isRead)
   )
@@ -98,21 +115,24 @@ export const useNotificationStore = defineStore('notification', () => {
     )
   )
 
-  // Actions
+  // ============================================================================
+  // BASIC NOTIFICATION ACTIONS
+  // ============================================================================
+  
   const addNotification = (notification) => {
     const newNotification = {
-      id: Date.now() + Math.random(),
+      id: notification.id || Date.now() + Math.random(),
       title: notification.title || 'Notification',
       message: notification.message || '',
       type: notification.type || NOTIFICATION_TYPES.INFO,
       category: notification.category || CATEGORIES.SYSTEM,
       priority: notification.priority || PRIORITY_LEVELS.MEDIUM,
-      isRead: false,
+      isRead: notification.isRead || false,
       isPersistent: notification.isPersistent || false,
-      autoClose: notification.autoClose !== false, // Default to true
+      autoClose: notification.autoClose !== false,
       duration: notification.duration || 5000,
-      createdAt: new Date().toISOString(),
-      readAt: null,
+      createdAt: notification.createdAt || new Date().toISOString(),
+      readAt: notification.readAt || null,
       userId: notification.userId || null,
       entityId: notification.entityId || null,
       actionUrl: notification.actionUrl || null,
@@ -122,9 +142,13 @@ export const useNotificationStore = defineStore('notification', () => {
       color: notification.color || getDefaultColor(notification.type)
     }
 
-    notifications.value.unshift(newNotification)
-    if (!newNotification.isRead) {
-      unreadCount.value++
+    // Check for duplicates
+    const existingIndex = notifications.value.findIndex(n => n.id === newNotification.id)
+    if (existingIndex === -1) {
+      notifications.value.unshift(newNotification)
+      if (!newNotification.isRead) {
+        unreadCount.value++
+      }
     }
 
     return newNotification.id
@@ -169,7 +193,10 @@ export const useNotificationStore = defineStore('notification', () => {
     notifications.value = notifications.value.filter(n => !n.isRead)
   }
 
-  // Toast notifications (temporary)
+  // ============================================================================
+  // TOAST NOTIFICATIONS
+  // ============================================================================
+  
   const showToast = (message, type = 'info', options = {}) => {
     return addNotification({
       title: options.title || getToastTitle(type),
@@ -200,7 +227,10 @@ export const useNotificationStore = defineStore('notification', () => {
   const showInfo = (message, options = {}) => 
     showToast(message, NOTIFICATION_TYPES.INFO, options)
 
-  // Role-specific notification helpers
+  // ============================================================================
+  // ROLE-SPECIFIC NOTIFICATION HELPERS
+  // ============================================================================
+  
   const showTempleApprovalNotification = (templeData, isApproved) => {
     return addNotification({
       title: isApproved ? 'Temple Approved!' : 'Temple Rejected',
@@ -274,7 +304,10 @@ export const useNotificationStore = defineStore('notification', () => {
     })
   }
 
-  // Utility functions
+  // ============================================================================
+  // UTILITY FUNCTIONS
+  // ============================================================================
+  
   const getDefaultIcon = (type) => {
     const iconMap = {
       [NOTIFICATION_TYPES.SUCCESS]: 'CheckCircle',
@@ -328,7 +361,10 @@ export const useNotificationStore = defineStore('notification', () => {
     return durationMap[type] || 5000
   }
 
-  // Fetch notifications from backend in-app API
+  // ============================================================================
+  // API METHODS
+  // ============================================================================
+  
   const fetchNotifications = async (limit = 20) => {
     isLoading.value = true
     try {
@@ -350,7 +386,10 @@ export const useNotificationStore = defineStore('notification', () => {
       lastFetch.value = new Date().toISOString()
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
-      showError('Failed to load notifications')
+      // Don't show error toast during initial load to avoid noise
+      if (lastFetch.value) {
+        showError('Failed to load notifications')
+      }
     } finally {
       isLoading.value = false
     }
@@ -367,100 +406,158 @@ export const useNotificationStore = defineStore('notification', () => {
       }
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
+      // Silently fail - not critical enough to show error to user
     }
   }
 
-  // Realtime SSE connection
-  let eventSource = null
+  // ============================================================================
+  // SSE REALTIME CONNECTION
+  // ============================================================================
+  
   const connectStream = () => {
-    if (eventSource) return
+    // Prevent multiple connections
+    if (eventSource) {
+      console.log('SSE already connected')
+      return
+    }
+
+    // Check if we've exceeded max reconnection attempts
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      console.error('Max SSE reconnection attempts reached')
+      connectionError.value = 'Unable to establish real-time connection'
+      return
+    }
     
-    // Match the axios baseURL configuration
-    const baseURL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL
-    const token = localStorage.getItem('auth_token')
-    
-    console.log('SSE Connection baseURL:', baseURL)
-    
-    // Construct SSE URL with token for authentication
-    const url = token 
-      ? `${baseURL}/v1/notifications/stream-token?token=${token}` 
-      : `${baseURL}/v1/notifications/stream`
-    
-    console.log('Connecting to SSE:', url)
-    
-    eventSource = new EventSource(url, { withCredentials: true })
-    
-    // Handle incoming notification events
-    eventSource.addEventListener('inapp', (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        console.log('Received SSE notification:', data)
-        
-        const n = {
-          id: data.id,
-          title: data.title,
-          message: data.message,
-          category: data.category,
-          isRead: data.is_read || false,
-          createdAt: data.created_at,
-          type: data.type || NOTIFICATION_TYPES.INFO,
-          priority: data.priority || PRIORITY_LEVELS.MEDIUM,
-          actionUrl: data.action_url || null,
-          actionText: data.action_text || null,
-          metadata: data.metadata || {}
-        }
-        
-        // Check if notification already exists (prevent duplicates)
-        const existingIndex = notifications.value.findIndex(existing => existing.id === n.id)
-        if (existingIndex === -1) {
-          // Add to notifications array
-          notifications.value.unshift(n)
-          if (!n.isRead) unreadCount.value++
-          
-          // Show toast notification for new messages
-          if (!n.isRead) {
-            showToast(n.message, n.type, {
-              title: n.title,
-              duration: 6000
-            })
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse SSE notification:', e)
+    try {
+      // Match the axios baseURL configuration
+      const baseURL = import.meta.env.DEV ? '/api' : import.meta.env.VITE_API_BASE_URL
+      const token = localStorage.getItem('auth_token')
+      
+      if (!token) {
+        console.warn('No auth token available for SSE connection')
+        return
       }
-    })
-    
-    // Handle connection open
-    eventSource.addEventListener('open', () => {
-      console.log('SSE connection established')
-    })
-    
-    // Handle heartbeat/ping events to keep connection alive
-    eventSource.addEventListener('ping', () => {
-      console.log('SSE heartbeat received')
-    })
-    
-    // Handle connection errors
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error)
-      disconnectStream()
-      // Retry connection after 3 seconds
-      setTimeout(() => {
-        console.log('Attempting to reconnect SSE...')
-        connectStream()
-      }, 3000)
+      
+      console.log('SSE Connection baseURL:', baseURL)
+      
+      // Construct SSE URL with token for authentication
+      const url = `${baseURL}/v1/notifications/stream-token?token=${token}`
+      
+      console.log('Connecting to SSE:', url)
+      
+      eventSource = new EventSource(url, { withCredentials: true })
+      
+      // Handle connection open
+      eventSource.addEventListener('open', () => {
+        console.log('✓ SSE connection established')
+        isConnected.value = true
+        connectionError.value = null
+        reconnectAttempts = 0 // Reset attempts on successful connection
+      })
+      
+      // Handle heartbeat/ping events to keep connection alive
+      eventSource.addEventListener('ping', () => {
+        console.log('SSE heartbeat received')
+      })
+      
+      // Handle incoming notification events
+      eventSource.addEventListener('inapp', (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          console.log('📬 Received SSE notification:', data)
+          
+          const n = {
+            id: data.id,
+            title: data.title,
+            message: data.message,
+            category: data.category,
+            isRead: data.is_read || false,
+            createdAt: data.created_at,
+            type: data.type || NOTIFICATION_TYPES.INFO,
+            priority: data.priority || PRIORITY_LEVELS.MEDIUM,
+            actionUrl: data.action_url || null,
+            actionText: data.action_text || null,
+            metadata: data.metadata || {}
+          }
+          
+          // Check if notification already exists (prevent duplicates)
+          const existingIndex = notifications.value.findIndex(existing => existing.id === n.id)
+          if (existingIndex === -1) {
+            // Add to notifications array
+            notifications.value.unshift(n)
+            if (!n.isRead) {
+              unreadCount.value++
+              
+              // Show toast notification for new unread messages
+              // But don't show toast if it's a system notification to avoid double notifications
+              if (n.category !== CATEGORIES.SYSTEM) {
+                showToast(n.message, n.type, {
+                  title: n.title,
+                  duration: 6000
+                })
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse SSE notification:', e)
+        }
+      })
+      
+      // Handle connection errors
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error)
+        isConnected.value = false
+        connectionError.value = 'Connection lost'
+        
+        // Clean up current connection
+        disconnectStream()
+        
+        // Increment reconnection attempts
+        reconnectAttempts++
+        
+        // Calculate exponential backoff delay
+        const delay = Math.min(RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1), 30000)
+        
+        console.log(`Attempting to reconnect SSE... (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms`)
+        
+        // Schedule reconnection
+        reconnectTimer = setTimeout(() => {
+          connectStream()
+        }, delay)
+      }
+    } catch (error) {
+      console.error('Failed to create SSE connection:', error)
+      isConnected.value = false
+      connectionError.value = 'Failed to connect'
     }
   }
 
   const disconnectStream = () => {
+    // Clear any pending reconnection timer
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    
+    // Close the event source
     if (eventSource) {
       console.log('Disconnecting SSE stream')
       eventSource.close()
       eventSource = null
+      isConnected.value = false
     }
   }
 
-  // Auto-cleanup old notifications
+  const reconnectStream = () => {
+    disconnectStream()
+    reconnectAttempts = 0 // Reset attempts for manual reconnection
+    connectStream()
+  }
+
+  // ============================================================================
+  // CLEANUP UTILITIES
+  // ============================================================================
+  
   const cleanupOldNotifications = (daysOld = 30) => {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysOld)
@@ -480,12 +577,18 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  // ============================================================================
+  // RETURN STORE API
+  // ============================================================================
+  
   return {
     // State
     notifications,
     unreadCount,
     isLoading,
     lastFetch,
+    isConnected,
+    connectionError,
     
     // Constants
     NOTIFICATION_TYPES,
@@ -522,9 +625,12 @@ export const useNotificationStore = defineStore('notification', () => {
     
     // API methods
     fetchNotifications,
-    cleanupOldNotifications,
     markInAppAsRead,
+    cleanupOldNotifications,
+    
+    // SSE methods
     connectStream,
-    disconnectStream
+    disconnectStream,
+    reconnectStream
   }
 })
