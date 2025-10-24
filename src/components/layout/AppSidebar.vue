@@ -1,11 +1,4 @@
 <template>
-  <!-- Mobile Overlay -->
-  <div 
-    v-if="isMobileMenuOpen" 
-    class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-    @click="closeMobileMenu"
-  ></div>
-
   <!-- Permission Denied Alert for Monitoring Users -->
   <transition name="fade">
     <div v-if="showPermissionAlert" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-md">
@@ -37,21 +30,35 @@
 
   <!-- Sidebar -->
   <aside 
-    class="fixed left-0 top-0 bottom-0 w-72 bg-white border-r border-gray-200 overflow-y-auto shadow-md transition-transform duration-300 ease-in-out z-40"
+    class="fixed left-0 top-0 bottom-0 w-80 sm:w-72 bg-white border-r border-gray-200 overflow-y-auto shadow-lg transition-transform duration-300 ease-in-out z-40"
     :class="{
       '-translate-x-full lg:translate-x-0': !isMobileMenuOpen,
       'translate-x-0': isMobileMenuOpen
     }"
-    style="margin-top: 48px; display: block !important;"
+    style="margin-top: 56px; display: block !important;"
   >
     <!-- Logo Area -->
-    <div class="p-4 pt-8 border-b border-gray-200">
-      <h3 class="text-lg font-semibold text-indigo-600">Temple Management</h3>
-      <p v-if="actualRole" class="text-sm text-gray-500">{{ formatRoleName(actualRole) }}</p>
+    <div class="p-3 sm:p-4 pt-4 sm:pt-6 lg:pt-8 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm sm:text-base lg:text-lg font-semibold text-indigo-600">Temple Management</h3>
+          <p v-if="actualRole" class="text-xs sm:text-sm text-gray-500">{{ formatRoleName(actualRole) }}</p>
+        </div>
+        <!-- Close button for mobile -->
+        <button
+          @click="closeMobileMenu"
+          class="lg:hidden p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          title="Close menu"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
     </div>
     
     <!-- Navigation Menu -->
-    <nav class="px-4 py-4">
+    <nav class="px-3 sm:px-4 py-3 sm:py-4 space-y-1">
       <!-- TENANT Navigation -->
       <div v-if="actualRole === 'tenant'" class="space-y-1">
         <!-- Quick Tenant Switch Button (Only for Superadmin accessing as Tenant) -->
@@ -71,7 +78,7 @@
         <!-- Divider (Only shown if superadmin) -->
         <div v-if="isSuperadminAsTenant" class="my-3 border-t border-gray-200"></div>
 
-        <router-link to="/tenant/dashboard" class="flex items-center px-3 py-2 text-sm font-medium rounded-md" :class="isActiveRoute('/tenant/dashboard') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
+        <router-link to="/tenant/dashboard" class="flex items-center px-3 py-3 text-sm font-medium rounded-md touch-target" :class="isActiveRoute('/tenant/dashboard') ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'" @click="closeMobileMenu">
           <svg class="mr-3 h-5 w-5" :class="isActiveRoute('/tenant/dashboard') ? 'text-indigo-500' : 'text-gray-400'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
@@ -511,23 +518,10 @@
       </router-link>
     </div>
   </aside>
-
-  <!-- Mobile Menu Toggle Button -->
-  <button
-    @click="toggleMobileMenu"
-    class="fixed top-14 left-4 z-50 lg:hidden bg-indigo-600 text-white p-2 rounded-md shadow-lg hover:bg-indigo-700 transition-colors"
-  >
-    <svg v-if="!isMobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-    <svg v-else class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  </button>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, inject } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -545,8 +539,12 @@ const props = defineProps({
 const route = useRoute();
 const authStore = useAuthStore();
 
-const isMobileMenuOpen = ref(false);
+// Inject sidebar state from parent layout
+const sidebarOpen = inject('sidebarOpen', ref(false));
 const showPermissionAlert = ref(false);
+
+// Use the injected sidebar state for mobile menu
+const isMobileMenuOpen = computed(() => sidebarOpen.value);
 
 const entityId = computed(() => {
   return route.params.id || route.params.entityId || '1';
@@ -597,12 +595,8 @@ const toggleSuperadminReports = () => {
   isSuperadminReportsActive.value = !isSuperadminReportsActive.value;
 };
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value;
-};
-
 const closeMobileMenu = () => {
-  isMobileMenuOpen.value = false;
+  sidebarOpen.value = false;
 };
 
 const showMonitoringUserAlert = () => {

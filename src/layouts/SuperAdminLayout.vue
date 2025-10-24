@@ -89,9 +89,9 @@ const rejectTemple = (id) => {
     </header>
 
     <!-- Main Content -->
-    <div class="flex">
+   <div class="flex flex-col lg:flex-row">
       <!-- Sidebar -->
-      <aside class="w-64 bg-white shadow-lg min-h-screen border-r border-indigo-100">
+       <aside class="w-full lg:w-64 bg-white shadow-lg min-h-screen border-r border-indigo-100 hidden lg:block">
         <nav class="p-6">
           <div class="space-y-2">
             <!-- Dashboard -->
@@ -146,7 +146,7 @@ const rejectTemple = (id) => {
       </aside>
 
       <!-- Main Content Area -->
-      <main class="flex-1 p-8">
+      <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-auto">
         <!-- Dashboard Content (when route is dashboard) -->
         <div v-if="$route.path === '/superadmin/dashboard' || !$route.path.includes('/superadmin/')">
           <div class="mb-6">
@@ -155,7 +155,7 @@ const rejectTemple = (id) => {
           </div>
 
           <!-- Stats Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
               <div class="flex items-center justify-between">
                 <div>
@@ -200,7 +200,7 @@ const rejectTemple = (id) => {
           </div>
 
           <!-- Pending Approvals -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
             <!-- Tenant Approvals -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200">
               <div class="p-6 border-b border-gray-200">

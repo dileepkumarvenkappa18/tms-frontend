@@ -72,6 +72,41 @@ export default {
   },
 
   /**
+   * NEW: Get devotee profile by entity and user ID
+   * This is the main method for viewing devotee profiles in management
+   */
+  async getDevoteeProfileByEntity(entityId, userId) {
+    try {
+      console.log('🔍 getDevoteeProfileByEntity called:', { entityId, userId });
+      
+      if (!isAuthenticated()) {
+        console.error('❌ User not authenticated');
+        throw new Error('Authentication required');
+      }
+
+      if (!entityId || !userId) {
+        console.error('❌ Missing required parameters');
+        throw new Error('Entity ID and User ID are required');
+      }
+
+      console.log('📡 Making request to:', `/entities/${entityId}/devotees/${userId}/profile`);
+      const response = await api.get(`/entities/${entityId}/devotees/${userId}/profile`);
+      
+      console.log('✅ Devotee profile fetched successfully');
+      return response;
+    } catch (error) {
+      console.error('❌ getDevoteeProfileByEntity error:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        entityId,
+        userId
+      });
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Create or update devotee profile
    */
   async createOrUpdateProfile(profileData) {
@@ -178,7 +213,7 @@ export default {
   },
 
   /**
-   * FIXED: Get all devotees for an entity with enhanced debugging
+   * Get all devotees for an entity with enhanced debugging
    */
   async getAllDevotees(entityId) {
     try {
@@ -235,7 +270,7 @@ export default {
   },
 
   /**
-   * FIXED: Get devotee stats for an entity with enhanced debugging
+   * Get devotee stats for an entity with enhanced debugging
    */
   async getDevoteeStats(entityId) {
     try {
@@ -268,7 +303,7 @@ export default {
   },
 
   /**
-   * FIXED: Update devotee membership status with enhanced debugging
+   * Update devotee membership status with enhanced debugging
    */
   async updateDevoteeStatus(entityId, devoteeId, status) {
     try {

@@ -72,9 +72,9 @@ const baseClasses = 'bg-white rounded-xl shadow-md border border-gray-200 transi
 
 const paddingClasses = {
   none: '',
-  sm: 'p-4',
-  default: 'p-6',
-  lg: 'p-8'
+  sm: 'p-3 sm:p-4',
+default: 'p-4 sm:p-6',
+  lg: 'p-6 sm:p-8'
 }
 
 // Static class computation

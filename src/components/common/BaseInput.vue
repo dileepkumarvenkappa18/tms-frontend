@@ -197,9 +197,9 @@ const inputClasses = computed(() => {
 
   // Size classes
   const sizeClasses = {
-    sm: 'px-3 py-2 text-sm',
-    md: 'px-4 py-2.5 text-sm',
-    lg: 'px-4 py-3 text-base'
+      sm: 'px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm',
+  md: 'px-3 py-2 sm:px-4 sm:py-2.5 text-sm',
+    lg: 'px-3 py-2.5 sm:px-4 sm:py-3 text-sm sm:text-base'
   }
   baseClasses.push(sizeClasses[props.size] || sizeClasses.md)
 

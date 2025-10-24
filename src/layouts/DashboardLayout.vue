@@ -25,9 +25,9 @@
         ]"
       >
         <!-- Page Content -->
-        <main class="flex-1 p-4 lg:p-6 xl:p-8 pt-4 relative">
+       <main class="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8 pt-4 relative">
           <!-- Content Container with enhanced styling -->
-          <div class="transition-all duration-200 ease-in-out">
+         <div class="transition-all duration-200 ease-in-out max-w-full overflow-hidden">
             <router-view v-slot="{ Component }">
               <transition 
                 name="fade" 
@@ -169,4 +169,28 @@ h1, h2, h3, h4, h5, h6 {
     margin-left: 0;
   }
 }
+/* Ensure content doesn't overflow on mobile */
+  .min-w-0 {
+    min-width: 0;
+  }
+  
+  /* Better mobile spacing */
+.p-2 {
+    padding: 0.5rem;
+  }
+
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .lg\:p-6 {
+    padding: 1rem;
+  }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1280px) {
+  .xl\:p-8 {
+padding: 2rem;
+  }
+ }
 </style>

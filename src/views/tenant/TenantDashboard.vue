@@ -2,11 +2,11 @@
   <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->
     <div class="bg-white shadow-sm border-b border-gray-200 rounded-2xl">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-900">Tenant Dashboard</h1>
-            <p class="text-gray-600 mt-1">
+      <<div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6">
+       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div class="mb-4 sm:mb-0">
+           <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Tenant Dashboard</h1>
+           <p class="text-sm sm:text-base text-gray-600 mt-1">
               Manage your temple registrations and applications
               <span v-if="tenantId" class="text-indigo-600 font-medium"> (Tenant ID: {{ tenantId }})</span>
             </p>
@@ -22,13 +22,13 @@
     </div>
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+     <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
       <!-- Welcome Banner with Approval Status -->
-      <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl shadow-lg p-8 mb-8 text-white">
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-800 rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8 text-white">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between">
           <div class="flex-1">
-            <h2 class="text-3xl font-bold mb-2">Welcome back!</h2>
-            <p class="text-indigo-100 text-lg mb-4">
+           <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold mb-2">Welcome back!</h2>
+            <p class="text-indigo-100 text-sm sm:text-base lg:text-lg mb-4">
               {{ isTenantUser ? 'Manage your temple applications and track their approval status' : 'View and access temples for this tenant' }}
             </p>
           </div>
@@ -81,7 +81,7 @@
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200">
           <div class="flex items-center">
             <div class="p-3 bg-indigo-100 rounded-xl">
@@ -172,8 +172,8 @@
             <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
               <!-- Temple Info -->
               <div class="flex-1">
-                <div class="flex items-center mb-2">
-                  <h4 class="text-lg font-semibold text-gray-900 mr-3">{{ temple.name }}</h4>
+              <div class="flex flex-col sm:flex-row sm:items-center mb-2">
+                  <h4 class="text-base sm:text-lg font-semibold text-gray-900 mr-0 sm:mr-3 mb-2 sm:mb-0">{{ temple.name }}</h4>
                   <TempleApprovalStatus :status="temple.status" />
                 </div>
                 <p class="text-gray-600 mb-2">{{ formatAddress(temple.address) }}</p>
@@ -195,7 +195,7 @@
               </div>
 
               <!-- Actions -->
-              <div class="mt-4 lg:mt-0 flex items-center space-x-3">
+               <div class="mt-4 lg:mt-0 flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                 <button
                   @click="viewTemple(temple)"
                   class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200"

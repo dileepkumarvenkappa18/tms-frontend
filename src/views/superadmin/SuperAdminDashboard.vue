@@ -2,13 +2,13 @@
   <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->
     <div class="bg-white border-b border-gray-200 shadow-sm">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h1 class="text-3xl font-bold text-gray-900" style="font-family: 'Roboto', sans-serif;">
+      <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6">
+       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div class="mb-4 sm:mb-0">
+           <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900" style="font-family: 'Roboto', sans-serif;">
               Super Admin Dashboard
             </h1>
-            <p class="mt-1 text-sm text-gray-600">
+        <p class="mt-1 text-xs sm:text-sm text-gray-600">
               Manage temple registrations and system oversight
             </p>
           </div>
@@ -27,9 +27,9 @@
     </div>
 
     <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
       <!-- Quick Access Links -->
-      <div class="flex flex-wrap gap-4 mb-8">
+       <div class="flex flex-wrap gap-2 sm:gap-4 mb-6 sm:mb-8">
         <!-- Debug button for API testing -->
         <button
           v-if="debugMode"
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <div class="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition-all duration-200">
           <div class="flex items-center justify-between">
             <div>
@@ -191,7 +191,7 @@
                   </span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <div>
                     <p class="text-sm text-gray-600">Email</p>
                     <p class="font-medium text-gray-900">{{ application.adminEmail }}</p>
@@ -228,7 +228,7 @@
               </div>
 
               <!-- Action Buttons -->
-              <div class="flex flex-col space-y-2 ml-6">
+              <div class="flex flex-col sm:flex-row lg:flex-col space-y-2 sm:space-y-0 sm:space-x-2 lg:space-x-0 lg:space-y-2 ml-0 sm:ml-4 lg:ml-6 mt-4 sm:mt-0">
                 <button @click="viewApplication(application)" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors duration-200 whitespace-nowrap">
                   <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>

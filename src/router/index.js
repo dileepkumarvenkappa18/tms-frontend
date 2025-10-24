@@ -353,116 +353,130 @@ const routes = [
   },
 
   // Entity (Temple Admin) Routes - Phase 5
-  {
-    path: '/entity/:id',
-    component: DashboardLayout,
-    props: true,
-    meta: { 
-      requiresAuth: true,
-      allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
-    },
-    children: [
-      {
-        path: '/entity/:id/dashboard',
-        name: 'EntityDirectDashboard',
-        component: () => import('@/views/entity/EntityDashboard.vue'),
-        meta: {
-          title: 'Entity Dashboard',
-          requiresAuth: true,
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
-        }
-      },
-      {
-        path: 'dashboard',
-        name: 'EntityDashboard',
-        component: EntityDashboard,
-        props: true,
-        meta: { 
-          title: 'Temple Dashboard',
-          breadcrumb: 'Dashboard',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
-        }
-      },
-      {
-        path: 'devotees',
-        name: 'DevoteeManagement',
-        component: DevoteeManagement,
-        props: true,
-        meta: { 
-          title: 'Devotee Management',
-          breadcrumb: 'Devotees',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
-        }
-      },
-      {
-        path: 'sevas',
-        name: 'SevaManagement',
-        component: SevaManagement,
-        props: true,
-        meta: { 
-          title: 'Seva Management',
-          breadcrumb: 'Sevas',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
-        }
-      },
-      {
-        path: 'donations',
-        name: 'DonationManagement',
-        component: DonationManagement,
-        props: true,
-        meta: { 
-          title: 'Donation Management',
-          breadcrumb: 'Donations',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
-        }
-      },
-      {
-        path: 'events',
-        name: 'EventManagement',
-        component: EventManagement,
-        props: true,
-        meta: { 
-          title: 'Event Management',
-          breadcrumb: 'Events',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
-        }
-      },
-      {
-        path: 'communication',
-        name: 'CommunicationCenter',
-        component: CommunicationCenter,
-        props: true,
-        meta: { 
-          title: 'Communication Center',
-          breadcrumb: 'Communication',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
-        }
-      },
-      {
-        path: 'message',
-        name: 'MessageComposer',
-        component: MessageComposer,
-        props: true,
-        meta: {
-          title: 'Compose Message',
-          breadcrumb: 'Message Composer',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
-        }
-      },
-      {
-        path: 'volunteers',
-        name: 'VolunteerManagement',
-        component: VolunteerManagement,
-        props: true,
-        meta: { 
-          title: 'Volunteer Management',
-          breadcrumb: 'Volunteers',
-          allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
-        }
-      }
-    ]
-  },
+  // Replace your Entity Routes section with this complete version:
 
+// Entity (Temple Admin) Routes - Phase 5
+{
+  path: '/entity/:id',
+  component: DashboardLayout,
+  props: true,
+  meta: { 
+    requiresAuth: true,
+    allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
+  },
+  children: [
+    {
+      path: '/entity/:id/dashboard',
+      name: 'EntityDirectDashboard',
+      component: () => import('@/views/entity/EntityDashboard.vue'),
+      meta: {
+        title: 'Entity Dashboard',
+        requiresAuth: true,
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
+      }
+    },
+    {
+      path: 'dashboard',
+      name: 'EntityDashboard',
+      component: EntityDashboard,
+      props: true,
+      meta: { 
+        title: 'Temple Dashboard',
+        breadcrumb: 'Dashboard',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
+      }
+    },
+    {
+      path: 'devotees',
+      name: 'DevoteeManagement',
+      component: DevoteeManagement,
+      props: true,
+      meta: { 
+        title: 'Devotee Management',
+        breadcrumb: 'Devotees',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
+      }
+    },
+    // ⭐ NEW: Devotee Profile Route
+    {
+      path: 'devotees/:devoteeId/profile',
+      name: 'devotee-profile',
+      component: () => import('@/views/entity/DevoteeProfileView.vue'),
+      props: true,
+      meta: { 
+        title: 'Devotee Profile',
+        breadcrumb: 'Profile',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser']
+      }
+    },
+    {
+      path: 'sevas',
+      name: 'SevaManagement',
+      component: SevaManagement,
+      props: true,
+      meta: { 
+        title: 'Seva Management',
+        breadcrumb: 'Sevas',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
+      }
+    },
+    {
+      path: 'donations',
+      name: 'DonationManagement',
+      component: DonationManagement,
+      props: true,
+      meta: { 
+        title: 'Donation Management',
+        breadcrumb: 'Donations',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
+      }
+    },
+    {
+      path: 'events',
+      name: 'EventManagement',
+      component: EventManagement,
+      props: true,
+      meta: { 
+        title: 'Event Management',
+        breadcrumb: 'Events',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
+      }
+    },
+    {
+      path: 'communication',
+      name: 'CommunicationCenter',
+      component: CommunicationCenter,
+      props: true,
+      meta: { 
+        title: 'Communication Center',
+        breadcrumb: 'Communication',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
+      }
+    },
+    {
+      path: 'message',
+      name: 'MessageComposer',
+      component: MessageComposer,
+      props: true,
+      meta: {
+        title: 'Compose Message',
+        breadcrumb: 'Message Composer',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
+      }
+    },
+    {
+      path: 'volunteers',
+      name: 'VolunteerManagement',
+      component: VolunteerManagement,
+      props: true,
+      meta: { 
+        title: 'Volunteer Management',
+        breadcrumb: 'Volunteers',
+        allowedRoles: ['tenant', 'entity_admin', 'templeadmin', 'standard_user', 'standarduser']
+      }
+    }
+  ]
+},
   // Devotee Routes - Phase 6
   {
     path: '/devotee',
@@ -503,7 +517,8 @@ const routes = [
     ]
   },
 
-  // Devotee Entity-Specific Routes
+  
+
   {
     path: '/entity/:id/devotee',
     component: DashboardLayout,
