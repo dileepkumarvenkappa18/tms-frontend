@@ -3,8 +3,7 @@
     <!-- Header -->
     <AppHeader
       :user="user"
-      :sidebar-open="sidebarOpen"
-      @toggle-sidebar="toggleSidebar"
+      @toggle-sidebar="sidebarOpen = !sidebarOpen"
       @logout="handleLogout"
       class="z-30 transition-all duration-300 ease-in-out"
     />
@@ -21,13 +20,13 @@
       <div 
         :class="[
           'flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out',
-          sidebarOpen ? 'md:ml-72' : 'ml-0'
+          sidebarOpen ? 'lg:ml-72' : 'ml-0'
         ]"
       >
         <!-- Page Content -->
-       <main class="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8 pt-4 relative">
+        <main class="flex-1 p-2 sm:p-4 lg:p-6 xl:p-8 pt-4 relative">
           <!-- Content Container with enhanced styling -->
-         <div class="transition-all duration-200 ease-in-out max-w-full overflow-hidden">
+          <div class="transition-all duration-200 ease-in-out max-w-full overflow-hidden">
             <router-view v-slot="{ Component }">
               <transition 
                 name="fade" 
@@ -49,7 +48,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import AppHeader from '@/components/layout/AppHeader.vue'
@@ -61,14 +60,16 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 // Sidebar state - responsive by default
-const sidebarOpen = ref(window.innerWidth > 768)
+const sidebarOpen = ref(window.innerWidth >= 1024)
 
 // Make sidebar state available to child components
 provide('sidebarOpen', sidebarOpen)
 
 // Toggle sidebar with animation
 const toggleSidebar = () => {
+  console.log('DashboardLayout - Toggle sidebar called. Current:', sidebarOpen.value)
   sidebarOpen.value = !sidebarOpen.value
+  console.log('DashboardLayout - New sidebar state:', sidebarOpen.value)
 }
 
 // User data from auth store
@@ -85,21 +86,21 @@ const handleLogout = async () => {
 }
 
 // Handle responsive behavior
+const handleResize = () => {
+  if (window.innerWidth >= 1024) {
+    sidebarOpen.value = true
+  } else {
+    sidebarOpen.value = false
+  }
+}
+
 onMounted(() => {
-  const handleResize = () => {
-    if (window.innerWidth < 768) {
-      sidebarOpen.value = false
-    } else {
-      sidebarOpen.value = true
-    }
-  }
-  
   window.addEventListener('resize', handleResize)
-  
-  // Clean up event listener
-  return () => {
-    window.removeEventListener('resize', handleResize)
-  }
+  console.log('DashboardLayout mounted. Initial sidebar state:', sidebarOpen.value)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -164,21 +165,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
-  .ml-72 {
+@media (max-width: 1023px) {
+  .lg\:ml-72 {
     margin-left: 0;
   }
 }
-/* Ensure content doesn't overflow on mobile */
-  .min-w-0 {
-    min-width: 0;
-  }
-  
-  /* Better mobile spacing */
-.p-2 {
-    padding: 0.5rem;
-  }
 
+/* Ensure content doesn't overflow on mobile */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Better mobile spacing */
+.p-2 {
+  padding: 0.5rem;
+}
 
 /* Tablet adjustments */
 @media (min-width: 769px) and (max-width: 1024px) {
@@ -190,7 +191,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Large screen optimizations */
 @media (min-width: 1280px) {
   .xl\:p-8 {
-padding: 2rem;
+    padding: 2rem;
   }
- }
+}
 </style>

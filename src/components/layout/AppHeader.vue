@@ -1,7 +1,7 @@
 <template>
   <header class="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
- <div class="px-2 sm:px-4 lg:px-6 xl:px-8">
-     <div class="flex justify-between items-center h-14 sm:h-16">
+    <div class="px-2 sm:px-4 lg:px-6 xl:px-8">
+      <div class="flex justify-between items-center h-14 sm:h-16">
         <!-- Left Side - Back Button, Menu Button, Logo -->
         <div class="flex items-center space-x-2">
           <!-- Back Button (All Devices) -->
@@ -15,18 +15,20 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
           </button>
-           <!-- Mobile Menu Toggle Button -->
+
+          <!-- Mobile Menu Toggle Button -->
           <button
-           @click="toggleSidebar"
-           class="lg:hidden p-1.5 sm:p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 touch-target"
-           title="Toggle menu"
+            @click="emit('toggle-sidebar')"
+            class="p-1.5 sm:p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 touch-target"
+            title="Toggle menu"
           >
             <svg v-if="!sidebarOpen" class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-           </svg>
-           <svg v-else class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-           </svg>          </button>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg v-else class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
 
           <!-- Devotee Quick Access Button (Desktop Only) -->
           <button
@@ -42,7 +44,7 @@
           </button>
 
           <!-- Logo and Brand -->
-           <div class="flex-shrink-0 flex items-center ml-1 sm:ml-2">
+          <div class="flex-shrink-0 flex items-center ml-1 sm:ml-2">
             <router-link :to="getHomeLink()" class="flex items-center">
               <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
                 <svg class="w-4 h-4 sm:w-6 sm:h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -51,7 +53,8 @@
               </div>
               <div class="ml-2 sm:ml-3 hidden sm:block">
                 <h1 class="text-base sm:text-lg lg:text-xl font-bold text-gray-900 hover:text-indigo-600 transition-colors">{{ appTitle }}</h1>
-                <p v-if="currentTemple" class="text-xs sm:text-sm text-gray-500 truncate max-w-24 sm:max-w-32 lg:max-w-48">{{ currentTemple }}</p>             </div>
+                <p v-if="currentTemple" class="text-xs sm:text-sm text-gray-500 truncate max-w-24 sm:max-w-32 lg:max-w-48">{{ currentTemple }}</p>
+              </div>
             </router-link>
           </div>
         </div>
@@ -61,9 +64,9 @@
           <!-- Notification Bell -->
           <button 
             @click="toggleNotifications"
-           class="relative p-1.5 sm:p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 notifications-bell"
+            class="relative p-1.5 sm:p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 notifications-bell"
           >
-             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 00-3 0v.68C7.64 5.36 6 7.929 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
@@ -95,7 +98,7 @@
       <div 
         v-if="showNotifications" 
         class="notifications-container absolute top-14 sm:top-16 right-2 sm:right-4 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-96 overflow-hidden"
-    >
+      >
         <div class="p-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-white">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -223,7 +226,7 @@ const props = defineProps({
   }
 })
 
-// Emits+
+// Emits
 const emit = defineEmits(['toggle-menu', 'toggle-sidebar'])
  
 // Composables
@@ -231,33 +234,9 @@ const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const router = useRouter()
 const route = useRoute()
-// Inject sidebar state from parent layout
-const sidebarOpen = inject('sidebarOpen', ref(false))
 
-// Ensure sidebar state is properly initialized
-onMounted(() => {
-  // If sidebar state is not properly injected, initialize it based on screen size
-  if (sidebarOpen.value === undefined || sidebarOpen.value === null) {
-    sidebarOpen.value = window.innerWidth > 768
-  }
-  
-  // Handle window resize for responsive behavior
-  const handleResize = () => {
-    if (window.innerWidth >= 1024) { // lg breakpoint
-      sidebarOpen.value = true
-    } else if (window.innerWidth < 1024) {
-      sidebarOpen.value = false
-    }
-  }
-  
-  window.addEventListener('resize', handleResize)
-  
-  // Clean up event listener
-  onUnmounted(() => {
-    window.removeEventListener('resize', handleResize)
-  })
-})
-
+// Inject sidebar state from parent layout (no fallback)
+const sidebarOpen = inject('sidebarOpen')
 
 // Reactive data
 const showNotifications = ref(false)
@@ -280,6 +259,8 @@ const appTitle = computed(() => {
       return 'Devotee Dashboard'
     case 'volunteer':
       return 'Volunteer Portal'
+    case 'superadmin':
+      return 'Devotee Connect'
     default:
       return 'Devotee Connect'
   }
@@ -319,6 +300,8 @@ const getHomeLink = () => {
       return `/entity/${entityId}/devotee/dashboard`
     case 'volunteer':
       return `/entity/${entityId}/volunteer/dashboard`
+    case 'superadmin':
+      return '/superadmin/dashboard'
     default:
       return '/'
   }
@@ -326,11 +309,6 @@ const getHomeLink = () => {
 
 const goBack = () => {
   router.back()
-}
-// Toggle sidebar function
-const toggleSidebar = () => {
- sidebarOpen.value = !sidebarOpen.value
-  emit('toggle-sidebar', sidebarOpen.value)
 }
 
 const navigateToDevotees = () => {
@@ -346,17 +324,16 @@ const toggleNotifications = (event) => {
   event.stopPropagation()
   showNotifications.value = !showNotifications.value
 }
+
 const markAsReadAndClose = async (notificationId) => {
   await notificationStore.markInAppAsRead(notificationId)
   showNotifications.value = false
   
-  // Get the notification to determine where to navigate
   const notification = headerNotifications.value.find(n => n.id === notificationId)
   if (!notification) return
   
   const entityId = route.params.entityId
   
-  // Navigate based on notification category
   switch (notification.category) {
     case 'event':
       router.push(`/entity/${entityId}/devotee/events`)
@@ -371,7 +348,6 @@ const markAsReadAndClose = async (notificationId) => {
       router.push(`/entity/${entityId}/devotee/dashboard`)
       break
     default:
-      // For other categories, stay on current page or go to notifications page
       if (notification.link) {
         router.push(notification.link)
       }
@@ -470,6 +446,9 @@ const handleClickOutside = (event) => {
 onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   
+  // Log initial state for debugging
+  console.log('AppHeader mounted. Sidebar state:', sidebarOpen?.value)
+  
   // Load notifications on mount
   isLoading.value = true
   try {
@@ -489,3 +468,36 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 </script>
+
+<style scoped>
+/* Animations */
+.slide-fade-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-active {
+  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Touch target for better mobile UX */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+</style>

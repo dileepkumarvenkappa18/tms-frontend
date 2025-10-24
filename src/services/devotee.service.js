@@ -89,8 +89,12 @@ export default {
         throw new Error('Entity ID and User ID are required');
       }
 
-      console.log('📡 Making request to:', `/entities/${entityId}/devotees/${userId}/profile`);
-      const response = await api.get(`/entities/${entityId}/devotees/${userId}/profile`);
+      // Ensure entityId and userId are integers
+      const parsedEntityId = parseInt(entityId, 10);
+      const parsedUserId = parseInt(userId, 10);
+
+      console.log('📡 Making request to:', `/entities/${parsedEntityId}/devotees/${parsedUserId}/profile`);
+      const response = await api.get(`/entities/${parsedEntityId}/devotees/${parsedUserId}/profile`);
       
       console.log('✅ Devotee profile fetched successfully');
       return response;
@@ -168,8 +172,11 @@ export default {
         throw new Error('Authentication required');
       }
 
+      // Ensure entityId is an integer
+      const parsedEntityId = parseInt(entityId, 10);
+
       const response = await api.post('/memberships', {
-        entity_id: entityId
+        entity_id: parsedEntityId
       });
       return response;
     } catch (error) {
@@ -202,7 +209,10 @@ export default {
         throw new Error('Authentication required');
       }
 
-      const response = await api.get(`/memberships/check/${templeId}`);
+      // Ensure templeId is an integer
+      const parsedTempleId = parseInt(templeId, 10);
+
+      const response = await api.get(`/memberships/check/${parsedTempleId}`);
       return response;
     } catch (error) {
       if (error.response?.status === 404) {
@@ -217,7 +227,7 @@ export default {
    */
   async getAllDevotees(entityId) {
     try {
-      console.log('🔍 getAllDevotees called with entityId:', entityId);
+      console.log('🔍 getAllDevotees called with entityId:', entityId, 'type:', typeof entityId);
       
       if (!isAuthenticated()) {
         console.error('❌ User not authenticated');
@@ -228,6 +238,10 @@ export default {
         console.error('❌ Entity ID is missing');
         throw new Error('Entity ID is required');
       }
+
+      // Ensure entityId is an integer
+      const parsedEntityId = parseInt(entityId, 10);
+      console.log('🔢 Parsed entityId:', parsedEntityId, 'type:', typeof parsedEntityId);
 
       // Log current user info
       const userData = localStorage.getItem('temple_user_data') || localStorage.getItem('user_data');
@@ -248,13 +262,13 @@ export default {
       const currentEntityId = localStorage.getItem('current_entity_id');
       const currentTenantId = localStorage.getItem('current_tenant_id');
       console.log('🏛️ Current context:', {
-        entityId: entityId,
+        entityId: parsedEntityId,
         storedEntityId: currentEntityId,
         storedTenantId: currentTenantId
       });
 
-      console.log('📡 Making request to:', `/entities/${entityId}/devotees`);
-      const response = await api.get(`/entities/${entityId}/devotees`);
+      console.log('📡 Making request to:', `/entities/${parsedEntityId}/devotees`);
+      const response = await api.get(`/entities/${parsedEntityId}/devotees`);
       
       console.log('✅ Devotees fetched successfully:', response.data?.length || 0);
       return response;
@@ -274,7 +288,7 @@ export default {
    */
   async getDevoteeStats(entityId) {
     try {
-      console.log('🔍 getDevoteeStats called with entityId:', entityId);
+      console.log('🔍 getDevoteeStats called with entityId:', entityId, 'type:', typeof entityId);
       
       if (!isAuthenticated()) {
         console.error('❌ User not authenticated');
@@ -286,8 +300,12 @@ export default {
         throw new Error('Entity ID is required');
       }
 
-      console.log('📡 Making request to:', `/entities/${entityId}/devotee-stats`);
-      const response = await api.get(`/entities/${entityId}/devotee-stats`);
+      // Ensure entityId is an integer
+      const parsedEntityId = parseInt(entityId, 10);
+      console.log('🔢 Parsed entityId:', parsedEntityId, 'type:', typeof parsedEntityId);
+
+      console.log('📡 Making request to:', `/entities/${parsedEntityId}/devotee-stats`);
+      const response = await api.get(`/entities/${parsedEntityId}/devotee-stats`);
       
       console.log('✅ Devotee stats fetched successfully');
       return response;
@@ -308,6 +326,10 @@ export default {
   async updateDevoteeStatus(entityId, devoteeId, status) {
     try {
       console.log('🔍 updateDevoteeStatus called:', { entityId, devoteeId, status });
+      console.log('🔍 Parameter types:', { 
+        entityIdType: typeof entityId, 
+        devoteeIdType: typeof devoteeId 
+      });
       
       if (!isAuthenticated()) {
         console.error('❌ User not authenticated');
@@ -319,8 +341,25 @@ export default {
         throw new Error('Entity ID, Devotee ID, and Status are required');
       }
 
-      console.log('📡 Making request to:', `/entities/${entityId}/devotees/${devoteeId}/status`);
-      const response = await api.patch(`/entities/${entityId}/devotees/${devoteeId}/status`, {
+      // Ensure entityId and devoteeId are integers
+      const parsedEntityId = parseInt(entityId, 10);
+      const parsedDevoteeId = parseInt(devoteeId, 10);
+      
+      console.log('🔢 Parsed IDs:', { 
+        parsedEntityId, 
+        parsedDevoteeId,
+        entityIdType: typeof parsedEntityId,
+        devoteeIdType: typeof parsedDevoteeId
+      });
+
+      // Validate parsed values
+      if (isNaN(parsedEntityId) || isNaN(parsedDevoteeId)) {
+        console.error('❌ Invalid ID format after parsing');
+        throw new Error('Invalid entity ID or devotee ID format');
+      }
+
+      console.log('📡 Making request to:', `/entities/${parsedEntityId}/devotees/${parsedDevoteeId}/status`);
+      const response = await api.patch(`/entities/${parsedEntityId}/devotees/${parsedDevoteeId}/status`, {
         status: status
       });
       
@@ -364,7 +403,10 @@ export default {
         throw new Error('Authentication required');
       }
 
-      const response = await api.post(`/profiles/${profileId}/family`, familyMemberData);
+      // Ensure profileId is an integer
+      const parsedProfileId = parseInt(profileId, 10);
+
+      const response = await api.post(`/profiles/${parsedProfileId}/family`, familyMemberData);
       return response;
     } catch (error) {
       throw this.handleError(error);
@@ -380,7 +422,11 @@ export default {
         throw new Error('Authentication required');
       }
 
-      const response = await api.put(`/profiles/${profileId}/family/${familyMemberId}`, familyMemberData);
+      // Ensure IDs are integers
+      const parsedProfileId = parseInt(profileId, 10);
+      const parsedFamilyMemberId = parseInt(familyMemberId, 10);
+
+      const response = await api.put(`/profiles/${parsedProfileId}/family/${parsedFamilyMemberId}`, familyMemberData);
       return response;
     } catch (error) {
       throw this.handleError(error);
@@ -396,7 +442,11 @@ export default {
         throw new Error('Authentication required');
       }
 
-      const response = await api.delete(`/profiles/${profileId}/family/${familyMemberId}`);
+      // Ensure IDs are integers
+      const parsedProfileId = parseInt(profileId, 10);
+      const parsedFamilyMemberId = parseInt(familyMemberId, 10);
+
+      const response = await api.delete(`/profiles/${parsedProfileId}/family/${parsedFamilyMemberId}`);
       return response;
     } catch (error) {
       throw this.handleError(error);
@@ -412,7 +462,10 @@ export default {
         throw new Error('Authentication required');
       }
 
-      const response = await api.get(`/entity/${entityId}/devotee/dashboard`);
+      // Ensure entityId is an integer
+      const parsedEntityId = parseInt(entityId, 10);
+
+      const response = await api.get(`/entity/${parsedEntityId}/devotee/dashboard`);
       return response;
     } catch (error) {
       console.warn('Dashboard endpoint not available');
@@ -472,6 +525,13 @@ export default {
 
     if (error.response?.status === 404) {
       return new Error('The requested resource was not found.');
+    }
+
+    // Handle 400 Bad Request errors with more details
+    if (error.response?.status === 400) {
+      console.error('🔴 400 Bad Request error:', error.response?.data);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Bad request. Please check your input.';
+      return new Error(errorMsg);
     }
 
     if (error.response?.status >= 500) {

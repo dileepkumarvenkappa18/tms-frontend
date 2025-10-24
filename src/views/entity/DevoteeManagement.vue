@@ -84,34 +84,6 @@
               </div>
             </div>
 
-            <!-- Spiritual Filters -->
-             <!-- 
-            <div class="flex items-center space-x-2 flex-wrap gap-2">
-              <select v-model="spiritualFilters.nakshatra" @change="applyFilters" class="block w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="">All Nakshatra</option>
-                <option v-for="nakshatra in nakshatraList" :key="nakshatra" :value="nakshatra">{{ nakshatra }}</option>
-              </select>
-              
-              <select v-model="spiritualFilters.rashi" @change="applyFilters" class="block w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="">All Rashi</option>
-                <option v-for="rashi in rashiList" :key="rashi" :value="rashi">{{ rashi }}</option>
-              </select>
-              
-              <select v-model="spiritualFilters.lagna" @change="applyFilters" class="block w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="">All Lagna</option>
-                <option v-for="lagna in lagnaList" :key="lagna" :value="lagna">{{ lagna }}</option>
-              </select>
-              
-              <select v-model="spiritualFilters.vedaShaka" @change="applyFilters" class="block w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                <option value="">All Veda Shaka</option>
-                <option v-for="veda in vedaShakaList" :key="veda" :value="veda">{{ veda }}</option>
-              </select>
-
-              <button @click="clearFilters" class="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                Clear Filters
-              </button>
-            </div>
- -->
             <!-- Active Filters Display -->
             <div v-if="hasActiveFilters" class="flex items-center space-x-2 flex-wrap gap-2">
               <span class="text-xs text-gray-500 font-medium">Active Filters:</span>
@@ -355,10 +327,11 @@ export default {
       'Samaveda - Kauthuma', 'Samaveda - Jaiminiya', 'Atharvaveda - Shaunaka'
     ])
 
-    // Get entity ID from route
-    const templeId = computed(() =>
-      route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
-    )
+    // CRITICAL FIX: Get entity ID from route and ensure it's an integer
+    const templeId = computed(() => {
+      const id = route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
+      return id ? parseInt(id, 10) : null
+    })
 
     // Check if any spiritual filters are active
     const hasActiveFilters = computed(() => {
@@ -527,7 +500,6 @@ export default {
         }
       })
     }
-
     // Clear all filters
     const clearFilters = () => {
       spiritualFilters.value = {

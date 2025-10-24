@@ -929,252 +929,336 @@ async downloadTempleRegisteredReport(params) {
     }
   }
 
-  // DEVOTEE BIRTHDAYS METHODS
-  async getDevoteeBirthdaysReport(params) {
-    const { entityId, entityIds, dateRange = 'monthly', startDate, endDate, isSuperAdmin } = params
+// DEVOTEE BIRTHDAYS METHODS - Service Code Only
+// Place these methods in your reports.service.js file
 
-    if (!entityId && !entityIds) {
-      throw new Error('Entity ID or Entity IDs are required')
-    }
+async getDevoteeBirthdaysReport(params) {
+  const { entityId, entityIds, dateRange = 'monthly', startDate, endDate, isSuperAdmin } = params
 
-    const queryParams = new URLSearchParams({
-      date_range: dateRange,
-    })
-
-    // For birthdays, we need to handle date range differently
-    if (dateRange === 'custom' && startDate && endDate) {
-      queryParams.append('start_date', startDate)
-      queryParams.append('end_date', endDate)
-    } else {
-      // For birthdays, set appropriate default dates
-      const today = new Date()
-      let calculatedStartDate, calculatedEndDate
-      
-      switch (dateRange) {
-        case 'weekly':
-          calculatedStartDate = new Date()
-          calculatedEndDate = new Date()
-          calculatedEndDate.setDate(calculatedEndDate.getDate() + 7)
-          break
-        case 'monthly':
-          calculatedStartDate = new Date()
-          calculatedEndDate = new Date()
-          calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
-          break
-        case 'yearly':
-          calculatedStartDate = new Date(today.getFullYear(), 0, 1)
-          calculatedEndDate = new Date(today.getFullYear(), 11, 31)
-          break
-        default:
-          calculatedStartDate = new Date()
-          calculatedEndDate = new Date()
-          calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
-      }
-      
-      queryParams.append('start_date', calculatedStartDate.toISOString().split('T')[0])
-      queryParams.append('end_date', calculatedEndDate.toISOString().split('T')[0])
-    }
-
-    let url;
-    let response;
-    
-    // Choose the right API endpoint based on user role
-    if (isSuperAdmin) {
-      try {
-        // First try with superadmin/tenants endpoint
-        if (entityIds && entityIds.length > 1) {
-          url = `/superadmin/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
-        } else {
-          url = `/superadmin/tenants/${entityId}/reports/devotee-birthdays?${queryParams}`
-        }
-        
-        console.log('🎂 Making primary devotee birthdays API request:', url)
-        response = await api.get(url)
-      } catch (error) {
-        console.log('Primary API endpoint failed, trying fallback:', error.message)
-        
-        // Fallback to alternative superadmin endpoint structure
-        try {
-          if (entityIds && entityIds.length > 1) {
-            url = `/superadmin/devotee-birthdays/report?${queryParams}&tenants=${entityIds.join(',')}`
-          } else {
-            url = `/superadmin/devotee-birthdays/report?${queryParams}&tenant_id=${entityId}`
-          }
-          
-          console.log('🎂 Making fallback devotee birthdays API request:', url)
-          response = await api.get(url)
-        } catch (error2) {
-          console.log('Second fallback failed, trying third pattern:', error2.message)
-          
-          // Try one more pattern
-          if (entityIds && entityIds.length > 1) {
-            url = `/superadmin/entities/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
-          } else {
-            url = `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
-          }
-          
-          console.log('🎂 Making third fallback devotee birthdays API request:', url)
-          response = await api.get(url)
-        }
-      }
-    } else {
-      // Regular entity endpoint
-      url = `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
-      console.log('🎂 Making devotee birthdays API request:', url)
-      response = await api.get(url)
-    }
-    
-    console.log('✅ Devotee birthdays API Response received:', response)
-    return response
+  if (!entityId && !entityIds) {
+    throw new Error('Entity ID or Entity IDs are required')
   }
 
-  async downloadDevoteeBirthdaysReport(params) {
-    const { entityId, entityIds, format, dateRange = 'monthly', startDate, endDate, isSuperAdmin } = params
+  const queryParams = new URLSearchParams({
+    date_range: dateRange,
+  })
 
-    if ((!entityId && !entityIds) || !format) {
-      throw new Error('Entity ID (or IDs) and format are required')
-    }
-
-    const queryParams = new URLSearchParams({
-      date_range: dateRange,
-      format
-    })
-
-    // Same date logic as preview method
-    if (dateRange === 'custom' && startDate && endDate) {
-      queryParams.append('start_date', startDate)
-      queryParams.append('end_date', endDate)
-    } else {
-      const today = new Date()
-      let calculatedStartDate, calculatedEndDate
-      
-      switch (dateRange) {
-        case 'weekly':
-          calculatedStartDate = new Date()
-          calculatedEndDate = new Date()
-          calculatedEndDate.setDate(calculatedEndDate.getDate() + 7)
-          break
-        case 'monthly':
-          calculatedStartDate = new Date()
-          calculatedEndDate = new Date()
-          calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
-          break
-        case 'yearly':
-          calculatedStartDate = new Date(today.getFullYear(), 0, 1)
-          calculatedEndDate = new Date(today.getFullYear(), 11, 31)
-          break
-        default:
-          calculatedStartDate = new Date()
-          calculatedEndDate = new Date()
-          calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
-      }
-      
-      queryParams.append('start_date', calculatedStartDate.toISOString().split('T')[0])
-      queryParams.append('end_date', calculatedEndDate.toISOString().split('T')[0])
-    }
-
-    let url;
+  // For birthdays, we need to handle date range differently
+  if (dateRange === 'custom' && startDate && endDate) {
+    queryParams.append('start_date', startDate)
+    queryParams.append('end_date', endDate)
+  } else {
+    // For birthdays, set appropriate default dates
+    const today = new Date()
+    let calculatedStartDate, calculatedEndDate
     
-    // Choose the right API endpoint based on user role
-    if (isSuperAdmin) {
+    switch (dateRange) {
+      case 'weekly':
+        calculatedStartDate = new Date()
+        calculatedEndDate = new Date()
+        calculatedEndDate.setDate(calculatedEndDate.getDate() + 7)
+        break
+      case 'monthly':
+        calculatedStartDate = new Date()
+        calculatedEndDate = new Date()
+        calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
+        break
+      case 'yearly':
+        calculatedStartDate = new Date(today.getFullYear(), 0, 1)
+        calculatedEndDate = new Date(today.getFullYear(), 11, 31)
+        break
+      default:
+        calculatedStartDate = new Date()
+        calculatedEndDate = new Date()
+        calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
+    }
+    
+    queryParams.append('start_date', calculatedStartDate.toISOString().split('T')[0])
+    queryParams.append('end_date', calculatedEndDate.toISOString().split('T')[0])
+  }
+
+  let url;
+  let response;
+  
+  // Choose the right API endpoint based on user role
+  if (isSuperAdmin) {
+    try {
+      // First try with superadmin/tenants endpoint
       if (entityIds && entityIds.length > 1) {
         url = `/superadmin/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
       } else {
         url = `/superadmin/tenants/${entityId}/reports/devotee-birthdays?${queryParams}`
       }
+      
+      console.log('🎂 Making primary devotee birthdays API request:', url)
+      response = await api.get(url)
+    } catch (error) {
+      console.log('Primary API endpoint failed, trying fallback:', error.message)
+      
+      // Fallback to alternative superadmin endpoint structure
+      try {
+        if (entityIds && entityIds.length > 1) {
+          url = `/superadmin/devotee-birthdays/report?${queryParams}&tenants=${entityIds.join(',')}`
+        } else {
+          url = `/superadmin/devotee-birthdays/report?${queryParams}&tenant_id=${entityId}`
+        }
+        
+        console.log('🎂 Making fallback devotee birthdays API request:', url)
+        response = await api.get(url)
+      } catch (error2) {
+        console.log('Second fallback failed, trying third pattern:', error2.message)
+        
+        // Try one more pattern
+        if (entityIds && entityIds.length > 1) {
+          url = `/superadmin/entities/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
+        } else {
+          url = `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
+        }
+        
+        console.log('🎂 Making third fallback devotee birthdays API request:', url)
+        response = await api.get(url)
+      }
+    }
+  } else {
+    // Regular entity endpoint - Handle 'all' case
+    console.log('----------->ENTITYID', entityId)
+    
+    // ⭐ CRITICAL FIX: Instead of using /entities/all, 
+    // fetch data for each individual temple and combine
+    if (entityId === 'all') {
+      // Get the tenant ID from params
+      const tenantId = params.tenantId
+      
+      if (!tenantId) {
+        throw new Error('Tenant ID is required when entityId is "all"')
+      }
+      
+      // Check if we have templeIds in params (from frontend)
+      if (params.templeIds && params.templeIds.length > 0) {
+        // Fetch data for each temple and combine
+        console.log('🎂 Fetching birthdays for multiple temples:', params.templeIds)
+        const allData = []
+        
+        for (const templeId of params.templeIds) {
+          try {
+            const templeUrl = `/entities/${templeId}/reports/devotee-birthdays?${queryParams}`
+            console.log('🎂 Fetching for temple:', templeId, templeUrl)
+            const templeResponse = await api.get(templeUrl)
+            
+            let templeData = templeResponse.data
+            if (templeData && templeData.data) {
+              templeData = templeData.data
+            }
+            
+            // Extract devotees array from various possible response structures
+            let devotees = []
+            if (Array.isArray(templeData)) {
+              devotees = templeData
+            } else if (templeData.devotees) {
+              devotees = templeData.devotees
+            } else if (templeData.birthdays) {
+              devotees = templeData.birthdays
+            } else if (templeData.devotee_birthdays) {
+              devotees = templeData.devotee_birthdays
+            }
+            
+            allData.push(...devotees)
+          } catch (templeError) {
+            console.warn(`Failed to fetch birthdays for temple ${templeId}:`, templeError.message)
+          }
+        }
+        
+        // Return combined data
+        response = {
+          data: {
+            data: allData,
+            devotees: allData,
+            total: allData.length
+          }
+        }
+      } else {
+        // No specific temples provided, try the all endpoint as fallback
+        console.warn('No templeIds provided for "all" selection, trying /entities/all endpoint')
+        url = `/entities/all/reports/devotee-birthdays?${queryParams}`
+        console.log('🎂 Making devotee birthdays API request:', url)
+        response = await api.get(url)
+      }
     } else {
+      // Specific temple selected
       url = `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
+      console.log('🎂 Making devotee birthdays API request:', url)
+      response = await api.get(url)
+    }
+  }
+  
+  console.log('✅ Devotee birthdays API Response received:', response)
+  return response
+}
+
+async downloadDevoteeBirthdaysReport(params) {
+  const { entityId, entityIds, format, dateRange = 'monthly', startDate, endDate, isSuperAdmin } = params
+
+  if ((!entityId && !entityIds) || !format) {
+    throw new Error('Entity ID (or IDs) and format are required')
+  }
+
+  const queryParams = new URLSearchParams({
+    date_range: dateRange,
+    format
+  })
+
+  // Same date logic as preview method
+  if (dateRange === 'custom' && startDate && endDate) {
+    queryParams.append('start_date', startDate)
+    queryParams.append('end_date', endDate)
+  } else {
+    const today = new Date()
+    let calculatedStartDate, calculatedEndDate
+    
+    switch (dateRange) {
+      case 'weekly':
+        calculatedStartDate = new Date()
+        calculatedEndDate = new Date()
+        calculatedEndDate.setDate(calculatedEndDate.getDate() + 7)
+        break
+      case 'monthly':
+        calculatedStartDate = new Date()
+        calculatedEndDate = new Date()
+        calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
+        break
+      case 'yearly':
+        calculatedStartDate = new Date(today.getFullYear(), 0, 1)
+        calculatedEndDate = new Date(today.getFullYear(), 11, 31)
+        break
+      default:
+        calculatedStartDate = new Date()
+        calculatedEndDate = new Date()
+        calculatedEndDate.setDate(calculatedEndDate.getDate() + 30)
     }
     
-    try {
-      return await this.downloadReport(url, { format }, 'devotee_birthdays_report', async () => {
-        // Fallback function for alternative URLs if the first one fails
-        if (isSuperAdmin) {
-          // Try alternative patterns
-          const alternatives = [
-            entityIds && entityIds.length > 1 
-              ? `/superadmin/devotee-birthdays/report?${queryParams}&tenants=${entityIds.join(',')}`
-              : `/superadmin/devotee-birthdays/report?${queryParams}&tenant_id=${entityId}`,
-            
-            entityIds && entityIds.length > 1
-              ? `/superadmin/entities/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
-              : `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
-          ];
-          
-          return alternatives;
-        }
-        return null; // No alternatives for regular users
-      });
-    } catch (error) {
-      console.error('Error downloading devotee-birthdays report:', error)
-      throw error
-    }
+    queryParams.append('start_date', calculatedStartDate.toISOString().split('T')[0])
+    queryParams.append('end_date', calculatedEndDate.toISOString().split('T')[0])
   }
 
-  async getDevoteeBirthdaysPreview(params) {
-    try {
-      const response = await this.getDevoteeBirthdaysReport(params)
-
-      console.log('🎂 Devotee birthdays preview response:', response)
-
-      let responseData = response.data
-      
-      // Handle different response structures
-      if (responseData && responseData.data) {
-        responseData = responseData.data
-      }
-
-      console.log('📊 Processed response data:', responseData)
-
-      const columns = [
-        { key: 'full_name', label: 'Full Name' },
-        { key: 'date_of_birth', label: 'Date of Birth' },
-        { key: 'age', label: 'Age' },
-        { key: 'gender', label: 'Gender' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'email', label: 'Email' },
-        { key: 'temple_name', label: 'Temple' },
-        { key: 'upcoming_birthday', label: 'Upcoming Birthday' }
-      ]
-
-      // Handle different response formats more robustly
-      let previewData = []
-      
-      if (Array.isArray(responseData)) {
-        previewData = responseData
-      } else if (responseData && responseData.devotees) {
-        previewData = responseData.devotees
-      } else if (responseData && responseData.birthdays) {
-        previewData = responseData.birthdays
-      } else if (responseData && responseData.devotee_birthdays) {
-        previewData = responseData.devotee_birthdays
-      } else if (responseData && Array.isArray(responseData.data)) {
-        previewData = responseData.data
+  let url;
+  
+  // Choose the right API endpoint based on user role
+  if (isSuperAdmin) {
+    if (entityIds && entityIds.length > 1) {
+      url = `/superadmin/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
+    } else {
+      url = `/superadmin/tenants/${entityId}/reports/devotee-birthdays?${queryParams}`
+    }
+  } else {
+    // Handle 'all' case - use first temple for download
+    console.log('-->entityId', entityId)
+    
+    if (entityId !== 'all') {
+      url = `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
+    } else {
+      // ⭐ FIX: For 'all' temples download, use the first temple ID
+      // The download will be for a single combined file
+      if (params.templeIds && params.templeIds.length > 0) {
+        // Use first temple for the download endpoint
+        const firstTempleId = params.templeIds[0]
+        console.log(`📥 Using first temple (${firstTempleId}) for 'all' download`)
+        url = `/entities/${firstTempleId}/reports/devotee-birthdays?${queryParams}`
       } else {
-        console.warn('⚠️ No valid devotee birthdays data found in response:', responseData)
-        previewData = []
+        // Fallback to 'all' endpoint if no specific temples
+        console.warn('No templeIds provided for "all" download, trying /entities/all')
+        url = `/entities/all/reports/devotee-birthdays?${queryParams}`
       }
-
-      // Format date fields for better display
-      previewData = previewData.map(item => ({
-        ...item,
-        date_of_birth: item.date_of_birth ? this.formatDate(item.date_of_birth) : '-',
-        upcoming_birthday: item.upcoming_birthday ? this.formatDate(item.upcoming_birthday) : '-'
-      }))
-
-      console.log('📋 Final preview data:', previewData)
-
-      return {
-        data: previewData,
-        columns,
-        totalRecords: previewData.length || 0
-      }
-    } catch (error) {
-      console.error('❌ Error getting devotee-birthdays preview:', error)
-      throw error
     }
   }
+  
+  try {
+    return await this.downloadReport(url, { format }, 'devotee_birthdays_report', async () => {
+      // Fallback function for alternative URLs if the first one fails
+      if (isSuperAdmin) {
+        // Try alternative patterns
+        const alternatives = [
+          entityIds && entityIds.length > 1 
+            ? `/superadmin/devotee-birthdays/report?${queryParams}&tenants=${entityIds.join(',')}`
+            : `/superadmin/devotee-birthdays/report?${queryParams}&tenant_id=${entityId}`,
+          
+          entityIds && entityIds.length > 1
+            ? `/superadmin/entities/reports/devotee-birthdays?${queryParams}&tenants=${entityIds.join(',')}`
+            : `/entities/${entityId}/reports/devotee-birthdays?${queryParams}`
+        ];
+        
+        return alternatives;
+      }
+      return null; // No alternatives for regular users
+    });
+  } catch (error) {
+    console.error('Error downloading devotee-birthdays report:', error)
+    throw error
+  }
+}
 
+async getDevoteeBirthdaysPreview(params) {
+  try {
+    const response = await this.getDevoteeBirthdaysReport(params)
+
+    console.log('🎂 Devotee birthdays preview response:', response)
+
+    let responseData = response.data
+    
+    // Handle different response structures
+    if (responseData && responseData.data) {
+      responseData = responseData.data
+    }
+
+    console.log('📊 Processed response data:', responseData)
+
+    const columns = [
+      { key: 'full_name', label: 'Full Name' },
+      { key: 'date_of_birth', label: 'Date of Birth' },
+      { key: 'age', label: 'Age' },
+      { key: 'gender', label: 'Gender' },
+      { key: 'phone', label: 'Phone' },
+      { key: 'email', label: 'Email' },
+      { key: 'temple_name', label: 'Temple' },
+      { key: 'upcoming_birthday', label: 'Upcoming Birthday' }
+    ]
+
+    // Handle different response formats more robustly
+    let previewData = []
+    
+    if (Array.isArray(responseData)) {
+      previewData = responseData
+    } else if (responseData && responseData.devotees) {
+      previewData = responseData.devotees
+    } else if (responseData && responseData.birthdays) {
+      previewData = responseData.birthdays
+    } else if (responseData && responseData.devotee_birthdays) {
+      previewData = responseData.devotee_birthdays
+    } else if (responseData && Array.isArray(responseData.data)) {
+      previewData = responseData.data
+    } else {
+      console.warn('⚠️ No valid devotee birthdays data found in response:', responseData)
+      previewData = []
+    }
+
+    // Format date fields for better display
+    previewData = previewData.map(item => ({
+      ...item,
+      date_of_birth: item.date_of_birth ? this.formatDate(item.date_of_birth) : '-',
+      upcoming_birthday: item.upcoming_birthday ? this.formatDate(item.upcoming_birthday) : '-'
+    }))
+
+    console.log('📋 Final preview data:', previewData)
+
+    return {
+      data: previewData,
+      columns,
+      totalRecords: previewData.length || 0
+    }
+  } catch (error) {
+    console.error('❌ Error getting devotee-birthdays preview:', error)
+    throw error
+  }
+}
   // DEVOTEE LIST METHODS
   async getDevoteeList(params) {
     console.trace()

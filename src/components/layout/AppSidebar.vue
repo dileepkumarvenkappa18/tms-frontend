@@ -28,14 +28,23 @@
     </div>
   </transition>
 
-  <!-- Sidebar -->
+  <!-- Mobile Overlay -->
+  <transition name="fade">
+    <div 
+      v-if="sidebarOpen && isMobile"
+      @click="closeMobileMenu"
+      class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+      style="margin-top: 56px;"
+    ></div>
+  </transition>
+<!-- Sidebar -->
   <aside 
     class="fixed left-0 top-0 bottom-0 w-80 sm:w-72 bg-white border-r border-gray-200 overflow-y-auto shadow-lg transition-transform duration-300 ease-in-out z-40"
-    :class="{
-      '-translate-x-full lg:translate-x-0': !isMobileMenuOpen,
-      'translate-x-0': isMobileMenuOpen
-    }"
-    style="margin-top: 56px; display: block !important;"
+    :class="[
+      sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+      'lg:translate-x-0'
+    ]"
+    style="margin-top: 56px;"
   >
     <!-- Logo Area -->
     <div class="p-3 sm:p-4 pt-4 sm:pt-6 lg:pt-8 border-b border-gray-200">
@@ -521,7 +530,7 @@
 </template>
 
 <script setup>
-import { computed, ref, inject } from 'vue';
+import { computed, ref, inject, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -542,9 +551,7 @@ const authStore = useAuthStore();
 // Inject sidebar state from parent layout
 const sidebarOpen = inject('sidebarOpen', ref(false));
 const showPermissionAlert = ref(false);
-
-// Use the injected sidebar state for mobile menu
-const isMobileMenuOpen = computed(() => sidebarOpen.value);
+const isMobile = ref(window.innerWidth < 1024);
 
 const entityId = computed(() => {
   return route.params.id || route.params.entityId || '1';
@@ -596,7 +603,9 @@ const toggleSuperadminReports = () => {
 };
 
 const closeMobileMenu = () => {
-  sidebarOpen.value = false;
+  if (isMobile.value) {
+    sidebarOpen.value = false;
+  }
 };
 
 const showMonitoringUserAlert = () => {
@@ -612,4 +621,75 @@ const formatRoleName = (role) => {
   if (role === 'monitoring_user') return 'Monitoring User';
   return role.charAt(0).toUpperCase() + role.slice(1);
 };
+
+// Handle window resize
+const handleResize = () => {
+  isMobile.value = window.innerWidth < 1024;
+};
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
 </script>
+
+<style scoped>
+/* Animations */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-down-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-down-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  max-height: 500px;
+  opacity: 1;
+}
+
+/* Touch target for better mobile UX */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Scrollbar styling */
+aside::-webkit-scrollbar {
+  width: 6px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+aside::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+</style>
