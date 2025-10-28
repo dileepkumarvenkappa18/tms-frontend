@@ -735,7 +735,9 @@ const buildTenantHeaders = (tenantId) => {
   };
 };
 
-// CRITICAL: Build report parameters with proper entity filtering
+// CRITICAL FIX: buildReportParams() function for Vue component
+// Add this to your BirthdaysReport.vue <script> section
+
 const buildReportParams = () => {
   const params = {
     dateRange: activeFilter.value,
@@ -755,38 +757,44 @@ const buildReportParams = () => {
     params.status = devoteeStatus.value;
   }
 
-  // CRITICAL: Single temple selection - MUST filter by specific entity
+  // ⭐ CRITICAL FIX: Single temple selection
   if (selectedTemple.value !== 'all') {
     const templeId = selectedTemple.value;
     
-    // Find the temple to get its tenant information
+    // Find the temple object to get its tenant_id
     const temple = availableTemples.value.find(t => String(t.id) === String(templeId));
     
-    // Set temple/entity identifiers with multiple variations for backend compatibility
-    params.templeId = templeId;
-    params.temple_id = templeId;
-    params.entityId = templeId;
-    params.entity_id = templeId;
-    
-    // Set tenant context for proper scoping
-    if (temple) {
-      const templeTenantId = temple.tenant_id || temple.entityId || temple.created_by;
-      if (templeTenantId) {
-        params.tenantId = templeTenantId;
-        params.tenant_id = templeTenantId;
-      }
-    } else if (effectiveTenantId.value) {
-      params.tenantId = effectiveTenantId.value;
-      params.tenant_id = effectiveTenantId.value;
+    if (!temple) {
+      console.error('Temple not found:', templeId);
+      throw new Error('Selected temple not found');
     }
     
-    // Ensure single temple filtering flag
+    // Get the tenant ID (the user who owns this temple)
+    const templeTenantId = temple.tenant_id || temple.created_by || temple.entityId;
+    
+    if (!templeTenantId) {
+      console.error('Temple has no tenant_id:', temple);
+      throw new Error('Temple has no associated tenant');
+    }
+    
+    // Set temple/entity identifiers
+    params.templeId = templeId;
+    params.temple_id = templeId;
+    params.entityId = templeId;  // This is the temple ID to filter by
+    params.entity_id = templeId;
+    
+    // ⭐ CRITICAL: Set the tenant ID (temple admin user ID)
+    params.tenantId = templeTenantId;  // This is the tenant/user who owns the temple
+    params.tenant_id = templeTenantId;
+    
+    // Flag to indicate single temple filtering
     params.singleTemple = true;
     params.filterByEntity = true;
     
-    console.log('Single temple selected - filtering by entity:', {
-      templeId,
-      templeTenantId: temple?.tenant_id,
+    console.log('✅ Single temple selected - params:', {
+      templeId: templeId,
+      templeName: temple.name,
+      tenantId: templeTenantId,
       params
     });
   } 
@@ -797,6 +805,11 @@ const buildReportParams = () => {
       params.tenantIds = tenantIds.value.slice();
       params.entityIds = tenantIds.value.slice();
       params.allTemples = true;
+      
+      console.log('All temples (multi-tenant):', {
+        tenantCount: tenantIds.value.length,
+        tenantIds: tenantIds.value
+      });
     } else if (effectiveTenantId.value) {
       // Single tenant scenario - all temples for one tenant
       params.tenantId = effectiveTenantId.value;
@@ -804,13 +817,22 @@ const buildReportParams = () => {
       params.entityId = effectiveTenantId.value;
       params.entity_id = effectiveTenantId.value;
       params.allTemples = true;
+      
+      // ⭐ IMPORTANT: Pass temple IDs for filtering
+      const templesForTenant = availableTemples.value
+        .filter(t => String(t.tenant_id || t.created_by) === String(effectiveTenantId.value))
+        .map(t => t.id);
+      
+      if (templesForTenant.length > 0) {
+        params.templeIds = templesForTenant;
+      }
+      
+      console.log('All temples (single tenant):', {
+        tenantId: effectiveTenantId.value,
+        templeCount: templesForTenant.length,
+        templeIds: templesForTenant
+      });
     }
-    
-    console.log('All temples selected:', {
-      multiTenant: fromSuperadmin.value && tenantIds.value.length > 1,
-      tenantIds: tenantIds.value,
-      params
-    });
   }
 
   return params;
