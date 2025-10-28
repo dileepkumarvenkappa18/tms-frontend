@@ -84,6 +84,38 @@
               </div>
             </div>
 
+            <!-- Spiritual Filters -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Nakshatra</label>
+                <select v-model="spiritualFilters.nakshatra" @change="applyFilters" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Nakshatras</option>
+                  <option v-for="nakshatra in nakshatraList" :key="nakshatra" :value="nakshatra">{{ nakshatra }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Rashi</label>
+                <select v-model="spiritualFilters.rashi" @change="applyFilters" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Rashis</option>
+                  <option v-for="rashi in rashiList" :key="rashi" :value="rashi">{{ rashi }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Lagna</label>
+                <select v-model="spiritualFilters.lagna" @change="applyFilters" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Lagnas</option>
+                  <option v-for="lagna in lagnaList" :key="lagna" :value="lagna">{{ lagna }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Veda Shaka</label>
+                <select v-model="spiritualFilters.vedaShaka" @change="applyFilters" class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                  <option value="">All Vedas</option>
+                  <option v-for="veda in vedaShakaList" :key="veda" :value="veda">{{ veda }}</option>
+                </select>
+              </div>
+            </div>
+
             <!-- Active Filters Display -->
             <div v-if="hasActiveFilters" class="flex items-center space-x-2 flex-wrap gap-2">
               <span class="text-xs text-gray-500 font-medium">Active Filters:</span>
@@ -103,6 +135,7 @@
                 Veda: {{ spiritualFilters.vedaShaka }}
                 <button @click="spiritualFilters.vedaShaka = ''; applyFilters()" class="ml-1 hover:text-orange-900">×</button>
               </span>
+              <button @click="clearFilters" class="text-xs text-red-600 hover:text-red-800 font-medium">Clear All</button>
             </div>
           </div>
         </div>
@@ -129,6 +162,9 @@
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                  <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nakshatra</th>
+                  <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rashi</th>
+                  <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lagna</th>
                   <th scope="col" class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th scope="col" class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -150,6 +186,24 @@
                   </td>
                   <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ devotee.email || 'Not provided' }}</td>
                   <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">{{ devotee.phone || 'Not provided' }}</td>
+                  <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                    <span v-if="devotee.nakshatra" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700">
+                      {{ devotee.nakshatra }}
+                    </span>
+                    <span v-else class="text-gray-400">-</span>
+                  </td>
+                  <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                    <span v-if="devotee.rashi" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
+                      {{ devotee.rashi }}
+                    </span>
+                    <span v-else class="text-gray-400">-</span>
+                  </td>
+                  <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">
+                    <span v-if="devotee.lagna" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">
+                      {{ devotee.lagna }}
+                    </span>
+                    <span v-else class="text-gray-400">-</span>
+                  </td>
                   <td class="px-3 py-2 whitespace-nowrap">
                     <span :class="getStatusClass(devotee.status)" class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full">{{ devotee.status || 'active' }}</span>
                   </td>
@@ -327,7 +381,7 @@ export default {
       'Samaveda - Kauthuma', 'Samaveda - Jaiminiya', 'Atharvaveda - Shaunaka'
     ])
 
-    // CRITICAL FIX: Get entity ID from route and ensure it's an integer
+    // Get entity ID from route
     const templeId = computed(() => {
       const id = route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
       return id ? parseInt(id, 10) : null
@@ -479,7 +533,7 @@ export default {
       return (status || 'active') === 'active' ? 'Deactivate' : 'Activate'
     }
 
-    // View devotee profile - Navigate to dedicated page
+    // View devotee profile
     const viewDevoteeProfile = (devotee) => {
       const userId = getDevoteeId(devotee)
       if (!userId || userId === 'unknown') {
@@ -500,6 +554,7 @@ export default {
         }
       })
     }
+
     // Clear all filters
     const clearFilters = () => {
       spiritualFilters.value = {
@@ -587,26 +642,64 @@ export default {
 
     // Status toggle handler
     const handleToggleStatus = async (devotee) => {
-      if (!templeId.value) return
+      if (!templeId.value) {
+        console.error('❌ No temple ID available')
+        toast.error('Temple ID is missing')
+        return
+      }
 
       const devoteeId = getDevoteeId(devotee)
       const currentStatus = devotee.status || 'active'
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
 
       if (!devoteeId || devoteeId === 'unknown') {
+        console.error('❌ Invalid devotee ID')
         toast.error('Invalid devotee ID')
         return
       }
 
+      console.log('🔄 Toggling status:', {
+        templeId: templeId.value,
+        templeIdType: typeof templeId.value,
+        devoteeId,
+        devoteeIdType: typeof devoteeId,
+        currentStatus,
+        newStatus
+      })
+
       statusUpdateLoading.value = devoteeId
 
       try {
-        await devoteeStore.updateDevoteeStatus(templeId.value, devoteeId, newStatus)
+        // Direct API call with proper payload structure
+        console.log('📡 Making API call to:', `/entities/${templeId.value}/devotees/${devoteeId}/status`)
+        
+        const response = await api.patch(`/entities/${templeId.value}/devotees/${devoteeId}/status`, {
+          entity_id: parseInt(templeId.value, 10),
+          user_id: parseInt(devoteeId, 10),
+          status: newStatus
+        })
+        
+        console.log('✅ API Response:', response.data)
+        
+        // Reload data
         await loadDevotees()
         await loadDevoteeStats()
+        
         toast.success(`Devotee ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`)
+        console.log('✅ Status updated successfully')
       } catch (error) {
-        console.error('Error updating status:', error)
+        console.error('❌ Error updating status:', error)
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          requestData: {
+            entity_id: parseInt(templeId.value, 10),
+            user_id: parseInt(devoteeId, 10),
+            status: newStatus
+          }
+        })
+        
         const errorMessage = error.response?.data?.error || 
                             error.response?.data?.message || 
                             error.message || 

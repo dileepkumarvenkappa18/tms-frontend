@@ -737,7 +737,7 @@ const buildTenantHeaders = (tenantId) => {
 
 // CRITICAL FIX: buildReportParams() function for Vue component
 // Add this to your BirthdaysReport.vue <script> section
-
+// In BirthdaysReport.vue - Update buildReportParams()
 const buildReportParams = () => {
   const params = {
     dateRange: activeFilter.value,
@@ -757,11 +757,11 @@ const buildReportParams = () => {
     params.status = devoteeStatus.value;
   }
 
-  // ⭐ CRITICAL FIX: Single temple selection
+  // ⭐⭐⭐ CRITICAL: Single temple selection ⭐⭐⭐
   if (selectedTemple.value !== 'all') {
     const templeId = selectedTemple.value;
     
-    // Find the temple object to get its tenant_id
+    // Find temple object
     const temple = availableTemples.value.find(t => String(t.id) === String(templeId));
     
     if (!temple) {
@@ -769,7 +769,7 @@ const buildReportParams = () => {
       throw new Error('Selected temple not found');
     }
     
-    // Get the tenant ID (the user who owns this temple)
+    // Get tenant ID (temple owner user ID)
     const templeTenantId = temple.tenant_id || temple.created_by || temple.entityId;
     
     if (!templeTenantId) {
@@ -777,61 +777,27 @@ const buildReportParams = () => {
       throw new Error('Temple has no associated tenant');
     }
     
-    // Set temple/entity identifiers
-    params.templeId = templeId;
-    params.temple_id = templeId;
-    params.entityId = templeId;  // This is the temple ID to filter by
-    params.entity_id = templeId;
+    // ⭐ Set these parameters - THIS IS CRITICAL!
+    params.entityId = templeId;           // Temple ID
+    params.tenantId = templeTenantId;     // Tenant/User ID who owns temple
+    params.singleTemple = true;            // Flag to use /entities/{id} endpoint
     
-    // ⭐ CRITICAL: Set the tenant ID (temple admin user ID)
-    params.tenantId = templeTenantId;  // This is the tenant/user who owns the temple
-    params.tenant_id = templeTenantId;
-    
-    // Flag to indicate single temple filtering
-    params.singleTemple = true;
-    params.filterByEntity = true;
-    
-    console.log('✅ Single temple selected - params:', {
-      templeId: templeId,
-      templeName: temple.name,
+    console.log('✅ Single temple params:', {
+      templeId,
       tenantId: templeTenantId,
-      params
+      singleTemple: true
     });
   } 
   // All temples selected
   else {
     if (fromSuperadmin.value && tenantIds.value.length > 1) {
-      // Multi-tenant scenario - all temples across multiple tenants
       params.tenantIds = tenantIds.value.slice();
       params.entityIds = tenantIds.value.slice();
       params.allTemples = true;
-      
-      console.log('All temples (multi-tenant):', {
-        tenantCount: tenantIds.value.length,
-        tenantIds: tenantIds.value
-      });
     } else if (effectiveTenantId.value) {
-      // Single tenant scenario - all temples for one tenant
       params.tenantId = effectiveTenantId.value;
-      params.tenant_id = effectiveTenantId.value;
       params.entityId = effectiveTenantId.value;
-      params.entity_id = effectiveTenantId.value;
       params.allTemples = true;
-      
-      // ⭐ IMPORTANT: Pass temple IDs for filtering
-      const templesForTenant = availableTemples.value
-        .filter(t => String(t.tenant_id || t.created_by) === String(effectiveTenantId.value))
-        .map(t => t.id);
-      
-      if (templesForTenant.length > 0) {
-        params.templeIds = templesForTenant;
-      }
-      
-      console.log('All temples (single tenant):', {
-        tenantId: effectiveTenantId.value,
-        templeCount: templesForTenant.length,
-        templeIds: templesForTenant
-      });
     }
   }
 
