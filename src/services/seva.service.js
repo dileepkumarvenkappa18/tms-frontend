@@ -1,4 +1,4 @@
-// src/services/seva.service.js - Updated version with entity ID resolution similar to events
+// src/services/seva.service.js - Updated version with slot management
 import axios from 'axios'
 
 class SevaService {
@@ -10,21 +10,17 @@ class SevaService {
    */
   async getSevas(params = {}) {
     try {
-      // Get entity ID using the same resolution logic as events
       const entityId = this.getCurrentEntityId();
       const tenantId = localStorage.getItem('current_tenant_id');
       
       console.log(`Fetching sevas for entity ID: ${entityId}, tenant ID: ${tenantId}`);
       
-      // Store entity ID in localStorage for future use
       if (entityId) {
         localStorage.setItem('current_entity_id', entityId);
       }
       
-      // Build URL with entity filtering - similar to events pattern
       const url = entityId ? `/sevas/entity-sevas?entity_id=${entityId}` : '/sevas/entity-sevas';
       
-      // Include proper headers with current tenant and entity ID
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -34,10 +30,8 @@ class SevaService {
         }
       };
       
-      console.log(`Requesting sevas from: ${url} with headers:`, headers);
-      console.log('Requesting sevas with params:', params);
+      console.log(`Requesting sevas from: ${url} with params:`, params);
       
-      // Merge entity_id into params for backend filtering
       const requestParams = {
         ...params,
         entity_id: entityId
@@ -50,9 +44,17 @@ class SevaService {
       
       console.log('Seva response:', response.data);
       
+      // ✅ Ensure slot fields are included in response
+      const sevas = (response.data?.sevas || []).map(seva => ({
+        ...seva,
+        available_slots: seva.available_slots || seva.AvailableSlots || 0,
+        booked_slots: seva.booked_slots || seva.BookedSlots || 0,
+        remaining_slots: seva.remaining_slots || seva.RemainingSlots || 0
+      }));
+      
       return {
         success: true,
-        data: response.data?.sevas || [],
+        data: sevas,
         total: response.data?.total || 0,
         pagination: response.data?.pagination || {}
       }
@@ -81,7 +83,6 @@ class SevaService {
       console.log('Requesting devotee sevas with params:', params);
       console.log(`Devotee sevas for entity ID: ${entityId}, tenant ID: ${tenantId}`);
       
-      // Build URL with entity filtering for devotees
       const url = entityId ? `/sevas?entity_id=${entityId}` : '/sevas';
       
       const headers = {
@@ -93,7 +94,6 @@ class SevaService {
         }
       };
       
-      // Merge entity_id into params
       const requestParams = {
         ...params,
         entity_id: entityId
@@ -106,9 +106,17 @@ class SevaService {
       
       console.log('Devotee seva response:', response.data);
       
+      // ✅ Ensure slot fields are included in response
+      const sevas = (response.data?.sevas || []).map(seva => ({
+        ...seva,
+        available_slots: seva.available_slots || seva.AvailableSlots || 0,
+        booked_slots: seva.booked_slots || seva.BookedSlots || 0,
+        remaining_slots: seva.remaining_slots || seva.RemainingSlots || 0
+      }));
+      
       return {
         success: true,
-        data: response.data?.sevas || [],
+        data: sevas,
         pagination: response.data?.pagination || {}
       }
     } catch (error) {
@@ -144,9 +152,17 @@ class SevaService {
       console.log(`Fetching seva ${sevaId} for entity ID: ${entityId}`);
       const response = await axios.get(`v1/sevas/${sevaId}`, headers);
       
+      // ✅ Ensure slot fields are included
+      const seva = response.data || null;
+      if (seva) {
+        seva.available_slots = seva.available_slots || seva.AvailableSlots || 0;
+        seva.booked_slots = seva.booked_slots || seva.BookedSlots || 0;
+        seva.remaining_slots = seva.remaining_slots || seva.RemainingSlots || 0;
+      }
+      
       return {
         success: true,
-        data: response.data || null
+        data: seva
       }
     } catch (error) {
       console.error('Error fetching seva:', error)
@@ -169,7 +185,6 @@ class SevaService {
       
       console.log(`Fetching booking counts for entity ID: ${entityId}, tenant ID: ${tenantId}`);
       
-      // Build URL with entity filtering
       const url = entityId ? `/sevas/booking-counts?entity_id=${entityId}` : '/sevas/booking-counts';
       
       const headers = {
@@ -190,7 +205,6 @@ class SevaService {
       }
     } catch (error) {
       console.error('Error fetching booking counts:', error)
-      // Don't throw error for stats, return empty stats like events
       return {
         success: false,
         error: error.response?.data?.error || 'Failed to fetch booking counts',
@@ -206,12 +220,12 @@ class SevaService {
 
   /**
    * Create a new seva - matches POST / route
+   * ✅ UPDATED: Uses available_slots instead of max_bookings_per_day
    * @param {Object} sevaData - Seva data to create
    * @returns {Promise<Object>} Creation response
    */
   async createSeva(sevaData) {
     try {
-      // Use the same entity ID resolution logic as events
       const entityId = this.getCurrentEntityId();
       const tenantId = localStorage.getItem('current_tenant_id');
       
@@ -219,7 +233,7 @@ class SevaService {
         throw new Error('No entity ID available for seva creation');
       }
 
-      // Prepare the data with proper entity ID - similar to event creation
+      // ✅ UPDATED: Map to new slot field names
       const apiData = {
         name: sevaData.name,
         seva_type: sevaData.seva_type || sevaData.sevaType,
@@ -229,14 +243,13 @@ class SevaService {
         start_time: sevaData.start_time || sevaData.startTime,
         end_time: sevaData.end_time || sevaData.endTime,
         duration: sevaData.duration || 30,
-        max_bookings_per_day: sevaData.max_bookings_per_day || sevaData.maxBookingsPerDay || 10,
-        entity_id: parseInt(entityId) // Ensure it's stored as integer
+        available_slots: sevaData.available_slots || sevaData.availableSlots || sevaData.max_bookings_per_day || sevaData.maxBookingsPerDay || 10, // ✅ UPDATED
+        entity_id: parseInt(entityId)
       };
 
       console.log('Creating seva with data:', apiData);
       console.log('Entity ID being used:', entityId);
       
-      // Use headers to ensure proper entity context
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -266,6 +279,7 @@ class SevaService {
 
   /**
    * Update seva - matches PUT /:id route
+   * ✅ UPDATED: Uses available_slots instead of max_bookings_per_day
    * @param {string} sevaId - Seva ID to update
    * @param {Object} sevaData - Updated seva data
    * @returns {Promise<Object>} Update response
@@ -275,7 +289,7 @@ class SevaService {
       const entityId = this.getCurrentEntityId();
       const tenantId = localStorage.getItem('current_tenant_id');
       
-      // Prepare API data - similar to event update
+      // ✅ UPDATED: Map to new slot field names
       const apiData = {
         name: sevaData.name,
         seva_type: sevaData.seva_type || sevaData.sevaType,
@@ -285,11 +299,10 @@ class SevaService {
         start_time: sevaData.start_time || sevaData.startTime,
         end_time: sevaData.end_time || sevaData.endTime,
         duration: sevaData.duration || 30,
-        max_bookings_per_day: sevaData.max_bookings_per_day || sevaData.maxBookingsPerDay || 10,
+        available_slots: sevaData.available_slots || sevaData.availableSlots || sevaData.max_bookings_per_day || sevaData.maxBookingsPerDay, // ✅ UPDATED
         status: sevaData.status
       };
 
-      // Include entity ID in headers for context
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
@@ -322,7 +335,7 @@ class SevaService {
   }
 
   /**
-   * Delete seva - HARD DELETE, not just inactive - matches DELETE /:id route
+   * Delete seva - HARD DELETE - matches DELETE /:id route
    * @param {string} sevaId - Seva ID to delete permanently
    * @returns {Promise<Object>} Delete response
    */
@@ -334,23 +347,21 @@ class SevaService {
       console.log('Permanently deleting seva with ID:', sevaId);
       console.log('Entity context:', entityId);
       
-      // Include entity context in headers - similar to events
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
           'X-Entity-ID': entityId,
           'X-Tenant-ID': tenantId,
-          'X-Force-Delete': 'true' // Additional header approach
+          'X-Force-Delete': 'true'
         }
       };
       
-      // Use DELETE method with force parameter to ensure hard delete
       const response = await axios.delete(`/sevas/${sevaId}`, {
         ...headers,
         params: { 
-          force: true, // Add force parameter to ensure hard delete
-          permanent: true // Additional flag to ensure permanent deletion
+          force: true,
+          permanent: true
         }
       });
       
@@ -365,7 +376,6 @@ class SevaService {
       console.error('Error deleting seva:', error);
       console.error('Delete error details:', error.response?.data);
       
-      // Handle different error scenarios
       if (error.response?.status === 404) {
         return {
           success: false,
@@ -381,43 +391,6 @@ class SevaService {
       return {
         success: false,
         error: error.response?.data?.error || error.response?.data?.message || 'Failed to permanently delete seva'
-      }
-    }
-  }
-
-  /**
-   * Alternative method for soft delete (set as inactive) if needed
-   * @param {string} sevaId - Seva ID to deactivate
-   * @returns {Promise<Object>} Deactivate response
-   */
-  async deactivateSeva(sevaId) {
-    try {
-      const entityId = this.getCurrentEntityId();
-      const tenantId = localStorage.getItem('current_tenant_id');
-      
-      console.log('Deactivating seva with ID:', sevaId);
-      
-      const headers = {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
-        }
-      };
-      
-      const response = await axios.patch(`/sevas/${sevaId}/deactivate`, {}, headers);
-      
-      return {
-        success: true,
-        data: response.data,
-        message: 'Seva deactivated successfully'
-      }
-    } catch (error) {
-      console.error('Error deactivating seva:', error);
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Failed to deactivate seva'
       }
     }
   }
@@ -449,7 +422,7 @@ class SevaService {
       return {
         success: true,
         data: response.data,
-        message: 'Seva booked successfully'
+        message: 'Seva booking request submitted successfully'
       };
     } catch (error) {
       console.error('Error booking seva:', error.response?.data || error);
@@ -462,63 +435,54 @@ class SevaService {
 
   /**
    * Get user's seva bookings - matches GET /my-bookings route (devotee only)
+   * @param {string} entityId - Optional entity ID to filter bookings
    * @returns {Promise<Object>} User's booking history
    */
-// In seva.service.js - Update getMyBookings method
-
-/**
- * Get user's seva bookings - matches GET /my-bookings route (devotee only)
- * @param {string} entityId - Optional entity ID to filter bookings
- * @returns {Promise<Object>} User's booking history
- */
-async getMyBookings(entityId = null) {
-  try {
-    // Use provided entityId or get from resolution logic
-    const resolvedEntityId = entityId || this.getCurrentEntityId();
-    const tenantId = localStorage.getItem('current_tenant_id');
-    
-    console.log(`Fetching my bookings for entity ${resolvedEntityId}`);
-    
-    // Build URL with entity filtering
-    const url = resolvedEntityId ? 
-      `/sevas/my-bookings?entity_id=${resolvedEntityId}` : 
-      '/sevas/my-bookings';
-    
-    const headers = {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        'Content-Type': 'application/json',
-        'X-Entity-ID': resolvedEntityId,
-        'X-Tenant-ID': tenantId
+  async getMyBookings(entityId = null) {
+    try {
+      const resolvedEntityId = entityId || this.getCurrentEntityId();
+      const tenantId = localStorage.getItem('current_tenant_id');
+      
+      console.log(`Fetching my bookings for entity ${resolvedEntityId}`);
+      
+      const url = resolvedEntityId ? 
+        `/sevas/my-bookings?entity_id=${resolvedEntityId}` : 
+        '/sevas/my-bookings';
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Entity-ID': resolvedEntityId,
+          'X-Tenant-ID': tenantId
+        }
+      };
+      
+      const response = await axios.get(url, headers);
+      
+      let bookings = response.data?.bookings || [];
+      
+      if (resolvedEntityId) {
+        bookings = bookings.filter(booking => {
+          const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId;
+          return bookingEntityId && parseInt(bookingEntityId) === parseInt(resolvedEntityId);
+        });
+        console.log(`✅ Filtered ${bookings.length} bookings for entity ${resolvedEntityId}`);
       }
-    };
-    
-    const response = await axios.get(url, headers);
-    
-    let bookings = response.data?.bookings || [];
-    
-    // Additional client-side filtering by entity ID for safety
-    if (resolvedEntityId) {
-      bookings = bookings.filter(booking => {
-        const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId;
-        return bookingEntityId && parseInt(bookingEntityId) === parseInt(resolvedEntityId);
-      });
-      console.log(`✅ Filtered ${bookings.length} bookings for entity ${resolvedEntityId}`);
+      
+      return {
+        success: true,
+        data: bookings
+      };
+    } catch (error) {
+      console.error('Error fetching my bookings:', error.response?.data || error);
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to fetch booking history',
+        data: []
+      };
     }
-    
-    return {
-      success: true,
-      data: bookings
-    };
-  } catch (error) {
-    console.error('Error fetching my bookings:', error.response?.data || error);
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Failed to fetch booking history',
-      data: []
-    };
   }
-}
 
   /**
    * Get entity bookings - matches GET /entity-bookings route (temple admin)
@@ -527,13 +491,11 @@ async getMyBookings(entityId = null) {
    */
   async getEntityBookings(entityId) {
     try {
-      // Use provided entityId or get from resolution logic
       const resolvedEntityId = entityId || this.getCurrentEntityId();
       const tenantId = localStorage.getItem('current_tenant_id');
       
       console.log(`Fetching entity bookings for entity ID: ${resolvedEntityId}, tenant ID: ${tenantId}`);
       
-      // Build URL with entity filtering - similar to events pattern
       const url = resolvedEntityId ? 
         `/sevas/entity-bookings?entity_id=${resolvedEntityId}` : 
         '/sevas/entity-bookings';
@@ -547,7 +509,7 @@ async getMyBookings(entityId = null) {
         }
       };
       
-      console.log(`Requesting entity bookings from: ${url} with headers:`, headers);
+      console.log(`Requesting entity bookings from: ${url}`);
       const response = await axios.get(url, headers);
       
       console.log('Entity bookings response:', response.data);
@@ -605,8 +567,9 @@ async getMyBookings(entityId = null) {
 
   /**
    * Update booking status - matches PATCH /bookings/:id/status route (temple admin)
+   * ✅ This triggers slot updates on the backend
    * @param {string} bookingId - Booking ID
-   * @param {string} status - New status (approved, rejected, completed, etc.)
+   * @param {string} status - New status (approved, rejected, etc.)
    * @returns {Promise<Object>} Status update response
    */
   async updateBookingStatus(bookingId, status) {
@@ -643,11 +606,8 @@ async getMyBookings(entityId = null) {
     }
   }
 
-  // ===========================
-  // Helper method to get current entity ID using the same logic as events
-  // ===========================
+  // Helper method to get current entity ID
   getCurrentEntityId() {
-    // Priority 1: Check URL path for entity ID
     const currentPath = window.location.pathname;
     const entityMatch = currentPath.match(/\/entity\/(\d+)/);
     if (entityMatch) {
@@ -656,14 +616,12 @@ async getMyBookings(entityId = null) {
       return entityId;
     }
 
-    // Priority 2: Check localStorage
     const storedEntityId = localStorage.getItem('current_entity_id');
     if (storedEntityId && storedEntityId !== 'null' && storedEntityId !== 'undefined') {
       console.log(`Entity ID from localStorage: ${storedEntityId}`);
       return storedEntityId;
     }
 
-    // Priority 3: For role-based fallback, try to get from user info
     const userInfo = this.getUserInfo();
     if (userInfo) {
       switch (userInfo.role) {
@@ -688,12 +646,10 @@ async getMyBookings(entityId = null) {
     return null;
   }
 
-  // Helper method to get user info from localStorage or token
   getUserInfo() {
     try {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        // Decode JWT token to get user info
         const payload = JSON.parse(atob(token.split('.')[1]));
         return {
           userId: payload.user_id,
@@ -708,7 +664,6 @@ async getMyBookings(entityId = null) {
     return null;
   }
 
-  // Handle errors similar to event service
   handleError(error) {
     if (error.response?.data?.message) {
       return new Error(error.response.data.message);
@@ -720,35 +675,7 @@ async getMyBookings(entityId = null) {
       return new Error('An unexpected error occurred');
     }
   }
-
-  /**
-   * Helper method to save booking to localStorage (for UI simulation)
-   * @private
-   * @param {number} sevaId - Seva ID to save
-   */
-  _saveBookingToLocalStorage(sevaId) {
-    try {
-      // Get existing bookings
-      const existingBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-      
-      // Add this booking if not already present
-      if (!existingBookings.some(b => b.seva_id === sevaId)) {
-        existingBookings.push({
-          id: Math.floor(Math.random() * 1000),
-          seva_id: sevaId,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        });
-        
-        // Save back to localStorage
-        localStorage.setItem('user_bookings', JSON.stringify(existingBookings));
-      }
-    } catch (e) {
-      console.error('Error saving booking to localStorage:', e);
-    }
-  }
 }
 
-// Export singleton instance
 export const sevaService = new SevaService()
 export default sevaService

@@ -1,4 +1,4 @@
-// src/stores/seva.js - Updated to match backend routes with fixed delete
+// src/stores/seva.js - Updated with slot management support
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -18,13 +18,11 @@ export const useSevaStore = defineStore('seva', () => {
   })
   const selectedSeva = ref(null)
   
-  // New state for recent sevas and booking counts
   const recentSevas = ref([])
   const loadingRecentSevas = ref(false)
   const bookingCounts = ref({})
   const loadingBookingCounts = ref(false)
   
-  // State for seva catalog (all available sevas)
   const sevaCatalog = ref([])
   const loadingCatalog = ref(false)
   
@@ -32,7 +30,6 @@ export const useSevaStore = defineStore('seva', () => {
   const filteredSevas = computed(() => {
     let filtered = sevas.value
     
-    // Search filter
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase()
       filtered = filtered.filter(seva =>
@@ -41,12 +38,10 @@ export const useSevaStore = defineStore('seva', () => {
       )
     }
     
-    // Status filter
     if (filters.value.status !== 'all') {
       filtered = filtered.filter(seva => seva.status === filters.value.status)
     }
     
-    // Type filter
     if (filters.value.type !== 'all') {
       filtered = filtered.filter(seva => seva.type === filters.value.type)
     }
@@ -61,28 +56,32 @@ export const useSevaStore = defineStore('seva', () => {
     pending: sevas.value.filter(s => s.status === 'pending').length,
   }))
   
-  const fetchTempleName = async () => {
-  try {
-    const response = await sevaService.getTempleInfo(); // assumes endpoint returns temple info
-    if (response.success && response.data) {
-      console.log('Temple Name:', response.data.name); // or response.data.TempleName
-      return response.data.name;
-    } else {
-      console.error('Failed to fetch temple info:', response.error);
-      return null;
-    }
-  } catch (err) {
-    console.error('Error fetching temple info:', err);
-    return null;
-  }
-}
+  // ✅ NEW: Computed slot statistics
+  const slotStats = computed(() => {
+    const stats = {
+      totalSlots: 0,
+      bookedSlots: 0,
+      remainingSlots: 0,
+      fullyBooked: 0
+    };
+    
+    sevas.value.forEach(seva => {
+      stats.totalSlots += seva.available_slots || 0;
+      stats.bookedSlots += seva.booked_slots || 0;
+      stats.remainingSlots += seva.remaining_slots || 0;
+      if ((seva.remaining_slots || 0) === 0 && (seva.available_slots || 0) > 0) {
+        stats.fullyBooked++;
+      }
+    });
+    
+    return stats;
+  })
 
-  // Actions - Connect to backend API
-  
   /**
    * Fetch sevas for temple admin view - uses /entity-sevas endpoint
+   * ✅ UPDATED: Now includes slot information
    * @param {Object} params - Query parameters
-   * @returns {Array} Seva list
+   * @returns {Array} Seva list with slot data
    */
   const fetchSevas = async (params = {}) => {
     loading.value = true
@@ -97,7 +96,15 @@ export const useSevaStore = defineStore('seva', () => {
       })
       
       if (response.success) {
-        sevas.value = response.data || []
+        // ✅ Ensure all sevas have slot fields
+        sevas.value = (response.data || []).map(seva => ({
+          ...seva,
+          available_slots: seva.available_slots || 0,
+          booked_slots: seva.booked_slots || 0,
+          remaining_slots: seva.remaining_slots || 0
+        }))
+        
+        console.log('Sevas loaded with slot data:', sevas.value.length)
         return sevas.value
       } else {
         error.value = response.error
@@ -114,8 +121,9 @@ export const useSevaStore = defineStore('seva', () => {
   
   /**
    * Fetch sevas for devotee view - uses / endpoint with devotee middleware
+   * ✅ UPDATED: Now includes slot information
    * @param {Object} params - Query parameters
-   * @returns {Array} Seva list
+   * @returns {Array} Seva list with slot data
    */
   const fetchDevoteeSevas = async (params = {}) => {
     loading.value = true
@@ -130,7 +138,13 @@ export const useSevaStore = defineStore('seva', () => {
       })
       
       if (response.success) {
-        sevas.value = response.data || []
+        // ✅ Ensure all sevas have slot fields
+        sevas.value = (response.data || []).map(seva => ({
+          ...seva,
+          available_slots: seva.available_slots || 0,
+          booked_slots: seva.booked_slots || 0,
+          remaining_slots: seva.remaining_slots || 0
+        }))
         return sevas.value
       } else {
         error.value = response.error
@@ -174,20 +188,27 @@ export const useSevaStore = defineStore('seva', () => {
   
   /**
    * Fetch seva catalog for mapping purposes
-   * @returns {Array} Complete seva catalog
+   * ✅ UPDATED: Now includes slot information
+   * @returns {Array} Complete seva catalog with slot data
    */
   const fetchSevaCatalog = async () => {
     loadingCatalog.value = true
     try {
       const response = await sevaService.getSevas({
         page: 1,
-        limit: 1000, // Get all sevas
+        limit: 1000,
         search: ''
       })
       
       if (response.success) {
-        sevaCatalog.value = response.data || []
-        console.log('Seva catalog loaded:', sevaCatalog.value)
+        // ✅ Ensure all sevas have slot fields
+        sevaCatalog.value = (response.data || []).map(seva => ({
+          ...seva,
+          available_slots: seva.available_slots || 0,
+          booked_slots: seva.booked_slots || 0,
+          remaining_slots: seva.remaining_slots || 0
+        }))
+        console.log('Seva catalog loaded:', sevaCatalog.value.length)
         return sevaCatalog.value
       } else {
         console.error('Failed to fetch seva catalog:', response.error)
@@ -259,90 +280,78 @@ export const useSevaStore = defineStore('seva', () => {
       loading.value = false
     }
   }
-  const fetchTempleInfo = async () => {
-  try {
-    const temple = await sevaService.getTempleInfo() // or similar
-    // Update store with temple info
-  } catch (error) {
-    console.error('Failed to load temple info:', error)
-  }
-}
+
   /**
    * Fetch recent sevas for devotee dashboard - uses /my-bookings endpoint
+   * @param {string} entityId - Optional entity ID to filter bookings
    * @returns {Array} Recent bookings with seva details
    */
-  // In src/stores/seva.js - Complete fetchRecentSevas function
-
-/**
- * Fetch recent sevas for devotee dashboard - uses /my-bookings endpoint
- * @param {string} entityId - Optional entity ID to filter bookings
- * @returns {Array} Recent bookings with seva details
- */
-const fetchRecentSevas = async (entityId = null) => {
-  loadingRecentSevas.value = true;
-  try {
-    // Always fetch the catalog first, regardless of whether we have bookings
-    await fetchSevaCatalog();
-    
-    // Then get the bookings with entity filter
-    const response = await sevaService.getMyBookings(entityId);
-    
-    if (response.success) {
-      let bookings = response.data || [];
+  const fetchRecentSevas = async (entityId = null) => {
+    loadingRecentSevas.value = true;
+    try {
+      await fetchSevaCatalog();
       
-      // Filter by entity ID if provided
-      if (entityId) {
-        bookings = bookings.filter(booking => {
-          const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId;
-          return bookingEntityId && parseInt(bookingEntityId) === parseInt(entityId);
-        });
-        console.log(`Filtered ${bookings.length} bookings for entity ${entityId}`);
-      }
+      const response = await sevaService.getMyBookings(entityId);
       
-      // Map seva names to bookings using the catalog
-      bookings = bookings.map(booking => {
-        const sevaId = booking.seva_id || booking.SevaID;
-        const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
+      if (response.success) {
+        let bookings = response.data || [];
         
-        return {
-          ...booking,
-          seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
-          seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
-          seva_description: seva?.description || seva?.Description || '',
-          seva: seva ? {
-            id: seva.id || seva.ID,
-            name: seva.name || seva.Name,
-            type: seva.type || seva.Type || seva.seva_type,
-            description: seva.description || seva.Description
-          } : null
-        };
-      });
-      
-      console.log(`Bookings with seva names for entity ${entityId}:`, bookings.length);
-      
-      // Sort by booking time, newest first
-      const sorted = [...bookings].sort((a, b) => {
-        const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
-        const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
-        return dateB - dateA;
-      });
-      
-      recentSevas.value = sorted;
-      return recentSevas.value;
-    } else {
+        if (entityId) {
+          bookings = bookings.filter(booking => {
+            const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId;
+            return bookingEntityId && parseInt(bookingEntityId) === parseInt(entityId);
+          });
+          console.log(`Filtered ${bookings.length} bookings for entity ${entityId}`);
+        }
+        
+        bookings = bookings.map(booking => {
+          const sevaId = booking.seva_id || booking.SevaID;
+          const seva = sevaCatalog.value.find(s => s.id === sevaId || s.ID === sevaId);
+          
+          return {
+            ...booking,
+            seva_name: seva?.name || seva?.Name || `Seva ${sevaId}`,
+            seva_type: seva?.type || seva?.Type || seva?.seva_type || '',
+            seva_description: seva?.description || seva?.Description || '',
+            seva: seva ? {
+              id: seva.id || seva.ID,
+              name: seva.name || seva.Name,
+              type: seva.type || seva.Type || seva.seva_type,
+              description: seva.description || seva.Description,
+              // ✅ Include slot information
+              available_slots: seva.available_slots || 0,
+              booked_slots: seva.booked_slots || 0,
+              remaining_slots: seva.remaining_slots || 0
+            } : null
+          };
+        });
+        
+        console.log(`Bookings with seva names for entity ${entityId}:`, bookings.length);
+        
+        const sorted = [...bookings].sort((a, b) => {
+          const dateA = new Date(a.booking_time || a.BookingTime || a.created_at || Date.now());
+          const dateB = new Date(b.booking_time || b.BookingTime || b.created_at || Date.now());
+          return dateB - dateA;
+        });
+        
+        recentSevas.value = sorted;
+        return recentSevas.value;
+      } else {
+        recentSevas.value = [];
+        return [];
+      }
+    } catch (error) {
+      console.error('Failed to fetch recent sevas:', error);
       recentSevas.value = [];
       return [];
+    } finally {
+      loadingRecentSevas.value = false;
     }
-  } catch (error) {
-    console.error('Failed to fetch recent sevas:', error);
-    recentSevas.value = [];
-    return [];
-  } finally {
-    loadingRecentSevas.value = false;
   }
-}
+
   /**
    * Create new seva - uses POST / endpoint
+   * ✅ UPDATED: Backend handles slot initialization
    * @param {Object} sevaData - Seva creation data
    * @returns {Object} Operation result
    */
@@ -355,11 +364,17 @@ const fetchRecentSevas = async (entityId = null) => {
       
       const response = await sevaService.createSeva(sevaData)
       
-      // Add the new seva to the list if successful
       if (response.success && response.data) {
-        sevas.value.push(response.data)
-        // Also add to catalog
-        sevaCatalog.value.push(response.data)
+        // ✅ Ensure slot fields are present
+        const newSeva = {
+          ...response.data,
+          available_slots: response.data.available_slots || 0,
+          booked_slots: response.data.booked_slots || 0,
+          remaining_slots: response.data.remaining_slots || 0
+        }
+        
+        sevas.value.push(newSeva)
+        sevaCatalog.value.push(newSeva)
       }
       
       return { 
@@ -381,6 +396,7 @@ const fetchRecentSevas = async (entityId = null) => {
   
   /**
    * Update existing seva - uses PUT /:id endpoint
+   * ✅ UPDATED: Backend recalculates slots
    * @param {string} sevaId - Seva ID to update
    * @param {Object} sevaData - Updated seva data
    * @returns {Object} Operation result
@@ -392,17 +408,23 @@ const fetchRecentSevas = async (entityId = null) => {
     try {
       const response = await sevaService.updateSeva(sevaId, sevaData)
       
-      // Update the seva in the list
       if (response.success && response.data) {
-        const index = sevas.value.findIndex(s => s.id === sevaId)
-        if (index !== -1) {
-          sevas.value[index] = response.data
+        // ✅ Ensure slot fields are present
+        const updatedSeva = {
+          ...response.data,
+          available_slots: response.data.available_slots || 0,
+          booked_slots: response.data.booked_slots || 0,
+          remaining_slots: response.data.remaining_slots || 0
         }
         
-        // Also update in catalog
+        const index = sevas.value.findIndex(s => s.id === sevaId)
+        if (index !== -1) {
+          sevas.value[index] = updatedSeva
+        }
+        
         const catalogIndex = sevaCatalog.value.findIndex(s => s.id === sevaId)
         if (catalogIndex !== -1) {
-          sevaCatalog.value[catalogIndex] = response.data
+          sevaCatalog.value[catalogIndex] = updatedSeva
         }
       }
       
@@ -424,7 +446,7 @@ const fetchRecentSevas = async (entityId = null) => {
   }
   
   /**
-   * Delete seva - PERMANENT DELETE (not soft delete) - uses DELETE /:id endpoint
+   * Delete seva - PERMANENT DELETE - uses DELETE /:id endpoint
    * @param {string} sevaId - Seva ID to delete permanently
    * @returns {Object} Operation result
    */
@@ -438,11 +460,8 @@ const fetchRecentSevas = async (entityId = null) => {
       const response = await sevaService.deleteSeva(sevaId)
       
       if (response.success) {
-        // Remove the seva from ALL local arrays (complete removal)
         sevas.value = sevas.value.filter(s => (s.id || s.ID) !== sevaId)
         sevaCatalog.value = sevaCatalog.value.filter(s => (s.id || s.ID) !== sevaId)
-        
-        // Also remove any related bookings from local state
         sevaBookings.value = sevaBookings.value.filter(b => (b.seva_id || b.SevaID) !== sevaId)
         recentSevas.value = recentSevas.value.filter(b => (b.seva_id || b.SevaID) !== sevaId)
         
@@ -466,52 +485,8 @@ const fetchRecentSevas = async (entityId = null) => {
   }
   
   /**
-   * Alternative method to deactivate seva (soft delete) if needed
-   * @param {string} sevaId - Seva ID to deactivate
-   * @returns {Object} Operation result
-   */
-  const deactivateSeva = async (sevaId) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      console.log('Deactivating seva with ID:', sevaId)
-      
-      const response = await sevaService.deactivateSeva(sevaId)
-      
-      if (response.success) {
-        // Update the seva status in local state
-        const sevaIndex = sevas.value.findIndex(s => (s.id || s.ID) === sevaId)
-        if (sevaIndex !== -1) {
-          sevas.value[sevaIndex].is_active = false
-          sevas.value[sevaIndex].status = 'inactive'
-        }
-        
-        const catalogIndex = sevaCatalog.value.findIndex(s => (s.id || s.ID) === sevaId)
-        if (catalogIndex !== -1) {
-          sevaCatalog.value[catalogIndex].is_active = false
-          sevaCatalog.value[catalogIndex].status = 'inactive'
-        }
-      }
-      
-      return {
-        success: response.success,
-        message: response.message || 'Seva deactivated successfully'
-      }
-    } catch (err) {
-      console.error('Error deactivating seva:', err)
-      error.value = err.response?.data?.error || 'Failed to deactivate seva'
-      return {
-        success: false,
-        message: error.value
-      }
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  /**
    * Book a seva for devotees - uses POST /bookings endpoint
+   * ✅ NOTE: Slots are NOT reduced until admin approves
    * @param {number} sevaId - Seva ID to book
    * @returns {Object} Operation result
    */
@@ -522,9 +497,10 @@ const fetchRecentSevas = async (entityId = null) => {
     try {
       const response = await sevaService.bookSeva(sevaId)
       
+      // ✅ Note: We don't update slots here - they update when admin approves
       return {
         success: response.success,
-        message: response.message || 'Seva booked successfully',
+        message: response.message || 'Seva booking request submitted',
         data: response.data
       }
     } catch (err) {
@@ -541,6 +517,7 @@ const fetchRecentSevas = async (entityId = null) => {
   
   /**
    * Update booking status - uses PATCH /bookings/:id/status endpoint
+   * ✅ IMPORTANT: This triggers slot updates on the backend
    * @param {string} bookingId - Booking ID
    * @param {string} status - New status
    * @returns {Object} Operation result
@@ -553,12 +530,15 @@ const fetchRecentSevas = async (entityId = null) => {
       const response = await sevaService.updateBookingStatus(bookingId, status)
       
       if (response.success) {
-        // Update the booking status in the list if we have it
+        // Update the booking status in local state
         const bookingIndex = sevaBookings.value.findIndex(b => (b.id || b.ID) === bookingId)
         if (bookingIndex !== -1) {
           sevaBookings.value[bookingIndex].status = status
-          sevaBookings.value[bookingIndex].Status = status // Handle both cases
+          sevaBookings.value[bookingIndex].Status = status
         }
+        
+        // ✅ IMPORTANT: Refresh sevas to get updated slot counts from backend
+        await fetchSevas()
       }
       
       return { 
@@ -590,7 +570,14 @@ const fetchRecentSevas = async (entityId = null) => {
       const response = await sevaService.getSevaById(sevaId)
       
       if (response.success) {
-        return response.data
+        // ✅ Ensure slot fields are present
+        const seva = response.data
+        if (seva) {
+          seva.available_slots = seva.available_slots || 0
+          seva.booked_slots = seva.booked_slots || 0
+          seva.remaining_slots = seva.remaining_slots || 0
+        }
+        return seva
       } else {
         error.value = response.error
         return null
@@ -645,6 +632,7 @@ const fetchRecentSevas = async (entityId = null) => {
     // Getters
     filteredSevas,
     sevaStats,
+    slotStats, // ✅ NEW: Slot statistics
     
     // Actions
     fetchSevas,
@@ -657,7 +645,6 @@ const fetchRecentSevas = async (entityId = null) => {
     createSeva,
     updateSeva,
     deleteSeva,
-    deactivateSeva,
     bookSeva,
     updateBookingStatus,
     getSevaById,
