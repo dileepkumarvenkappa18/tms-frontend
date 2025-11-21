@@ -23,58 +23,65 @@
 
     <!-- Toast Notifications Container -->
     <Teleport to="body">
-      <div class="fixed top-4 right-4 md:right-8 lg:right-12 z-50 space-y-2">
-        <TransitionGroup
-          name="toast"
-          enter-active-class="transition-all duration-300 ease-out"
-          leave-active-class="transition-all duration-200 ease-in"
-          enter-from-class="opacity-0 transform translate-x-full"
-          enter-to-class="opacity-100 transform translate-x-0"
-          leave-from-class="opacity-100 transform translate-x-0"
-          leave-to-class="opacity-0 transform translate-x-full"
-        >
-          <div
-            v-for="toast in toasts"
-            :key="toast.id"
-            :class="[
-              'max-w-sm w-full bg-white shadow-lg rounded-2xl pointer-events-auto overflow-hidden border-l-4',
-              getToastBorderColor(toast.type)
-            ]"
-          >
-            <div class="p-4">
-              <div class="flex items-start">
-                <div class="flex-shrink-0">
-                  <component
-                    :is="getToastIcon(toast.type)"
-                    :class="[
-                      'h-6 w-6',
-                      getToastIconColor(toast.type)
-                    ]"
-                  />
-                </div>
-                <div class="ml-3 w-0 flex-1">
-                  <p class="text-sm font-medium text-gray-900">
-                    {{ toast.title }}
-                  </p>
-                  <p v-if="toast.message" class="mt-1 text-sm text-gray-500">
-                    {{ toast.message }}
-                  </p>
-                </div>
-                <div class="ml-4 flex-shrink-0 flex">
-                  <button
-                    @click="removeToast(toast.id)"
-                    class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
-                  >
-                    <span class="sr-only">Close</span>
-                    <XMarkIcon class="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
+  <div class="fixed top-4 right-4 md:right-8 lg:right-12 z-50 space-y-2">
+    <TransitionGroup
+      name="toast"
+      enter-active-class="transition-all duration-300 ease-out"
+      leave-active-class="transition-all duration-200 ease-in"
+      enter-from-class="opacity-0 transform translate-x-full"
+      enter-to-class="opacity-100 transform translate-x-0"
+      leave-from-class="opacity-100 transform translate-x-0"
+      leave-to-class="opacity-0 transform translate-x-full"
+    >
+      <div
+        v-for="toast in toasts"
+        :key="toast.id"
+        :class="[
+          'w-80 max-w-xs bg-white shadow-lg rounded-xl pointer-events-auto overflow-hidden border-l-4',
+          getToastBorderColor(toast.type)
+        ]"
+      >
+        <div class="p-4">
+          <div class="flex items-start">
+
+            <!-- Toast Icon -->
+            <div class="flex-shrink-0">
+              <component
+                :is="getToastIcon(toast.type)"
+                class="h-6 w-6"
+                :class="getToastIconColor(toast.type)"
+              />
+            </div>
+
+            <!-- Toast Text -->
+            <div class="ml-3 flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-900">
+                {{ toast.title }}
+              </p>
+
+              <p
+                v-if="toast.message"
+                class="mt-1 text-sm text-gray-600 leading-5"
+              >
+                {{ toast.message }}
+              </p>
+            </div>
+
+            <!-- Close Button -->
+            <div class="ml-3 flex-shrink-0">
+              <button
+                @click="removeToast(toast.id)"
+                class="rounded-md text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-150"
+              >
+                <XMarkIcon class="h-5 w-5" />
+              </button>
             </div>
           </div>
-        </TransitionGroup>
+        </div>
       </div>
-    </Teleport>
+    </TransitionGroup>
+  </div>
+</Teleport>
 
     <!-- Main Router View - Only shown after initialization -->
     <template v-if="!isInitializing">

@@ -898,11 +898,11 @@ export default {
         
         // Try multiple approaches to get all tenants
         const endpoints = [
-          '/api/v1/superadmin/tenants',
-          '/api/v1/superadmin/tenants?status=pending',
-          '/api/v1/superadmin/tenants?status=approved', 
-          '/api/v1/superadmin/tenants?status=active',
-          '/api/v1/superadmin/tenants?status=rejected'
+          '/superadmin/tenants',
+          '/superadmin/tenants?status=pending',
+          '/superadmin/tenants?status=approved', 
+          '/superadmin/tenants?status=active',
+          '/superadmin/tenants?status=rejected'
         ];
         
         for (const endpoint of endpoints) {

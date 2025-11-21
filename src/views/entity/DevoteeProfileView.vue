@@ -182,8 +182,8 @@
         <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
-        <h3 class="mt-4 text-lg font-medium text-gray-900">Unable to Load Profile</h3>
-        <p class="mt-2 text-sm text-gray-500">The devotee profile could not be found.</p>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">Devotee has not created their complete profile</h3>
+        <p class="mt-2 text-sm text-gray-500">The devotee profile is not created.</p>
         <button @click="goBack" class="mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Go Back</button>
       </div>
     </div>

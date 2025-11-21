@@ -559,12 +559,37 @@ const normalizeTempleDocuments = (temple) => {
   console.log('normalizeTempleDocuments - input temple:', temple)
   const docs = []
 
-  // Backend may already send an array
+  // --- Helper to clean URLs ---
+  const cleanUrl = (url) => {
+    if (!url) return ''
+
+    let cleaned = url.trim()
+
+    // Remove "/files/" folder
+    cleaned = cleaned.replace(/\/files\//g, '/')
+
+    // Remove wrong "/uploads/<id>/" (e.g. /uploads/4/file.pdf)
+    if (/uploads\/\d+\//.test(cleaned)) {
+      console.log("normalizeTempleDocuments - removing WRONG folder:", cleaned)
+      cleaned = cleaned.replace(/uploads\/\d+\//, 'uploads/')
+    }
+
+    // Remove leading slashes
+    cleaned = cleaned.replace(/^\/+/, '')
+
+    return cleaned
+  }
+
+  // -------------------------------------------------------------------
+  // 1. Main documents array from backend
+  // -------------------------------------------------------------------
   if (Array.isArray(temple.documents) && temple.documents.length > 0) {
     console.log('normalizeTempleDocuments - found documents array:', temple.documents)
     temple.documents.forEach((d, idx) => {
-      const url = d.download_url || d.downloadUrl || d.url || d.file_url || d.fileUrl || d.path || ''
-      console.log(`normalizeTempleDocuments - document ${idx} URL:`, url)
+      let url = d.download_url || d.downloadUrl || d.url || d.file_url || d.fileUrl || d.path || ''
+      url = cleanUrl(url)
+      console.log(`normalizeTempleDocuments - cleaned document ${idx} URL:`, url)
+
       docs.push({
         id: d.id || `${temple.id || temple.ID || 'doc'}-${idx}`,
         name: d.name || d.filename || `Document ${idx + 1}`,
@@ -575,7 +600,9 @@ const normalizeTempleDocuments = (temple) => {
     })
   }
 
-  // Look for single doc fields
+  // -------------------------------------------------------------------
+  // 2. Single-field docs (trust deed, registration cert, etc.)
+  // -------------------------------------------------------------------
   const singleFields = [
     { key: 'registration_cert', label: 'Registration Certificate' },
     { key: 'trust_deed', label: 'Trust Deed' },
@@ -585,10 +612,15 @@ const normalizeTempleDocuments = (temple) => {
   singleFields.forEach(({ key, label }) => {
     const candidates = [
       temple[`${key}_url`], temple[`${key}Url`], temple[key], temple[`${key}_path`], temple[`${key}_link`]
-    ].map(safeString).filter(Boolean)
-    const url = candidates.find(v => v.startsWith('http') || v.startsWith('/')) || ''
+    ]
+      .map(safeString)
+      .filter(Boolean)
+
+    let url = candidates.find(v => v.startsWith('http') || v.startsWith('/')) || ''
+    url = cleanUrl(url)
+
     if (url) {
-      console.log(`normalizeTempleDocuments - found single field ${key}:`, url)
+      console.log(`normalizeTempleDocuments - cleaned single field ${key}:`, url)
       docs.push({
         id: key,
         name: label,
@@ -599,7 +631,9 @@ const normalizeTempleDocuments = (temple) => {
     }
   })
 
-  // Additional docs array variants
+  // -------------------------------------------------------------------
+  // 3. Additional document arrays
+  // -------------------------------------------------------------------
   const additionalArrays = [
     temple.additional_docs,
     temple.additionalDocs,
@@ -610,8 +644,10 @@ const normalizeTempleDocuments = (temple) => {
   if (additionalArrays && additionalArrays.length > 0) {
     console.log('normalizeTempleDocuments - found additional docs:', additionalArrays)
     additionalArrays.forEach((d, idx) => {
-      const url = d.download_url || d.downloadUrl || d.url || d.file_url || d.fileUrl || d.path || ''
-      console.log(`normalizeTempleDocuments - additional doc ${idx} URL:`, url)
+      let url = d.download_url || d.downloadUrl || d.url || d.file_url || d.fileUrl || d.path || ''
+      url = cleanUrl(url)
+      console.log(`normalizeTempleDocuments - cleaned additional doc ${idx}:`, url)
+
       docs.push({
         id: d.id || `additional-${idx}`,
         name: d.name || d.filename || `Additional Document ${idx + 1}`,
@@ -622,7 +658,9 @@ const normalizeTempleDocuments = (temple) => {
     })
   }
 
-  // Ensure uniqueness
+  // -------------------------------------------------------------------
+  // 4. Final unique list
+  // -------------------------------------------------------------------
   const seen = new Set()
   const finalDocs = docs.filter(d => {
     const k = `${d.id}-${d.name}`
@@ -630,70 +668,78 @@ const normalizeTempleDocuments = (temple) => {
     seen.add(k)
     return true
   })
-  
+
   console.log('normalizeTempleDocuments - final docs:', finalDocs)
   return finalDocs
 }
 
-// Fixed buildDocUrl function - always return full URLs with port 8080
+// Clean and stable buildDocUrl - FINAL VERSION
 const buildDocUrl = (doc, appId, action = 'view') => {
-  console.log('buildDocUrl - doc:', doc)
-  console.log('buildDocUrl - appId:', appId)
-  
-  let direct = doc.download_url || doc.downloadUrl || doc.url || doc.file_url || doc.fileUrl || doc.path
-  console.log('buildDocUrl - direct (original):', direct)
-  
-  if (direct) {
-    // Remove "/files/" from any URL path before processing
-    if (direct.includes('/files/')) {
-      direct = direct.replace(/\/files\//g, '/')
-      console.log('buildDocUrl - removed /files/ from path:', direct)
+  console.log("buildDocUrl - doc:", doc);
+  console.log("buildDocUrl - appId:", appId);
+
+  let direct =
+    doc.download_url ||
+    doc.downloadUrl ||
+    doc.url ||
+    doc.file_url ||
+    doc.fileUrl ||
+    doc.path ||
+    "";
+
+  console.log("buildDocUrl - direct (raw):", direct);
+
+  if (!direct) {
+    // Fallback API
+    if (doc.id && appId) {
+      const apiUrl = `http://localhost:8080/api/v1/entities/${encodeURIComponent(
+        appId
+      )}/documents/${encodeURIComponent(doc.id)}/${action}`;
+      console.log("buildDocUrl - API fallback:", apiUrl);
+      return apiUrl;
     }
-    
-    // Handle full HTTP URLs
-    if (direct.startsWith('http')) {
-      // Check for missing uploads prefix (after files removal)
-      if (direct.includes('://localhost:8080/') && !direct.includes('/uploads/')) {
-        const urlParts = direct.split('://localhost:8080/')
-        if (urlParts.length === 2) {
-          const pathPart = urlParts[1]
-          if (!pathPart.startsWith('uploads/') && !pathPart.startsWith('api/') && !pathPart.startsWith('public/')) {
-            direct = `${urlParts[0]}://localhost:8080/uploads/${pathPart}`
-            console.log('buildDocUrl - added uploads prefix:', direct)
-          }
-        }
-      }
-      console.log('buildDocUrl - returning full HTTP URL:', direct)
-      return direct
-    }
-    
-    // Convert relative URLs to full URLs pointing to port 8080
-    let path
-    if (direct.startsWith('/uploads/')) {
-      path = direct
-    } else if (direct.startsWith('uploads/')) {
-      path = `/${direct}`
-    } else if (direct.startsWith('/')) {
-      path = `/uploads${direct}`
-    } else {
-      path = `/uploads/${direct}`
-    }
-    
-    const fullUrl = `http://localhost:8080${path}`
-    console.log('buildDocUrl - converted to full URL:', fullUrl)
-    return fullUrl
+    return "";
   }
 
-  // Fallback to API endpoint with full URL
-  if (doc.id && appId) {
-    const fullUrl = `http://localhost:8080/api/v1/entities/${encodeURIComponent(appId)}/documents/${encodeURIComponent(doc.id)}/${action}`
-    console.log('buildDocUrl - using full API endpoint:', fullUrl)
-    return fullUrl
+  // ----------------------------
+  // 1. Remove unwanted "/files/"
+  // ----------------------------
+  direct = direct.replace(/\/files\//g, "/");
+
+  // --------------------------------------------------------
+  // 2. Remove WRONG nested folder "/uploads/<id>/" if exists
+  // --------------------------------------------------------
+  if (/uploads\/\d+\//.test(direct)) {
+    console.log("buildDocUrl - removing WRONG temple folder:", direct);
+    direct = direct.replace(/uploads\/\d+\//, "uploads/");
   }
-  
-  console.log('buildDocUrl - no URL found, returning empty')
-  return ''
-}
+
+  // --------------------------------------------------------
+  // 3. ABSOLUTE URL handling: leave it as-is (after cleaning)
+  // --------------------------------------------------------
+  if (direct.startsWith("http://") || direct.startsWith("https://")) {
+    console.log("buildDocUrl - absolute URL returned:", direct);
+    return direct;
+  }
+
+  // --------------------------------------------------------
+  // 4. Normalize to ensure the final path is: /uploads/<file>
+  // --------------------------------------------------------
+  let cleanPath = direct.replace(/^\/+/, ""); // remove leading slashes
+
+  // If path starts with uploads/... keep it
+  if (!cleanPath.startsWith("uploads/")) {
+    cleanPath = `uploads/${cleanPath}`;
+  }
+
+  // Fix double uploads
+  cleanPath = cleanPath.replace(/uploads\/uploads\//g, "uploads/");
+
+  const finalUrl = `http://localhost:8080/${cleanPath}`;
+  console.log("buildDocUrl - FINAL URL:", finalUrl);
+
+  return finalUrl;
+};
 
 // Fixed openInNewTab function (was missing)
 const openInNewTab = (url) => {
@@ -1158,16 +1204,24 @@ const approveApplication = async (application) => {
 }
 
 const rejectApplication = (application) => {
+  // keep selected application active
   selectedApplication.value = application
+
+  // open reject modal
   showRejectModal.value = true
-  if (showDetailsModal.value) closeDetailsModal()
+
+  // close the details modal WITHOUT clearing selectedApplication
+  if (showDetailsModal.value) {
+    showDetailsModal.value = false   // FIXED: do NOT call closeDetailsModal()
+  }
 }
 
 const closeRejectModal = () => {
   showRejectModal.value = false
-  selectedApplication.value = null
+  selectedApplication.value = null     // clear only when rejecting is fully cancelled
   rejectionNotes.value = ''
 }
+
 
 // Fixed confirmReject function
 const confirmReject = async () => {

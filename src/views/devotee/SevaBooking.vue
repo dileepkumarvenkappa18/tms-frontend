@@ -233,7 +233,7 @@
                 ]"
               >
                 {{ bookingInProgress[seva.id] ? 'Booking...' :
-                   bookedSevas[seva.id] ? 'Seva Booked (Pending)' : 
+                   bookedSevas[seva.id] ? 'Seva Booked ' : 
                    getRemainingSlots(seva) > 0 ? 'Book Now' : 'Fully Booked' }}
               </button>
             </div>

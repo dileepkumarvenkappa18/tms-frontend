@@ -124,7 +124,13 @@
             Notifications
           </div>
           <div class="flex items-center space-x-2">
-            <span class="text-xs text-gray-500">3 new</span>
+            <span 
+  v-if="notificationsCount > 0" 
+  class="text-xs text-gray-500"
+>
+  {{ notificationsCount }} new
+</span>
+
             <div class="relative">
               <input
                 type="checkbox"
@@ -185,6 +191,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 
 // Props (keeping for backward compatibility, but auth store takes precedence)
 const props = defineProps({
@@ -204,6 +211,11 @@ const emit = defineEmits(['logout'])
 // Composables
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
+
+
+const notificationsCount = computed(() => notificationStore.unreadCount)
+
 
 // Use auth store data with props as fallback
 const currentUser = computed(() => authStore.user || props.user)

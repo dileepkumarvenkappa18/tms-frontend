@@ -89,6 +89,50 @@
                 </div>
               </div>
 
+              <!-- 🔴 Rejection Reason Block Updated -->
+              <div v-if="temple.status === 'rejected'" class="mb-6">
+                <h3 class="text-sm font-medium text-red-600 mb-2">Rejection Reason</h3>
+
+                <p class="text-sm text-red-800 bg-red-50 border border-red-200 p-3 rounded-lg">
+                  {{
+                    temple.rejection_reason ||
+                    temple.reject_reason ||
+                    temple.rejected_reason ||
+                    temple.reason ||
+                    temple.notes ||
+                    'No reason provided.'
+                  }}
+                </p>
+
+                <!-- Rejected At -->
+                <div class="mt-3">
+                  <span class="text-sm text-gray-500">Rejected At:</span>
+                  <span class="ml-2 text-sm text-gray-900">
+                    {{
+                      temple.rejectedAt ||
+                      temple.rejected_at ||
+                      temple.RejectedAt ||
+                      'Not available'
+                    }}
+                  </span>
+                </div>
+              </div>
+              <!-- 🔴 End Block -->
+
+              <!-- 🟢 Approved Details -->
+              <div v-if="temple.status === 'approved'" class="mb-6">
+                <h3 class="text-sm font-medium text-green-600 mb-2">Approval Details</h3>
+                <div class="text-sm text-gray-900 bg-green-50 border border-green-200 p-3 rounded-lg">
+                  <span class="font-medium">Approved At:</span>
+                  {{
+                    temple.approvedAt ||
+                    temple.approved_at ||
+                    temple.ApprovedAt ||
+                    'Not available'
+                  }}
+                </div>
+              </div>
+
               <!-- Description -->
               <div class="mb-6">
                 <h3 class="text-sm font-medium text-gray-500 mb-2">Description</h3>
@@ -143,7 +187,6 @@ import BaseAlert from '@/components/common/BaseAlert.vue'
 import TempleApprovalStatus from '@/components/temple/TempleApprovalStatus.vue'
 
 const route = useRoute()
-// eslint-disable-next-line no-unused-vars
 const router = useRouter()
 const templeStore = useTempleStore()
 

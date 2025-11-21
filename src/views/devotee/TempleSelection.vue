@@ -43,16 +43,19 @@
             <div>
               <label class="block text-sm font-semibold text-indigo-900 mb-2 font-side">State</label>
               <select
-                v-model="selectedState"
-                class="px-4 py-3 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-indigo-800 min-w-[140px] appearance-none"
-              >
-                <option value="">All States</option>
-                <option value="Karnataka">Karnataka</option>
-                <option value="Tamil Nadu">Tamil Nadu</option>
-                <option value="Kerala">Kerala</option>
-                <option value="Andhra Pradesh">Andhra Pradesh</option>
-                <option value="Maharashtra">Maharashtra</option>
-              </select>
+  v-model="selectedState"
+  class="px-4 py-3 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-indigo-800 min-w-[140px] appearance-none"
+>
+  <option value="">All States</option>
+  <option
+    v-for="state in allStates"
+    :key="state"
+    :value="state"
+  >
+    {{ state }}
+  </option>
+</select>
+
             </div>
 
             <div>
@@ -65,6 +68,7 @@
                 <option value="traditional">Traditional</option>
                 <option value="modern">Modern</option>
                 <option value="heritage">Heritage</option>
+                <option value="community">Community</option>
               </select>
             </div>
           </div>
@@ -404,6 +408,44 @@ const goToDashboard = (temple) => {
     showToast('Navigation error. Please try again.', 'error')
   }
 }
+const allStates = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
+];
 
 // Computed
 const filteredTemples = computed(() => {

@@ -479,102 +479,145 @@ async batchFetchTenantDetails(tenantIds) {
   // TENANT MANAGEMENT - EXISTING
   // ==========================================
 
-  async getPendingTenants() {
-    try {
-      console.log('Service: Fetching pending tenants...')
-      
-      // Updated to use query parameter instead of /pending path
-      const response = await api.get(`${this.baseURL}/tenants?status=pending`)
-      
-      console.log('Service: Raw API response:', response)
-      
-      // The backend returns pending_tenants wrapped in the response
+
+/**
+ * Get pending tenants - FIXED VERSION
+ */
+async getPendingTenants() {
+  try {
+    console.log('Service: Fetching pending tenants...');
+    
+    const response = await api.get(`${this.baseURL}/tenants?status=pending`);
+    console.log('Service: Raw API response:', response);
+    
+    // Handle multiple possible response structures
+    let tenantData = [];
+    
+    // Check different possible response formats
+    if (Array.isArray(response)) {
+      // Direct array response
+      tenantData = response;
+    } else if (response && Array.isArray(response.data)) {
+      // Wrapped in data property
+      tenantData = response.data;
+    } else if (response && Array.isArray(response.pending_tenants)) {
+      // Wrapped in pending_tenants property
+      tenantData = response.pending_tenants;
+    } else if (response && response.data && Array.isArray(response.data.data)) {
+      // Double nested in data.data
+      tenantData = response.data.data;
+    } else if (response && response.data && Array.isArray(response.data.pending_tenants)) {
+      // Nested in data.pending_tenants
+      tenantData = response.data.pending_tenants;
+    }
+    
+    console.log(`Service: Processed ${tenantData.length} pending tenants`);
+    
+    return {
+      success: true,
+      data: tenantData,
+      total: tenantData.length,
+      message: 'Pending tenants fetched successfully'
+    };
+  } catch (error) {
+    console.error('Service: Error fetching pending tenants:', error);
+    
+    if (error.response?.status === 404) {
+      console.warn('Endpoint not found, using mock data for demonstration');
       return {
         success: true,
-        data: response.pending_tenants || response.data || response || [], 
-        message: 'Tenants fetched successfully'
-      }
-    } catch (error) {
-      console.error('Service: Error fetching pending tenants:', error)
-      
-      // If this is a 404, we might need to fall back to mock data
-      if (error.response?.status === 404) {
-        console.warn('Endpoint not found, using mock data for demonstration')
-        return {
-          success: true,
-          data: this.getMockPendingTenants(),
-          message: 'Mock tenant data loaded (API endpoint not available)'
-        }
-      }
-      
-      return {
-        success: false,
-        data: null,
-        message: error.message || 'Failed to fetch pending tenants'
-      }
+        data: this.getMockPendingTenants(),
+        message: 'Mock tenant data loaded (API endpoint not available)'
+      };
     }
+    
+    return {
+      success: false,
+      data: [],
+      message: error.response?.data?.message || error.message || 'Failed to fetch pending tenants'
+    };
   }
+}
 
-  async getAllTenants(filters = {}) {
-    try {
-      const params = new URLSearchParams()
-      if (filters.status) params.append('status', filters.status)
-      if (filters.search) params.append('search', filters.search)
-      if (filters.page) params.append('page', filters.page)
-      if (filters.limit) params.append('limit', filters.limit)
-      if (filters.sortBy) params.append('sortBy', filters.sortBy)
-      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
+/**
+ * Get all tenants - FIXED VERSION
+ */
+async getAllTenants(filters = {}) {
+  try {
+    console.log('Service: Fetching all tenants...');
+    
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-      const response = await api.get(`${this.baseURL}/tenants?${params}`)
-      
-      if (Array.isArray(response.data)) {
-        return {
-          success: true,
-          data: response.data,
-          pagination: { total: response.data.length },
-          message: 'Tenants fetched successfully'
-        }
-      } else if (response.data && Array.isArray(response.data.tenants)) {
-        return {
-          success: true,
-          data: response.data.tenants,
-          pagination: response.data.pagination || {},
-          message: 'Tenants fetched successfully'
-        }
-      } else if (response.data && Array.isArray(response.data.data)) {
-        return {
-          success: true,
-          data: response.data.data,
-          pagination: response.data.pagination || {},
-          message: 'Tenants fetched successfully'
-        }
-      } else {
-        return {
-          success: false,
-          data: [],
-          message: 'Unexpected API response format'
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching all tenants:', error)
-      
-      // Use mock data as fallback
-      if (error.response?.status === 404) {
-        console.warn('Endpoint not found, using mock data for demonstration')
-        return {
-          success: true,
-          data: this.getMockAllTenants(),
-          message: 'Mock tenant data loaded (API endpoint not available)'
-        }
-      }
-      
-      return {
-        success: false,
-        data: [],
-        message: error.message || 'Failed to fetch tenants'
-      }
+    const queryString = params.toString();
+    const endpoint = queryString ? `${this.baseURL}/tenants?${queryString}` : `${this.baseURL}/tenants`;
+    
+    console.log(`Service: Calling endpoint: ${endpoint}`);
+    const response = await api.get(endpoint);
+    console.log('Service: Raw API response:', response);
+    
+    // Handle multiple possible response structures
+    let tenantData = [];
+    let pagination = {};
+    
+    if (Array.isArray(response)) {
+      // Direct array response
+      tenantData = response;
+      pagination = { total: response.length };
+    } else if (response && Array.isArray(response.data)) {
+      // Wrapped in data property
+      tenantData = response.data;
+      pagination = {
+        total: response.total || response.data.length,
+        page: response.page || filters.page || 1,
+        limit: response.limit || filters.limit || 10
+      };
+    } else if (response && response.data && Array.isArray(response.data.data)) {
+      // Double nested in data.data
+      tenantData = response.data.data;
+      pagination = response.data.pagination || {
+        total: response.data.total || response.data.data.length
+      };
+    } else if (response && response.data && Array.isArray(response.data.tenants)) {
+      // Nested in data.tenants
+      tenantData = response.data.tenants;
+      pagination = response.data.pagination || {
+        total: response.data.total || response.data.tenants.length
+      };
     }
+    
+    console.log(`Service: Processed ${tenantData.length} total tenants`);
+    
+    return {
+      success: true,
+      data: tenantData,
+      pagination: pagination,
+      message: 'Tenants fetched successfully'
+    };
+  } catch (error) {
+    console.error('Service: Error fetching all tenants:', error);
+    
+    if (error.response?.status === 404) {
+      console.warn('Endpoint not found, using mock data for demonstration');
+      return {
+        success: true,
+        data: this.getMockAllTenants(),
+        message: 'Mock tenant data loaded (API endpoint not available)'
+      };
+    }
+    
+    return {
+      success: false,
+      data: [],
+      message: error.response?.data?.message || error.message || 'Failed to fetch tenants'
+    };
   }
+}
 
   /**
    * Get temple admins list for reports section

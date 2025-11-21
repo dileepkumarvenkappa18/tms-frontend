@@ -32,6 +32,33 @@
       </div>
     </div>
 
+    <!-- Filter Tabs -->
+    <div class="px-6 pt-6">
+      <div class="flex space-x-2 border-b border-gray-200">
+        <button
+          v-for="filter in userFilters.filter(f => f.value !== 'all')"
+          :key="filter.value"
+          @click="activeFilter = filter.value"
+          class="px-4 py-2 text-sm font-medium transition-colors relative"
+          :class="activeFilter === filter.value 
+            ? 'text-indigo-600 border-b-2 border-indigo-600' 
+            : 'text-gray-600 hover:text-gray-900'"
+        >
+          {{ filter.label }}
+          
+          <span 
+  class="ml-2 px-2 py-0.5 text-xs rounded-full"
+  :class="activeFilter === filter.value 
+    ? 'bg-indigo-100 text-indigo-600' 
+    : 'bg-gray-100 text-gray-600'"
+>
+  {{ getUserCountByFilter(filter.value) }}
+</span>
+
+        </button>
+      </div>
+    </div>
+
     <div class="p-6">
       <!-- Users List Table -->
       <div class="overflow-x-auto">
@@ -53,10 +80,10 @@
               </td>
             </tr>
 
-            <!-- Use filteredUsers -->
+            <!-- Use filteredUsers but exclude "all" filter -->
             <tr v-else-if="filteredUsers.length === 0">
               <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-                No users found. Create your first user by clicking the 'Create User' button or upload users in bulk via CSV.
+                No users found in this category. Create your first user by clicking the 'Create User' button or upload users in bulk via CSV.
               </td>
             </tr>
 
@@ -180,7 +207,14 @@
                       <li><strong>Password</strong> - User password</li>
                       <li><strong>Role</strong> - User role ({{ availableRoles.join(', ') }})</li>
                       <li><strong>Status</strong> - active or inactive</li>
+                      <li class="text-amber-700 font-medium mt-2"><strong>For Temple Admin role, add these additional columns:</strong></li>
+                      <li class="ml-4"><strong>Temple Name</strong> - Name of the temple</li>
+                      <li class="ml-4"><strong>Temple Place</strong> - City, State location</li>
+                      <li class="ml-4"><strong>Temple Address</strong> - Complete address</li>
+                      <li class="ml-4"><strong>Temple Phone</strong> - Temple contact number</li>
+                      <li class="ml-4"><strong>Temple Description</strong> - Brief temple description</li>
                     </ul>
+                    <p class="mt-2 text-xs text-blue-600">Note: Temple fields are required only for users with templeadmin role.</p>
                   </div>
                 </div>
               </div>
@@ -265,6 +299,7 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temple Info</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -284,6 +319,17 @@
                             :class="isValidStatus(row.status) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
                         {{ row.status }}
                       </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm">
+                      <div v-if="row.role && row.role.toLowerCase() === 'templeadmin'">
+                        <span v-if="row.temple_name" class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                          ✓ Temple Details
+                        </span>
+                        <span v-else class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                          ✗ Missing
+                        </span>
+                      </div>
+                      <span v-else class="text-xs text-gray-400">N/A</span>
                     </td>
                   </tr>
                 </tbody>
@@ -631,6 +677,9 @@ const showCreateModal = ref(false)
 const isEditing = ref(false)
 const editingUserId = ref(null)
 
+// Filter state - default to 'internal' instead of 'all'
+const activeFilter = ref('internal')
+
 // Bulk upload state variables
 const showBulkUploadModal = ref(false)
 const csvData = ref([])
@@ -645,6 +694,20 @@ const users = computed(() => superAdminStore.users || [])
 
 // Available roles for validation
 const availableRoles = computed(() => roles.value.map(role => role.role_name))
+
+// Filter configuration - removed 'all' filter
+const userFilters = [
+  { value: 'internal', label: 'Internal Admins' },
+  { value: 'volunteers', label: 'Volunteers' },
+  { value: 'devotees', label: 'Devotees' }
+]
+
+// Role categorization - using role IDs and names
+const roleCategories = {
+  internal: ['superadmin', 'templeadmin', 'standarduser', 'monitoringuser'],
+  volunteers: ['volunteer', '4'], // role_id 4 for volunteers
+  devotees: ['devotee', 'user', '3'] // role_id 3 for devotees
+}
 
 // Helpers: role normalization and approval resolution
 const normalizeRoleName = (role) => {
@@ -697,17 +760,44 @@ const resolveTempleApproval = (u) => {
   return { known: false, approved: false }
 }
 
-// Filtered users per requirements:
-// - Hide temple admins when approval is pending/not approved/rejected
-// - Show temple admins when approved or approval status unknown
-// - Non-templeadmin rows always visible
-const filteredUsers = computed(() => {
+// Get user category based on role (handles both role names and role IDs)
+const getUserCategory = (user) => {
+  const roleName = normalizeRoleName(user?.role)
+  const roleId = String(user?.role_id || user?.role?.id || '')
+  
+  // Check by role name or role ID
+  if (roleCategories.internal.includes(roleName)) {
+    return 'internal'
+  } else if (roleCategories.volunteers.includes(roleName) || roleCategories.volunteers.includes(roleId)) {
+    return 'volunteers'
+  } else if (roleCategories.devotees.includes(roleName) || roleCategories.devotees.includes(roleId)) {
+    return 'devotees'
+  }
+  
+  return 'other'
+}
+
+// Get user count by filter
+const getUserCountByFilter = (filterValue) => {
+  const list = baseFilteredUsers.value ?? []
+  const count = list.filter(user => getUserCategory(user) === filterValue).length
+  return count || 0
+}
+
+
+// Base filtered users (handles temple admin approval)
+const baseFilteredUsers = computed(() => {
   return (users.value || []).filter((u) => {
     if (!isTempleAdminRole(u)) return true
     const st = resolveTempleApproval(u)
     if (st.known) return st.approved
     return true
   })
+})
+
+// Final filtered users (base + category filter) - always filtered by category
+const filteredUsers = computed(() => {
+  return baseFilteredUsers.value.filter(user => getUserCategory(user) === activeFilter.value)
 })
 
 // Form state
@@ -773,10 +863,10 @@ const isValidStatus = (status) => ['active', 'inactive'].includes(status?.toLowe
 // Download sample CSV template
 const downloadSampleCSV = () => {
   const csvContent = [
-    ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status'],
-    ['John Doe', 'john.doe@example.com', '+1234567890', 'password123', 'user', 'active'],
-    ['Jane Smith', 'jane.smith@example.com', '+1234567891', 'password456', 'admin', 'active'],
-    ['Mike Johnson', 'mike.johnson@example.com', '+1234567892', 'password789', 'templeadmin', 'inactive']
+    ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description'],
+    ['John Doe', 'john.doe@example.com', '+1234567890', 'password123', 'user', 'active', '', '', '', '', ''],
+    ['Jane Smith', 'jane.smith@example.com', '+1234567891', 'password456', 'admin', 'active', '', '', '', '', ''],
+    ['Mike Johnson', 'mike.johnson@example.com', '+1234567892', 'password789', 'templeadmin', 'active', 'Shiva Temple', 'New Delhi, Delhi', '123 Temple Street, New Delhi', '+919876543210', 'Ancient temple dedicated to Lord Shiva']
   ]
   const csvString = csvContent.map(row => row.map(field => `"${field}"`).join(',')).join('\n')
   const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
@@ -836,19 +926,24 @@ const parseCsvData = (csvText) => {
       return
     }
     const headers = lines[0].split(',').map(h => h.replace(/\"/g, '').trim())
-    const expectedHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
-    const headerMismatch = expectedHeaders.some(expected => !headers.includes(expected))
-    if (headerMismatch) {
-      fileError.value = `CSV headers must match exactly: ${expectedHeaders.join(', ')}`
+    const expectedHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description']
+    const requiredHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
+    
+    // Check if all required headers are present
+    const missingHeaders = requiredHeaders.filter(expected => !headers.includes(expected))
+    if (missingHeaders.length > 0) {
+      fileError.value = `Missing required CSV headers: ${missingHeaders.join(', ')}`
       return
     }
+    
     const data = []
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.replace(/\"/g, '').trim())
-      if (values.length !== headers.length) {
-        fileError.value = `Row ${i + 1} has ${values.length} columns but expected ${headers.length}`
+      if (values.length < requiredHeaders.length) {
+        fileError.value = `Row ${i + 1} has ${values.length} columns but expected at least ${requiredHeaders.length}`
         return
       }
+      
       const rowData = {
         full_name: values[headers.indexOf('Full Name')],
         email: values[headers.indexOf('Email')],
@@ -857,10 +952,38 @@ const parseCsvData = (csvText) => {
         role: values[headers.indexOf('Role')],
         status: values[headers.indexOf('Status')]
       }
+      
+      // Add temple details if columns exist
+      if (headers.includes('Temple Name')) {
+        rowData.temple_name = values[headers.indexOf('Temple Name')] || ''
+      }
+      if (headers.includes('Temple Place')) {
+        rowData.temple_place = values[headers.indexOf('Temple Place')] || ''
+      }
+      if (headers.includes('Temple Address')) {
+        rowData.temple_address = values[headers.indexOf('Temple Address')] || ''
+      }
+      if (headers.includes('Temple Phone')) {
+        rowData.temple_phone = values[headers.indexOf('Temple Phone')] || ''
+      }
+      if (headers.includes('Temple Description')) {
+        rowData.temple_description = values[headers.indexOf('Temple Description')] || ''
+      }
+      
+      // Validate required fields
       if (!rowData.full_name || !rowData.email || !rowData.phone || !rowData.password || !rowData.role) {
-        fileError.value = `Row ${i + 1} is missing required fields`
+        fileError.value = `Row ${i + 1} is missing required fields (Full Name, Email, Phone, Password, or Role)`
         return
       }
+      
+      // Validate temple admin has temple details
+      if (rowData.role.toLowerCase() === 'templeadmin') {
+        if (!rowData.temple_name || !rowData.temple_place || !rowData.temple_address || !rowData.temple_phone || !rowData.temple_description) {
+          fileError.value = `Row ${i + 1}: Temple Admin role requires all temple details (Temple Name, Temple Place, Temple Address, Temple Phone, Temple Description)`
+          return
+        }
+      }
+      
       data.push(rowData)
     }
     csvData.value = data
