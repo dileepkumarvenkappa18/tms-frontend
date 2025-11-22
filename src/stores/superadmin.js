@@ -665,6 +665,7 @@ async function fetchTenantsForReports() {
     bulkUploadError.value = null
     
     try {
+      console.log("createBulkUsers() csvData:", csvData)
       console.log('Store: Starting bulk upload of', csvData.length, 'users...')
       const response = await superAdminService.bulkUploadUsers(csvData)
       

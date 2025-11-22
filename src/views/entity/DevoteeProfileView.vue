@@ -46,8 +46,9 @@
             </span>
           </div>
         </div>
-
+<!---->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!--
           <div class="bg-gray-50 p-4 rounded-lg">
             <p class="text-xs text-gray-500 uppercase font-medium">Email</p>
             <p class="text-sm font-semibold text-gray-900">{{ profile.email || 'N/A' }}</p>
@@ -56,6 +57,7 @@
             <p class="text-xs text-gray-500 uppercase font-medium">Phone</p>
             <p class="text-sm font-semibold text-gray-900">{{ profile.phone || 'N/A' }}</p>
           </div>
+        -->
           <div class="bg-gray-50 p-4 rounded-lg">
             <p class="text-xs text-gray-500 uppercase font-medium">Date of Birth</p>
             <p class="text-sm font-semibold text-gray-900">{{ formatDate(profile.dob) }}</p>

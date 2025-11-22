@@ -555,54 +555,59 @@ const inferMimeFromUrlOrName = (url, name) => {
   return ''
 }
 
+// FIXED: Replace your normalizeTempleDocuments function with this version
 const normalizeTempleDocuments = (temple) => {
   console.log('normalizeTempleDocuments - input temple:', temple)
   const docs = []
 
-  // --- Helper to clean URLs ---
+  // Helper to clean URLs
   const cleanUrl = (url) => {
     if (!url) return ''
-
     let cleaned = url.trim()
-
-    // Remove "/files/" folder
     cleaned = cleaned.replace(/\/files\//g, '/')
-
-    // Remove wrong "/uploads/<id>/" (e.g. /uploads/4/file.pdf)
     if (/uploads\/\d+\//.test(cleaned)) {
       console.log("normalizeTempleDocuments - removing WRONG folder:", cleaned)
       cleaned = cleaned.replace(/uploads\/\d+\//, 'uploads/')
     }
-
-    // Remove leading slashes
     cleaned = cleaned.replace(/^\/+/, '')
-
     return cleaned
   }
 
-  // -------------------------------------------------------------------
+  // Track processed documents by their actual URL to avoid true duplicates
+  const processedUrls = new Set()
+  
+  // Helper to add document if not already processed
+  const addDoc = (doc) => {
+    if (!doc.url || processedUrls.has(doc.url)) {
+      console.log('Skipping duplicate URL:', doc.url)
+      return false
+    }
+    processedUrls.add(doc.url)
+    docs.push(doc)
+    console.log('Added document:', doc.name, '| URL:', doc.url)
+    return true
+  }
+
   // 1. Main documents array from backend
-  // -------------------------------------------------------------------
   if (Array.isArray(temple.documents) && temple.documents.length > 0) {
     console.log('normalizeTempleDocuments - found documents array:', temple.documents)
     temple.documents.forEach((d, idx) => {
       let url = d.download_url || d.downloadUrl || d.url || d.file_url || d.fileUrl || d.path || ''
       url = cleanUrl(url)
-      console.log(`normalizeTempleDocuments - cleaned document ${idx} URL:`, url)
-
-      docs.push({
-        id: d.id || `${temple.id || temple.ID || 'doc'}-${idx}`,
-        name: d.name || d.filename || `Document ${idx + 1}`,
-        type: d.type || inferMimeFromUrlOrName(url, d.name || d.filename),
-        size: d.size || null,
-        url
-      })
+      
+      if (url) {
+        addDoc({
+          id: d.id || `doc-${idx}-${Date.now()}`,
+          name: d.name || d.filename || `Document ${idx + 1}`,
+          type: d.type || inferMimeFromUrlOrName(url, d.name || d.filename),
+          size: d.size || null,
+          url
+        })
+      }
     })
   }
 
-  // -------------------------------------------------------------------
   // 2. Single-field docs (trust deed, registration cert, etc.)
-  // -------------------------------------------------------------------
   const singleFields = [
     { key: 'registration_cert', label: 'Registration Certificate' },
     { key: 'trust_deed', label: 'Trust Deed' },
@@ -611,7 +616,11 @@ const normalizeTempleDocuments = (temple) => {
 
   singleFields.forEach(({ key, label }) => {
     const candidates = [
-      temple[`${key}_url`], temple[`${key}Url`], temple[key], temple[`${key}_path`], temple[`${key}_link`]
+      temple[`${key}_url`], 
+      temple[`${key}Url`], 
+      temple[key], 
+      temple[`${key}_path`], 
+      temple[`${key}_link`]
     ]
       .map(safeString)
       .filter(Boolean)
@@ -620,9 +629,9 @@ const normalizeTempleDocuments = (temple) => {
     url = cleanUrl(url)
 
     if (url) {
-      console.log(`normalizeTempleDocuments - cleaned single field ${key}:`, url)
-      docs.push({
-        id: key,
+      console.log(`normalizeTempleDocuments - checking single field ${key}:`, url)
+      addDoc({
+        id: `${key}-${Date.now()}`,
         name: label,
         type: inferMimeFromUrlOrName(url, label),
         size: null,
@@ -631,9 +640,7 @@ const normalizeTempleDocuments = (temple) => {
     }
   })
 
-  // -------------------------------------------------------------------
   // 3. Additional document arrays
-  // -------------------------------------------------------------------
   const additionalArrays = [
     temple.additional_docs,
     temple.additionalDocs,
@@ -646,31 +653,60 @@ const normalizeTempleDocuments = (temple) => {
     additionalArrays.forEach((d, idx) => {
       let url = d.download_url || d.downloadUrl || d.url || d.file_url || d.fileUrl || d.path || ''
       url = cleanUrl(url)
-      console.log(`normalizeTempleDocuments - cleaned additional doc ${idx}:`, url)
-
-      docs.push({
-        id: d.id || `additional-${idx}`,
-        name: d.name || d.filename || `Additional Document ${idx + 1}`,
-        type: d.type || inferMimeFromUrlOrName(url, d.name || d.filename),
-        size: d.size || null,
-        url
-      })
+      
+      if (url) {
+        addDoc({
+          id: d.id || `additional-${idx}-${Date.now()}`,
+          name: d.name || d.filename || `Additional Document ${idx + 1}`,
+          type: d.type || inferMimeFromUrlOrName(url, d.name || d.filename),
+          size: d.size || null,
+          url
+        })
+      }
     })
   }
 
-  // -------------------------------------------------------------------
-  // 4. Final unique list
-  // -------------------------------------------------------------------
-  const seen = new Set()
-  const finalDocs = docs.filter(d => {
-    const k = `${d.id}-${d.name}`
-    if (seen.has(k)) return false
-    seen.add(k)
-    return true
+  // 4. Parse JSON fields for additional documents
+  const jsonFields = [
+    temple.additional_docs_urls,
+    temple.additionalDocsUrls,
+    temple.additional_docs_info,
+    temple.additionalDocsInfo
+  ]
+
+  jsonFields.forEach(field => {
+    if (typeof field === 'string' && field.trim() && field !== '[]') {
+      try {
+        const parsed = JSON.parse(field)
+        if (Array.isArray(parsed)) {
+          parsed.forEach((item, idx) => {
+            let url = ''
+            if (typeof item === 'string') {
+              url = cleanUrl(item)
+            } else if (typeof item === 'object') {
+              url = cleanUrl(item.url || item.file_url || item.fileUrl || '')
+            }
+            
+            if (url) {
+              addDoc({
+                id: `json-doc-${idx}-${Date.now()}`,
+                name: item.name || item.filename || `Document ${idx + 1}`,
+                type: item.type || inferMimeFromUrlOrName(url, item.name),
+                size: item.size || null,
+                url
+              })
+            }
+          })
+        }
+      } catch (e) {
+        console.warn('Failed to parse JSON field:', field, e)
+      }
+    }
   })
 
-  console.log('normalizeTempleDocuments - final docs:', finalDocs)
-  return finalDocs
+  console.log(`✅ normalizeTempleDocuments - final count: ${docs.length} documents`)
+  console.log('Final docs:', docs)
+  return docs
 }
 
 // Clean and stable buildDocUrl - FINAL VERSION
@@ -1055,6 +1091,9 @@ const testTempleCountsApi = async () => {
 }
 
 // Data loaders
+// Add this debugging code inside your loadPendingEntities function
+// Right after you receive the response
+
 const loadPendingEntities = async () => {
   try {
     isLoading.value = true
@@ -1064,7 +1103,21 @@ const loadPendingEntities = async () => {
     })
 
     if (response && response.success && response.data) {
-      templeApplications.value = response.data.map(temple => {
+      console.log('🔍 RAW RESPONSE DATA:', response.data)
+      
+      templeApplications.value = response.data.map((temple, templeIndex) => {
+        // 🆕 DEBUG: Log each temple's document fields
+        console.log(`\n========== TEMPLE ${templeIndex + 1}: ${temple.Name || temple.name} ==========`)
+        console.log('Documents array:', temple.documents)
+        console.log('registration_cert_url:', temple.registration_cert_url)
+        console.log('trust_deed_url:', temple.trust_deed_url)
+        console.log('property_docs_url:', temple.property_docs_url)
+        console.log('additional_docs_urls:', temple.additional_docs_urls)
+        console.log('additional_docs_info:', temple.additional_docs_info)
+        console.log('additional_docs:', temple.additional_docs)
+        console.log('additionalDocs:', temple.additionalDocs)
+        console.log('====================================================\n')
+
         const status = (temple.Status || temple.status || 'pending').toLowerCase()
         const submittedDate = temple.CreatedAt ||
                               temple.createdAt ||
@@ -1093,6 +1146,10 @@ const loadPendingEntities = async () => {
           fullAddress = parts.filter(Boolean).join(', ')
         }
 
+        // 🆕 Call normalized document function and log result
+        const normalizedDocs = normalizeTempleDocuments(temple)
+        console.log(`📄 Temple "${temple.Name || temple.name}" - Normalized ${normalizedDocs.length} documents`)
+
         return {
           id: temple.ID || temple.id,
           templeName: temple.Name || temple.name,
@@ -1108,9 +1165,15 @@ const loadPendingEntities = async () => {
           rejectedAt: temple.RejectedAt || temple.rejectedAt,
           notes: temple.Notes || temple.notes,
           registrationType: temple.TempleType || temple.templeType,
-          documents: normalizeTempleDocuments(temple)
+          documents: normalizedDocs // Use normalized documents
         }
       })
+      
+      console.log('✅ Total temples loaded:', templeApplications.value.length)
+      console.log('📊 Document counts per temple:', 
+        templeApplications.value.map(t => `${t.templeName}: ${t.documents.length} files`)
+      )
+      
       toast.success(`Loaded ${templeApplications.value.length} temple applications`)
     } else {
       templeApplications.value = []

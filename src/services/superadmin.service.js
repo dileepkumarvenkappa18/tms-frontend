@@ -1663,7 +1663,9 @@ async assignUserToTenant(userId, tenantId) {
       const formData = new FormData()
       
       // Convert CSV data back to CSV format
-      const csvHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
+      const csvHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status','Temple Name',
+                          'Temple Place','Temple Address','Temple Phone','Temple Description'  
+      ]
       const csvRows = [
         csvHeaders.join(','), // Header row
         ...csvData.map(user => [
@@ -1672,7 +1674,13 @@ async assignUserToTenant(userId, tenantId) {
           `"${user.phone || ''}"`,
           `"${user.password || ''}"`,
           `"${user.role || ''}"`,
-          `"${user.status || 'active'}"`
+          `"${user.status || 'active'}"`,
+          `"${user.temple_name || ''}"`,
+          `"${user.temple_place || ''}"`,
+          `"${user.temple_address || ''}"`,
+          `"${user.temple_phone || ''}"`,
+          `"${user.temple_description || ''}"`,
+
         ].join(','))
       ]
       const csvContent = csvRows.join('\n')
