@@ -657,8 +657,8 @@
     </div>
   </div>
 </template>
-
 <script setup>
+import Papa from "papaparse"
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from '@/composables/useToast'
 import { useSuperAdminStore } from '@/stores/superadmin'
@@ -668,7 +668,7 @@ import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter.vue'
 const { success, error } = useToast()
 const superAdminStore = useSuperAdminStore()
 
-// State variables - using store reactive state
+// State variables
 const isLoading = computed(() => superAdminStore.loadingUserAction)
 const isRolesLoading = computed(() => superAdminStore.loadingUserRoles)
 const isUsersLoading = computed(() => superAdminStore.loadingUsers)
@@ -677,11 +677,12 @@ const showCreateModal = ref(false)
 const isEditing = ref(false)
 const editingUserId = ref(null)
 
-// Filter state - default to 'internal' instead of 'all'
+// Filter state
 const activeFilter = ref('internal')
 
-// Bulk upload state variables
+// Bulk upload state
 const showBulkUploadModal = ref(false)
+
 const csvData = ref([])
 const fileError = ref('')
 const isDragOver = ref(false)
@@ -695,21 +696,21 @@ const users = computed(() => superAdminStore.users || [])
 // Available roles for validation
 const availableRoles = computed(() => roles.value.map(role => role.role_name))
 
-// Filter configuration - removed 'all' filter
+// Filter configuration
 const userFilters = [
   { value: 'internal', label: 'Internal Admins' },
   { value: 'volunteers', label: 'Volunteers' },
   { value: 'devotees', label: 'Devotees' }
 ]
 
-// Role categorization - using role IDs and names
+// Role categorization
 const roleCategories = {
   internal: ['superadmin', 'templeadmin', 'standarduser', 'monitoringuser'],
-  volunteers: ['volunteer', '4'], // role_id 4 for volunteers
-  devotees: ['devotee', 'user', '3'] // role_id 3 for devotees
+  volunteers: ['volunteer', '4'],
+  devotees: ['devotee', 'user', '3']
 }
 
-// Helpers: role normalization and approval resolution
+// Helper functions
 const normalizeRoleName = (role) => {
   let name = ''
   if (typeof role === 'object' && role) {
@@ -739,33 +740,26 @@ const resolveTempleApproval = (u) => {
     b(u?.is_approved),
   ].filter((v) => v !== null)
 
-  // Explicit boolean true => approved
   if (boolCandidates.includes(true)) return { known: true, approved: true }
 
-  // Approved strings
-  const hasApproved =
-    statusCandidates.some((x) =>
-      x === 'approved' ||
-      x === 'approve' ||
-      (x.includes('approve') && !x.includes('not') && !x.includes('un') && !x.includes('reject') && !x.includes('pending'))
-    )
+  const hasApproved = statusCandidates.some((x) =>
+    x === 'approved' ||
+    x === 'approve' ||
+    (x.includes('approve') && !x.includes('not') && !x.includes('un') && !x.includes('reject') && !x.includes('pending'))
+  )
   if (hasApproved) return { known: true, approved: true }
 
-  // Pending/rejected/not approved => hide
   const negativeSet = ['pending', 'under_review', 'underreview', 'awaiting_approval', 'awaitingapproval', 'not_approved', 'notapproved', 'rejected', 'declined']
   const isPendingOrRejected = statusCandidates.some((x) => negativeSet.includes(x))
   if (isPendingOrRejected) return { known: true, approved: false }
 
-  // Unknown => visible
   return { known: false, approved: false }
 }
 
-// Get user category based on role (handles both role names and role IDs)
 const getUserCategory = (user) => {
   const roleName = normalizeRoleName(user?.role)
   const roleId = String(user?.role_id || user?.role?.id || '')
   
-  // Check by role name or role ID
   if (roleCategories.internal.includes(roleName)) {
     return 'internal'
   } else if (roleCategories.volunteers.includes(roleName) || roleCategories.volunteers.includes(roleId)) {
@@ -777,15 +771,12 @@ const getUserCategory = (user) => {
   return 'other'
 }
 
-// Get user count by filter
 const getUserCountByFilter = (filterValue) => {
   const list = baseFilteredUsers.value ?? []
   const count = list.filter(user => getUserCategory(user) === filterValue).length
   return count || 0
 }
 
-
-// Base filtered users (handles temple admin approval)
 const baseFilteredUsers = computed(() => {
   return (users.value || []).filter((u) => {
     if (!isTempleAdminRole(u)) return true
@@ -795,7 +786,6 @@ const baseFilteredUsers = computed(() => {
   })
 })
 
-// Final filtered users (base + category filter) - always filtered by category
 const filteredUsers = computed(() => {
   return baseFilteredUsers.value.filter(user => getUserCategory(user) === activeFilter.value)
 })
@@ -819,28 +809,28 @@ const form = ref({
 
 const errors = ref({})
 
-// Explicitly defined function to open the modal
+// Modal functions
 const openCreateModal = () => {
   showCreateModal.value = true
 }
 
-// Bulk upload modal functions
 const openBulkUploadModal = () => {
   showBulkUploadModal.value = true
   bulkUploadResult.value = null
 }
+
 const closeBulkUploadModal = () => {
   showBulkUploadModal.value = false
   clearCsvData()
   bulkUploadResult.value = null
 }
 
-// Fetch all data when component mounts
+// Fetch data on mount
 onMounted(async () => {
   await superAdminStore.refreshUserData()
 })
 
-// Helper function to get role display name
+// Helper functions
 const getRoleDisplay = (role) => {
   if (typeof role === 'object' && role?.description) return role.description
   if (typeof role === 'object' && role?.role_name) return role.role_name
@@ -848,7 +838,6 @@ const getRoleDisplay = (role) => {
   return roleObj ? (roleObj.description || roleObj.role_name) : role
 }
 
-// Disable Tenant Assigned when user is inactive AND role is standard/monitoring
 const isAssignDisabled = (user) => {
   const rn = normalizeRoleName(user?.role)
   const isStdOrMon = rn === 'standarduser' || rn === 'monitoringuser'
@@ -857,10 +846,18 @@ const isAssignDisabled = (user) => {
 }
 
 // CSV validation functions
-const isValidRole = (role) => availableRoles.value.includes(role)
-const isValidStatus = (status) => ['active', 'inactive'].includes(status?.toLowerCase())
+const isValidRole = (role) => {
+  if (!role) return false
+  const roleLower = String(role).toLowerCase()
+  return availableRoles.value.some(r => r.toLowerCase() === roleLower)
+}
 
-// Download sample CSV template
+const isValidStatus = (status) => {
+  if (!status) return false
+  return ['active', 'inactive'].includes(String(status).toLowerCase())
+}
+
+// Download sample CSV
 const downloadSampleCSV = () => {
   const csvContent = [
     ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description'],
@@ -885,6 +882,7 @@ const handleFileSelect = (event) => {
   const file = event.target.files[0]
   if (file) processFile(file)
 }
+
 const handleFileDrop = (event) => {
   isDragOver.value = false
   const files = event.dataTransfer.files
@@ -917,78 +915,109 @@ const processFile = (file) => {
   reader.readAsText(file)
 }
 
-// Parse CSV content
 const parseCsvData = (csvText) => {
   try {
-    const lines = csvText.split('\n').filter(line => line.trim())
-    if (lines.length < 2) {
-      fileError.value = 'CSV file must contain at least a header row and one data row'
+    const parsed = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim()
+    })
+
+    if (parsed.errors.length > 0) {
+      console.error('CSV Parse Errors:', parsed.errors)
+      fileError.value = "Invalid CSV format. Please check the file."
       return
     }
-    const headers = lines[0].split(',').map(h => h.replace(/\"/g, '').trim())
-    const expectedHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description']
-    const requiredHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
-    
-    // Check if all required headers are present
-    const missingHeaders = requiredHeaders.filter(expected => !headers.includes(expected))
-    if (missingHeaders.length > 0) {
-      fileError.value = `Missing required CSV headers: ${missingHeaders.join(', ')}`
+
+    const rows = parsed.data
+
+    if (rows.length === 0) {
+      fileError.value = "CSV file is empty. Please add data rows."
       return
     }
-    
+
+    const requiredFields = [
+      "Full Name",
+      "Email",
+      "Phone",
+      "Password",
+      "Role",
+      "Status"
+    ]
+
     const data = []
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.replace(/\"/g, '').trim())
-      if (values.length < requiredHeaders.length) {
-        fileError.value = `Row ${i + 1} has ${values.length} columns but expected at least ${requiredHeaders.length}`
-        return
-      }
-      
-      const rowData = {
-        full_name: values[headers.indexOf('Full Name')],
-        email: values[headers.indexOf('Email')],
-        phone: values[headers.indexOf('Phone')],
-        password: values[headers.indexOf('Password')],
-        role: values[headers.indexOf('Role')],
-        status: values[headers.indexOf('Status')]
-      }
-      
-      // Add temple details if columns exist
-      if (headers.includes('Temple Name')) {
-        rowData.temple_name = values[headers.indexOf('Temple Name')] || ''
-      }
-      if (headers.includes('Temple Place')) {
-        rowData.temple_place = values[headers.indexOf('Temple Place')] || ''
-      }
-      if (headers.includes('Temple Address')) {
-        rowData.temple_address = values[headers.indexOf('Temple Address')] || ''
-      }
-      if (headers.includes('Temple Phone')) {
-        rowData.temple_phone = values[headers.indexOf('Temple Phone')] || ''
-      }
-      if (headers.includes('Temple Description')) {
-        rowData.temple_description = values[headers.indexOf('Temple Description')] || ''
-      }
-      
-      // Validate required fields
-      if (!rowData.full_name || !rowData.email || !rowData.phone || !rowData.password || !rowData.role) {
-        fileError.value = `Row ${i + 1} is missing required fields (Full Name, Email, Phone, Password, or Role)`
-        return
-      }
-      
-      // Validate temple admin has temple details
-      if (rowData.role.toLowerCase() === 'templeadmin') {
-        if (!rowData.temple_name || !rowData.temple_place || !rowData.temple_address || !rowData.temple_phone || !rowData.temple_description) {
-          fileError.value = `Row ${i + 1}: Temple Admin role requires all temple details (Temple Name, Temple Place, Temple Address, Temple Phone, Temple Description)`
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+
+      const hasAnyData = Object.values(row).some(val => val && String(val).trim() !== '')
+      if (!hasAnyData) continue
+
+      for (const field of requiredFields) {
+        if (!row[field] || String(row[field]).trim() === "") {
+          fileError.value = `Row ${i + 2} is missing required field: ${field}`
           return
         }
       }
-      
-      data.push(rowData)
+
+      const rawRole = String(row["Role"] || "").trim()
+      const cleanRole = rawRole.replace(/[\u200B-\u200D\uFEFF]/g, '')
+      const roleLower = cleanRole.toLowerCase()
+
+      const roleExists = availableRoles.value.some(r => r.toLowerCase() === roleLower)
+      if (!roleExists) {
+        fileError.value = `Row ${i + 2}: Invalid role "${cleanRole}". Available roles: ${availableRoles.value.join(', ')}`
+        return
+      }
+
+      const statusLower = String(row["Status"] || "").trim().toLowerCase()
+      if (!['active', 'inactive'].includes(statusLower)) {
+        fileError.value = `Row ${i + 2}: Invalid status "${row["Status"]}". Must be 'active' or 'inactive'`
+        return
+      }
+
+      if (roleLower === "templeadmin") {
+        const templeFields = [
+          "Temple Name",
+          "Temple Place",
+          "Temple Address",
+          "Temple Phone",
+          "Temple Description"
+        ]
+
+        for (const field of templeFields) {
+          if (!row[field] || String(row[field]).trim() === "") {
+            fileError.value = `Row ${i + 2}: Missing temple field "${field}" (required for Temple Admin role)`
+            return
+          }
+        }
+      }
+
+      data.push({
+        full_name: String(row["Full Name"] || "").trim(),
+        email: String(row["Email"] || "").trim(),
+        phone: String(row["Phone"] || "").trim(),
+        password: String(row["Password"] || "").trim(),
+        role: roleLower,
+        status: statusLower,
+        temple_name: String(row["Temple Name"] || "").trim(),
+        temple_place: String(row["Temple Place"] || "").trim(),
+        temple_address: String(row["Temple Address"] || "").trim(),
+        temple_phone: String(row["Temple Phone"] || "").trim(),
+        temple_description: String(row["Temple Description"] || "").trim()
+      })
     }
+
+    if (data.length === 0) {
+      fileError.value = "No valid data rows found in CSV file."
+      return
+    }
+
     csvData.value = data
+    console.log('CSV Data parsed successfully:', data.length, 'rows')
   } catch (err) {
-    fileError.value = 'Error parsing CSV file. Please check the format and try again.'
+    console.error('CSV Parse Error:', err)
+    fileError.value = "Error parsing CSV. Please check format and try again."
   }
 }
 
@@ -1007,21 +1036,85 @@ const uploadBulkUsers = async () => {
     error('No CSV data to upload')
     return
   }
+
+  // Validate all rows before uploading
+  for (let i = 0; i < csvData.value.length; i++) {
+    const row = csvData.value[i]
+    
+    if (!isValidRole(row.role)) {
+      error(`Row ${i + 1}: Invalid role "${row.role}"`)
+      return
+    }
+    
+    if (!isValidStatus(row.status)) {
+      error(`Row ${i + 1}: Invalid status "${row.status}"`)
+      return
+    }
+
+    if (row.role.toLowerCase() === 'templeadmin') {
+      if (!row.temple_name || !row.temple_place || !row.temple_address || 
+          !row.temple_phone || !row.temple_description) {
+        error(`Row ${i + 1}: Temple Admin role requires all temple details`)
+        console.error(`Row ${i + 1} temple details:`, {
+          temple_name: row.temple_name,
+          temple_place: row.temple_place,
+          temple_address: row.temple_address,
+          temple_phone: row.temple_phone,
+          temple_description: row.temple_description
+        })
+        return
+      }
+    }
+  }
+
   isBulkUploading.value = true
   bulkUploadResult.value = null
+  
   try {
+    // Log the data being sent for debugging
+    console.log('CSV Data being uploaded:')
+    csvData.value.forEach((row, index) => {
+        if  (row.role.toLowerCase() !== 'templeadmin') {
+          row.temple_name =null
+          row.temple_place =null
+          row.temple_address =null
+          row.temple_phone =null
+          row.temple_description =null
+        }
+      
+    })
+    
+    console.log('csvData:',csvData)
     const result = await superAdminStore.createBulkUsers(csvData.value)
+    
     if (result.success) {
-      bulkUploadResult.value = { success: true, message: 'Bulk upload completed successfully', data: result.data }
+      bulkUploadResult.value = { 
+        success: true, 
+        message: 'Bulk upload completed successfully', 
+        data: result.data 
+      }
       success(`Successfully uploaded ${result.data.success_count} out of ${result.data.total_rows} users`)
+      
       await superAdminStore.refreshUserData()
-      setTimeout(() => { clearCsvData() }, 3000)
+      
+      setTimeout(() => { 
+        clearCsvData() 
+      }, 3000)
     } else {
-      bulkUploadResult.value = { success: false, message: result.error || 'Bulk upload failed', data: result.data }
+      bulkUploadResult.value = { 
+        success: false, 
+        message: result.error || 'Bulk upload failed', 
+        data: result.data 
+      }
       error(result.error || 'Failed to upload users')
     }
   } catch (err) {
-    bulkUploadResult.value = { success: false, message: 'An error occurred during bulk upload', data: null }
+    console.error('Bulk upload error:', err)
+    bulkUploadResult.value = { 
+      success: false, 
+      message: 'An error occurred during bulk upload: ' + (err.message || 'Unknown error'), 
+      data: null 
+    }
     error('Failed to upload users. Please try again.')
   } finally {
     isBulkUploading.value = false
@@ -1106,7 +1199,7 @@ const handleSubmitUser = async () => {
   }
 }
 
-// Toggle user active status
+// Toggle user status
 const toggleUserStatus = async (user) => {
   try {
     const newStatus = (user.status || '').toLowerCase() === 'active' ? 'inactive' : 'active'
@@ -1177,8 +1270,6 @@ const resetForm = () => {
 <style scoped>
 .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
 .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
-
-/* Modal styles */
 .fixed { position: fixed; }
 .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
 .z-50 { z-index: 50; }

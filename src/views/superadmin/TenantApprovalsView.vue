@@ -287,46 +287,38 @@
               
               <!-- Second Column - Temple Details -->
               <div class="space-y-4">
-                <!-- Loading state for temple details -->
-                <div v-if="selectedTenant._loading" class="text-center py-8">
-                  <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                  <p class="text-sm text-gray-500 mt-2">Loading temple details...</p>
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Name</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_name') }}
+                  </div>
                 </div>
                 
-                <div v-else>
-                  <div class="border-b border-gray-100 pb-3">
-                    <div class="text-sm font-medium text-gray-500">Temple Name</div>
-                    <div class="text-base text-gray-900 mt-1">
-                      {{ getTempleDetail(selectedTenant, 'temple_name') }}
-                    </div>
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Location</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_place') }}
                   </div>
-                  
-                  <div class="border-b border-gray-100 pb-3">
-                    <div class="text-sm font-medium text-gray-500">Temple Location</div>
-                    <div class="text-base text-gray-900 mt-1">
-                      {{ getTempleDetail(selectedTenant, 'temple_place') }}
-                    </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Address</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_address') }}
                   </div>
-                  
-                  <div class="border-b border-gray-100 pb-3">
-                    <div class="text-sm font-medium text-gray-500">Temple Address</div>
-                    <div class="text-base text-gray-900 mt-1">
-                      {{ getTempleDetail(selectedTenant, 'temple_address') }}
-                    </div>
-                  </div>
-                  
-                  <div class="border-b border-gray-100 pb-3">
-                    <div class="text-sm font-medium text-gray-500">Temple Phone</div>
-                    <div class="text-base text-gray-900 mt-1">
-                      {{ getTempleDetail(selectedTenant, 'temple_phone_no') }}
-                    </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Phone</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_phone_no') }}
                   </div>
                 </div>
               </div>
             </div>
             
             <!-- Description Section -->
-            <div v-if="!selectedTenant._loading" class="mt-5 border-t border-gray-100 pt-4">
+            <div class="mt-5 border-t border-gray-100 pt-4">
               <div class="text-sm font-medium text-gray-500 mb-2">Temple Description</div>
               <div class="text-base text-gray-900 bg-gray-50 p-4 rounded-lg">
                 {{ getTempleDescription(selectedTenant) }}
@@ -363,7 +355,6 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useToast } from '@/composables/useToast'
 import superAdminService from '@/services/superadmin.service'
-import api from '@/services/api'
 
 export default {
   name: 'TenantApprovals',
@@ -374,9 +365,10 @@ export default {
     const allTenants = ref([])
     const toast = useToast()
     const isProcessing = ref(false)
-    const API_URL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_URL;
+    const API_URL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_URL
     
     const debugMode = ref(false)
+    
     const showRejectModal = ref(false)
     const selectedTenant = ref(null)
     const rejectReason = ref('')
@@ -388,554 +380,577 @@ export default {
     // ==================== STATUS HELPERS ====================
     
     const normalizeStatus = (tenant) => {
-      if (!tenant) return 'pending';
+      if (!tenant) return 'pending'
       
-      let status = tenant.status || 
-                   tenant.Status || 
-                   tenant.approval_status || 
-                   tenant.approvalStatus || 
-                   tenant.tenant_status ||
-                   tenant.user_status ||
-                   '';
+      let status = tenant.status || tenant.Status || tenant.approval_status || tenant.approvalStatus || ''
+      status = String(status).toLowerCase().trim()
       
-      status = String(status).toLowerCase().trim();
-      
-      if (!status || status === 'null' || status === 'undefined') {
-        return 'pending';
-      }
+      if (!status || status === 'null' || status === 'undefined') return 'pending'
       
       const statusMappings = {
         'approved': 'approved',
-        'active': 'approved', 
+        'active': 'approved',
         'accepted': 'approved',
-        'confirm': 'approved',
         'confirmed': 'approved',
-        'approved_active': 'approved',
-        
         'rejected': 'rejected',
         'declined': 'rejected',
         'denied': 'rejected',
-        'cancelled': 'rejected',
-        'refused': 'rejected',
-        'inactive': 'rejected',
-        
         'pending': 'pending',
         'pending_approval': 'pending',
         'waiting': 'pending',
-        'submitted': 'pending',
-        'under_review': 'pending',
-        'new': 'pending'
-      };
+        'submitted': 'pending'
+      }
       
-      return statusMappings[status] || 'pending';
-    };
+      return statusMappings[status] || 'pending'
+    }
     
-    const isStatusPending = (tenant) => {
-      const status = normalizeStatus(tenant);
-      return status === 'pending';
-    };
-    
-    const isStatusApproved = (tenant) => {
-      const status = normalizeStatus(tenant);
-      return status === 'approved';
-    };
-    
-    const isStatusRejected = (tenant) => {
-      const status = normalizeStatus(tenant);
-      return status === 'rejected';
-    };
+    const isStatusPending = (tenant) => normalizeStatus(tenant) === 'pending'
+    const isStatusApproved = (tenant) => normalizeStatus(tenant) === 'approved'
+    const isStatusRejected = (tenant) => normalizeStatus(tenant) === 'rejected'
     
     // ==================== COMPUTED PROPERTIES ====================
     
     const pendingCount = computed(() => {
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      if (tenantsArray.length === 0) return 0;
-      return tenantsArray.filter(tenant => isStatusPending(tenant)).length;
-    });
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
+      return tenantsArray.filter(tenant => isStatusPending(tenant)).length
+    })
     
     const approvedCount = computed(() => {
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      if (tenantsArray.length === 0) return 0;
-      return tenantsArray.filter(tenant => isStatusApproved(tenant)).length;
-    });
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
+      return tenantsArray.filter(tenant => isStatusApproved(tenant)).length
+    })
     
     const rejectedCount = computed(() => {
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      if (tenantsArray.length === 0) return 0;
-      return tenantsArray.filter(tenant => isStatusRejected(tenant)).length;
-    });
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
+      return tenantsArray.filter(tenant => isStatusRejected(tenant)).length
+    })
     
     const filteredTenants = computed(() => {
-      const allTenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      const allTenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
       
-      if (!statusFilter.value || statusFilter.value === '' || statusFilter.value === 'all') {
-        return allTenantsArray;
+      if (!statusFilter.value || statusFilter.value === '') {
+        return allTenantsArray
       }
       
-      let filtered = [];
       switch (statusFilter.value.toLowerCase()) {
         case 'pending':
-          filtered = allTenantsArray.filter(tenant => isStatusPending(tenant));
-          break;
+          return allTenantsArray.filter(tenant => isStatusPending(tenant))
         case 'approved':
-          filtered = allTenantsArray.filter(tenant => isStatusApproved(tenant));
-          break;
+          return allTenantsArray.filter(tenant => isStatusApproved(tenant))
         case 'rejected':
-          filtered = allTenantsArray.filter(tenant => isStatusRejected(tenant));
-          break;
+          return allTenantsArray.filter(tenant => isStatusRejected(tenant))
         default:
-          filtered = allTenantsArray;
+          return allTenantsArray
       }
-      
-      return filtered;
-    });
+    })
     
     // ==================== TEMPLE DETAILS HELPERS ====================
     
     const getTempleDetail = (tenant, field, fallback = 'Not provided') => {
-      if (!tenant) return fallback;
+      if (!tenant) {
+        console.warn('getTempleDetail: No tenant provided')
+        return fallback
+      }
       
-      console.log('Getting temple detail for field:', field, 'from tenant:', tenant);
-      
-      // Define field mappings for different possible field names
-      const fieldMappings = {
-        'temple_name': ['temple_name', 'templeName', 'TempleName', 'name'],
-        'temple_place': ['temple_place', 'templePlace', 'TemplePlace', 'place', 'location'],
-        'temple_address': ['temple_address', 'templeAddress', 'TempleAddress', 'address'],
-        'temple_phone_no': ['temple_phone_no', 'templePhoneNo', 'TemplePhoneNo', 'temple_phone', 'templePhone', 'phoneNumber'],
-        'temple_description': ['temple_description', 'templeDescription', 'TempleDescription', 'description']
-      };
-      
-      const fieldsToCheck = fieldMappings[field] || [field];
-      
-      // Priority 1: Check temple_details object (snake_case)
+      // Priority 1: Check temple_details object
       if (tenant.temple_details && typeof tenant.temple_details === 'object') {
-        console.log('Checking temple_details:', tenant.temple_details);
-        for (const fieldName of fieldsToCheck) {
-          if (tenant.temple_details[fieldName]) {
-            console.log(`Found in temple_details.${fieldName}:`, tenant.temple_details[fieldName]);
-            return tenant.temple_details[fieldName];
-          }
+        if (tenant.temple_details[field]) {
+          return tenant.temple_details[field]
+        }
+        
+        const camelCase = field.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())
+        if (tenant.temple_details[camelCase]) {
+          return tenant.temple_details[camelCase]
+        }
+        
+        const pascalCase = camelCase.charAt(0).toUpperCase() + camelCase.slice(1)
+        if (tenant.temple_details[pascalCase]) {
+          return tenant.temple_details[pascalCase]
         }
       }
       
-      // Priority 2: Check TempleDetails (PascalCase)
-      if (tenant.TempleDetails && typeof tenant.TempleDetails === 'object') {
-        console.log('Checking TempleDetails:', tenant.TempleDetails);
-        for (const fieldName of fieldsToCheck) {
-          if (tenant.TempleDetails[fieldName]) {
-            console.log(`Found in TempleDetails.${fieldName}:`, tenant.TempleDetails[fieldName]);
-            return tenant.TempleDetails[fieldName];
-          }
+      // Priority 2: Check direct tenant properties
+      const variations = [
+        field,
+        field.toLowerCase(),
+        field.toUpperCase(),
+        field.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase()),
+        field.charAt(0).toUpperCase() + field.slice(1)
+      ]
+      
+      for (const variation of variations) {
+        if (tenant[variation]) {
+          return tenant[variation]
         }
       }
       
-      // Priority 3: Check templeDetails (camelCase)
-      if (tenant.templeDetails && typeof tenant.templeDetails === 'object') {
-        console.log('Checking templeDetails:', tenant.templeDetails);
-        for (const fieldName of fieldsToCheck) {
-          if (tenant.templeDetails[fieldName]) {
-            console.log(`Found in templeDetails.${fieldName}:`, tenant.templeDetails[fieldName]);
-            return tenant.templeDetails[fieldName];
-          }
+      // Priority 3: Check temple object
+      if (tenant.temple && typeof tenant.temple === 'object') {
+        const simpleField = field.replace('temple_', '')
+        
+        if (tenant.temple[simpleField]) {
+          return tenant.temple[simpleField]
+        }
+        
+        if (tenant.temple[field]) {
+          return tenant.temple[field]
         }
       }
       
-      // Priority 4: Check direct properties on tenant object
-      for (const fieldName of fieldsToCheck) {
-        if (tenant[fieldName]) {
-          console.log(`Found direct property ${fieldName}:`, tenant[fieldName]);
-          return tenant[fieldName];
-        }
-      }
-      
-      console.log(`Field ${field} not found, returning fallback:`, fallback);
-      return fallback;
-    };
+      return fallback
+    }
 
     const getTempleDescription = (tenant) => {
-      if (!tenant) return 'No additional details provided.';
+      if (!tenant) return 'No additional details provided.'
       
-      console.log('Getting temple description from tenant:', tenant);
-      
-      // Check multiple possible locations
-      const descriptionFields = [
-        'temple_description',
-        'templeDescription', 
-        'TempleDescription',
-        'description',
-        'Description'
-      ];
-      
-      // Check temple_details first
-      if (tenant.temple_details && typeof tenant.temple_details === 'object') {
-        for (const field of descriptionFields) {
+      if (tenant.temple_details) {
+        const descFields = ['temple_description', 'templeDescription', 'TempleDescription', 'description', 'Description']
+        
+        for (const field of descFields) {
           if (tenant.temple_details[field]) {
-            console.log(`Found description in temple_details.${field}:`, tenant.temple_details[field]);
-            return tenant.temple_details[field];
+            return tenant.temple_details[field]
           }
         }
       }
       
-      // Check TempleDetails
-      if (tenant.TempleDetails && typeof tenant.TempleDetails === 'object') {
-        for (const field of descriptionFields) {
-          if (tenant.TempleDetails[field]) {
-            console.log(`Found description in TempleDetails.${field}:`, tenant.TempleDetails[field]);
-            return tenant.TempleDetails[field];
-          }
-        }
-      }
+      const descriptionFields = [
+        'temple_description', 'templeDescription', 'TempleDescription',
+        'description', 'Description'
+      ]
       
-      // Check templeDetails
-      if (tenant.templeDetails && typeof tenant.templeDetails === 'object') {
-        for (const field of descriptionFields) {
-          if (tenant.templeDetails[field]) {
-            console.log(`Found description in templeDetails.${field}:`, tenant.templeDetails[field]);
-            return tenant.templeDetails[field];
-          }
-        }
-      }
-      
-      // Check direct properties
       for (const field of descriptionFields) {
         if (tenant[field]) {
-          console.log(`Found description in direct property ${field}:`, tenant[field]);
-          return tenant[field];
+          return tenant[field]
         }
       }
       
-      console.log('No description found, returning fallback');
-      return 'No additional details provided.';
-    };
+      return 'No additional details provided.'
+    }
     
     // ==================== PAGINATION ====================
     
     const paginatedTenants = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      const start = (currentPage.value - 1) * itemsPerPage.value;
-      const end = start + itemsPerPage.value;
-      return filtered.slice(start, end);
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      const start = (currentPage.value - 1) * itemsPerPage.value
+      const end = start + itemsPerPage.value
+      return filtered.slice(start, end)
+    })
     
     const totalPages = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return Math.ceil(filtered.length / itemsPerPage.value) || 1;
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      return Math.ceil(filtered.length / itemsPerPage.value) || 1
+    })
     
     const paginationStart = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return filtered.length === 0 
-        ? 0 
-        : (currentPage.value - 1) * itemsPerPage.value + 1;
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      return filtered.length === 0 ? 0 : (currentPage.value - 1) * itemsPerPage.value + 1
+    })
     
     const paginationEnd = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return Math.min(currentPage.value * itemsPerPage.value, filtered.length);
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      return Math.min(currentPage.value * itemsPerPage.value, filtered.length)
+    })
     
     const displayedPageNumbers = computed(() => {
-      const maxDisplayed = 5;
-      const pages = [];
+      const maxDisplayed = 5
+      const pages = []
       
       if (totalPages.value <= maxDisplayed) {
         for (let i = 1; i <= totalPages.value; i++) {
-          pages.push(i);
+          pages.push(i)
         }
       } else {
-        pages.push(1);
+        pages.push(1)
         
-        let startPage = Math.max(2, currentPage.value - 1);
-        let endPage = Math.min(totalPages.value - 1, currentPage.value + 1);
+        let startPage = Math.max(2, currentPage.value - 1)
+        let endPage = Math.min(totalPages.value - 1, currentPage.value + 1)
         
-        if (currentPage.value <= 2) {
-          endPage = 3;
-        }
+        if (currentPage.value <= 2) endPage = 3
+        if (currentPage.value >= totalPages.value - 1) startPage = totalPages.value - 2
         
-        if (currentPage.value >= totalPages.value - 1) {
-          startPage = totalPages.value - 2;
-        }
-        
-        if (startPage > 2) {
-          pages.push('...');
-        }
+        if (startPage > 2) pages.push('...')
         
         for (let i = startPage; i <= endPage; i++) {
-          pages.push(i);
+          pages.push(i)
         }
         
-        if (endPage < totalPages.value - 1) {
-          pages.push('...');
-        }
-        
-        if (totalPages.value > 1) {
-          pages.push(totalPages.value);
-        }
+        if (endPage < totalPages.value - 1) pages.push('...')
+        if (totalPages.value > 1) pages.push(totalPages.value)
       }
       
-      return pages;
-    });
+      return pages
+    })
     
     // ==================== HELPER METHODS ====================
     
     const getTenantName = (tenant) => {
-      if (!tenant) return 'Unknown Tenant';
+      if (!tenant) return 'Unknown Tenant'
       
-      if (tenant.full_name) return tenant.full_name;
-      if (tenant.FullName) return tenant.FullName;
-      if (tenant.fullName) return tenant.fullName;
-      if (tenant.name) return tenant.name;
-      if (tenant.Name) return tenant.Name;
+      if (tenant.full_name) return tenant.full_name
+      if (tenant.FullName) return tenant.FullName
+      if (tenant.fullName) return tenant.fullName
+      if (tenant.name) return tenant.name
+      if (tenant.Name) return tenant.Name
       
-      if (tenant.email) return tenant.email.split('@')[0];
-      if (tenant.Email) return tenant.Email.split('@')[0];
+      if (tenant.email) return tenant.email.split('@')[0]
+      if (tenant.Email) return tenant.Email.split('@')[0]
       
-      return (tenant.id || tenant.ID) ? `User ${tenant.id || tenant.ID}` : 'Unknown Tenant';
-    };
+      return (tenant.id || tenant.ID) ? `User ${tenant.id || tenant.ID}` : 'Unknown Tenant'
+    }
     
     const getTenantEmail = (tenant) => {
-      if (!tenant) return 'No email provided';
+      if (!tenant) return 'No email provided'
       
-      if (tenant.email) return tenant.email;
-      if (tenant.Email) return tenant.Email;
-      if (tenant.email_address) return tenant.email_address;
-      if (tenant.EmailAddress) return tenant.EmailAddress;
+      if (tenant.email) return tenant.email
+      if (tenant.Email) return tenant.Email
+      if (tenant.email_address) return tenant.email_address
+      if (tenant.EmailAddress) return tenant.EmailAddress
       
-      return 'No email provided';
-    };
+      return 'No email provided'
+    }
     
     const getTenantInitial = (tenant) => {
-      if (!tenant) return 'T';
+      if (!tenant) return 'T'
       
-      const name = getTenantName(tenant);
+      const name = getTenantName(tenant)
       if (name && name !== 'Unknown Tenant' && name.length > 0) {
-        return name.charAt(0).toUpperCase();
+        return name.charAt(0).toUpperCase()
       }
       
-      const email = getTenantEmail(tenant);
+      const email = getTenantEmail(tenant)
       if (email && email !== 'No email provided' && email.length > 0) {
-        return email.charAt(0).toUpperCase();
+        return email.charAt(0).toUpperCase()
       }
       
-      return 'T';
-    };
+      return 'T'
+    }
     
     const getStatusBadgeClass = (status) => {
-      const normalizedStatus = normalizeStatus({ status });
+      const normalizedStatus = normalizeStatus({ status })
       const classes = {
         'pending': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
         'approved': 'bg-green-100 text-green-800 border border-green-200',
         'rejected': 'bg-red-100 text-red-800 border border-red-200'
-      };
-      return classes[normalizedStatus] || 'bg-gray-100 text-gray-800 border border-gray-200';
-    };
+      }
+      return classes[normalizedStatus] || 'bg-gray-100 text-gray-800 border border-gray-200'
+    }
     
     const formatDate = (dateString) => {
-      if (!dateString) return 'N/A';
+      if (!dateString) return 'N/A'
       try {
-        const date = new Date(dateString);
+        const date = new Date(dateString)
         return date.toLocaleDateString('en-IN', {
           year: 'numeric',
           month: 'short',
           day: 'numeric'
-        });
+        })
       } catch {
-        return 'N/A';
+        return 'N/A'
       }
-    };
+    }
     
     const goToPage = (page) => {
       if (page !== '...') {
-        currentPage.value = page;
+        currentPage.value = page
       }
-    };
+    }
     
     // ==================== FILTER FUNCTIONS ====================
     
     const applyFilters = (newFilter = null) => {
       if (newFilter !== null) {
-        statusFilter.value = newFilter;
+        statusFilter.value = newFilter
       }
-      currentPage.value = 1;
-    };
+      currentPage.value = 1
+    }
     
     // ==================== MODAL HANDLERS ====================
     
     const handleViewDetails = async (tenant) => {
-      console.log('========================================');
-      console.log('Opening details for tenant:', tenant);
-      console.log('========================================');
+      selectedTenant.value = tenant
       
-      // Show modal immediately with basic info
-      selectedTenant.value = { ...tenant, _loading: true };
-      showDetailsModal.value = true;
+      console.log('Opening details for tenant:', tenant)
+      console.log('Temple details:', tenant.temple_details)
       
-      // Fetch complete tenant details including temple info
-      try {
-        const tenantId = tenant.id || tenant.ID;
-        console.log(`Fetching complete details for tenant ID: ${tenantId}`);
+      // If temple details are missing, try to fetch them
+      const tenantId = tenant.id || tenant.ID
+      if (tenantId && (!tenant.temple_details || Object.keys(tenant.temple_details).length === 0)) {
+        console.log('Temple details missing, fetching...')
         
-        const response = await fetch(API_URL + `/superadmin/tenants/${tenantId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        try {
+          const response = await fetch(API_URL + `/superadmin/tenant-details/${tenantId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            console.log('Fetched temple details:', data)
+            
+            // Update the selected tenant with temple details
+            selectedTenant.value = {
+              ...tenant,
+              temple_details: data.data || data
+            }
+            
+            // Also update in the main tenants array
+            const index = allTenants.value.findIndex(t => (t.id || t.ID) === tenantId)
+            if (index !== -1) {
+              allTenants.value[index] = {
+                ...allTenants.value[index],
+                temple_details: data.data || data
+              }
+            }
           }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Complete tenant data received:', data);
-          
-          // Extract tenant data from response
-          let completeData = null;
-          if (data.data) {
-            completeData = data.data;
-          } else if (data.tenant) {
-            completeData = data.tenant;
-          } else {
-            completeData = data;
-          }
-          
-          console.log('Extracted complete data:', completeData);
-          console.log('Available keys:', Object.keys(completeData));
-          
-          // Update selected tenant with complete data
-          selectedTenant.value = { ...completeData, _loading: false };
-        } else {
-          console.error('Failed to fetch tenant details:', response.status);
-          toast.error('Failed to load complete tenant details');
-          selectedTenant.value = { ...tenant, _loading: false };
+        } catch (error) {
+          console.error('Error fetching temple details:', error)
         }
-      } catch (error) {
-        console.error('Error fetching tenant details:', error);
-        toast.error('Error loading tenant details');
-        selectedTenant.value = { ...tenant, _loading: false };
       }
-    };
+      
+      showDetailsModal.value = true
+    }
     
     const handleApproveFromDetails = () => {
-      handleApprove(selectedTenant.value);
-      showDetailsModal.value = false;
-    };
+      handleApprove(selectedTenant.value)
+      showDetailsModal.value = false
+    }
     
     // ==================== DATA LOADING ====================
     
     const loadAllTenants = async () => {
-      loading.value = true;
+      loading.value = true
       
       try {
-        console.log('🔄 Loading ALL tenant data...');
+        console.log('🔄 Loading ALL tenant data with temple details...')
         
-        let allTenantsData = [];
+        let allTenantsData = []
         
-        const endpoints = [
-          '/superadmin/tenants',
-          '/superadmin/tenants?status=pending',
-          '/superadmin/tenants?status=approved', 
-          '/superadmin/tenants?status=active',
-          '/superadmin/tenants?status=rejected'
-        ];
-        
-        for (const endpoint of endpoints) {
-          try {
-            console.log(`🔗 Trying endpoint: ${endpoint}`);
-            
-            const response = await fetch(API_URL + endpoint, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              }
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              let tenantData = [];
-              
-              if (data && data.data && Array.isArray(data.data)) {
-                tenantData = data.data;
-              } else if (Array.isArray(data)) {
-                tenantData = data;
-              } else if (data && Array.isArray(data.tenants)) {
-                tenantData = data.tenants;
-              }
-              
-              if (tenantData.length > 0) {
-                console.log(`✅ Got ${tenantData.length} tenants from ${endpoint}`);
-                console.log('Sample tenant data:', tenantData[0]);
-                
-                tenantData.forEach(tenant => {
-                  const tenantId = tenant.id || tenant.ID;
-                  if (tenantId && !allTenantsData.find(existing => (existing.id || existing.ID) === tenantId)) {
-                    allTenantsData.push(tenant);
-                  }
-                });
-              }
+        // Method 1: Try the main tenants endpoint
+        try {
+          console.log('🔗 Trying main /superadmin/tenants endpoint...')
+          
+          const response = await fetch(API_URL + '/superadmin/tenants', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
-          } catch (endpointError) {
-            console.error(`❌ Error with endpoint ${endpoint}:`, endpointError);
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            let tenantData = []
+            
+            // Handle different response structures
+            if (data && data.data && Array.isArray(data.data)) {
+              tenantData = data.data
+            } else if (Array.isArray(data)) {
+              tenantData = data
+            } else if (data && Array.isArray(data.tenants)) {
+              tenantData = data.tenants
+            }
+            
+            if (tenantData.length > 0) {
+              console.log(`✅ Got ${tenantData.length} tenants from main endpoint`)
+              
+              // Check if temple_details are included
+              const firstTenant = tenantData[0]
+              console.log('First tenant structure:', firstTenant)
+              console.log('First tenant temple_details:', firstTenant.temple_details)
+              
+              // If temple_details are missing, fetch them individually
+              for (const tenant of tenantData) {
+                if (!tenant.temple_details || Object.keys(tenant.temple_details || {}).length === 0) {
+                  console.log(`⚠️ Tenant ${tenant.id || tenant.ID} missing temple_details, fetching...`)
+                  
+                  try {
+                    const tenantId = tenant.id || tenant.ID
+                    const detailsResponse = await fetch(API_URL + `/superadmin/tenant-details/${tenantId}`, {
+                      headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                      }
+                    })
+                    
+                    if (detailsResponse.ok) {
+                      const detailsData = await detailsResponse.json()
+                      console.log(`✅ Fetched temple details for tenant ${tenantId}:`, detailsData)
+                      
+                      // Merge temple details into tenant object
+                      tenant.temple_details = detailsData.data || detailsData
+                    }
+                  } catch (detailsError) {
+                    console.warn(`Failed to fetch temple details for tenant ${tenant.id || tenant.ID}:`, detailsError)
+                  }
+                }
+              }
+              
+              allTenantsData = tenantData
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error with main endpoint:', error)
+        }
+        
+        // Method 2: If main endpoint failed, try status-based endpoints
+        if (allTenantsData.length === 0) {
+          console.log('🔧 Trying status-based endpoints...')
+          
+          const statusEndpoints = [
+            '/superadmin/tenants?status=pending',
+            '/superadmin/tenants?status=approved',
+            '/superadmin/tenants?status=active',
+            '/superadmin/tenants?status=rejected'
+          ]
+          
+          for (const endpoint of statusEndpoints) {
+            try {
+              const response = await fetch(API_URL + endpoint, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                }
+              })
+              
+              if (response.ok) {
+                const data = await response.json()
+                let tenantData = []
+                
+                if (data && data.data && Array.isArray(data.data)) {
+                  tenantData = data.data
+                } else if (Array.isArray(data)) {
+                  tenantData = data
+                }
+                
+                if (tenantData.length > 0) {
+                  console.log(`✅ Got ${tenantData.length} tenants from ${endpoint}`)
+                  
+                  // Fetch temple details for each tenant if missing
+                  for (const tenant of tenantData) {
+                    const tenantId = tenant.id || tenant.ID
+                    
+                    if (tenantId && (!tenant.temple_details || Object.keys(tenant.temple_details || {}).length === 0)) {
+                      try {
+                        const detailsResponse = await fetch(API_URL + `/superadmin/tenant-details/${tenantId}`, {
+                          headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                          }
+                        })
+                        
+                        if (detailsResponse.ok) {
+                          const detailsData = await detailsResponse.json()
+                          tenant.temple_details = detailsData.data || detailsData
+                        }
+                      } catch (detailsError) {
+                        console.warn(`Failed to fetch details for tenant ${tenantId}:`, detailsError)
+                      }
+                    }
+                    
+                    // Add tenant if not already in array
+                    if (!allTenantsData.find(existing => (existing.id || existing.ID) === tenantId)) {
+                      allTenantsData.push(tenant)
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error(`❌ Error with ${endpoint}:`, error)
+            }
           }
         }
         
+        // Method 3: Fallback to service methods
         if (allTenantsData.length === 0) {
-          console.log('🔧 Trying service methods as fallback...');
+          console.log('🔧 Trying service methods as fallback...')
           
           try {
-            const serviceResponse = await superAdminService.getAllTenants();
+            const serviceResponse = await superAdminService.getAllTenants()
             
             if (serviceResponse && serviceResponse.success && serviceResponse.data) {
               if (Array.isArray(serviceResponse.data)) {
-                allTenantsData = serviceResponse.data;
-                console.log(`✅ Loaded ${allTenantsData.length} tenants from service`);
+                allTenantsData = serviceResponse.data
+                console.log(`✅ Loaded ${allTenantsData.length} tenants from service`)
+                
+                // Fetch temple details for each
+                for (const tenant of allTenantsData) {
+                  if (!tenant.temple_details) {
+                    const tenantId = tenant.id || tenant.ID
+                    if (tenantId) {
+                      try {
+                        const detailsResponse = await superAdminService.getTenantDetails(tenantId)
+                        if (detailsResponse.success && detailsResponse.data) {
+                          tenant.temple_details = detailsResponse.data.temple_details || detailsResponse.data
+                        }
+                      } catch (err) {
+                        console.warn(`Failed to get details for tenant ${tenantId}`)
+                      }
+                    }
+                  }
+                }
               }
             }
           } catch (serviceError) {
-            console.error('❌ Error with service methods:', serviceError);
+            console.error('❌ Error with service methods:', serviceError)
           }
         }
         
-        allTenants.value = [...allTenantsData];
-        tenants.value = [...allTenantsData];
+        // Log final data structure
+        console.log('📦 Final tenant data loaded:', allTenantsData.length)
+        if (allTenantsData.length > 0) {
+          console.log('📦 Sample tenant with temple details:', {
+            id: allTenantsData[0].id || allTenantsData[0].ID,
+            name: allTenantsData[0].full_name || allTenantsData[0].FullName,
+            temple_details: allTenantsData[0].temple_details
+          })
+        }
         
-        await nextTick();
+        // CRITICAL: Force reactive update
+        allTenants.value = [...allTenantsData]
+        tenants.value = [...allTenantsData]
         
-        console.log(`📊 FINAL RESULT: ${allTenantsData.length} total tenants loaded`);
+        // Force computed property recalculation
+        await nextTick()
+        
+        console.log(`📊 FINAL RESULT: ${allTenantsData.length} total tenants loaded`)
+        console.log(`📊 STATUS BREAKDOWN:
+          - Pending: ${allTenantsData.filter(t => isStatusPending(t)).length}
+          - Approved: ${allTenantsData.filter(t => isStatusApproved(t)).length}
+          - Rejected: ${allTenantsData.filter(t => isStatusRejected(t)).length}`)
         
         if (allTenantsData.length > 0) {
-          toast.success(`Loaded ${allTenantsData.length} total tenants`);
+          toast.success(`Loaded ${allTenantsData.length} total tenants with temple details`)
         } else {
-          toast.warning('No tenant data found');
+          toast.warning('No tenant data found')
         }
         
       } catch (error) {
-        console.error('❌ Error in loadAllTenants:', error);
-        allTenants.value = [];
-        tenants.value = [];
-        toast.error('Error loading tenant data');
+        console.error('❌ Error in loadAllTenants:', error)
+        allTenants.value = []
+        tenants.value = []
+        toast.error('Error loading tenant data')
       } finally {
-        loading.value = false;
+        loading.value = false
       }
-    };
+    }
     
     const loadTenants = async () => {
-      await loadAllTenants();
-    };
+      await loadAllTenants()
+    }
     
     // ==================== APPROVAL/REJECTION HANDLERS ====================
     
     const handleApprove = async (tenant) => {
       if (!tenant) {
-        toast.error('Cannot approve: Missing tenant');
-        return;
+        toast.error('Cannot approve: Missing tenant')
+        return
       }
       
-      const tenantId = tenant.id || tenant.ID;
+      const tenantId = tenant.id || tenant.ID
       
       if (!tenantId) {
-        toast.error('Cannot approve: Missing tenant ID');
-        return;
+        toast.error('Cannot approve: Missing tenant ID')
+        return
       }
       
-      isProcessing.value = true;
-      console.log(`🔄 Attempting to approve tenant ${tenantId}`);
+      isProcessing.value = true
+      console.log(`🔄 Attempting to approve tenant ${tenantId}`)
       
       try {
         const response = await fetch(API_URL + `/superadmin/tenants/${tenantId}/approval`, {
@@ -947,70 +962,71 @@ export default {
           body: JSON.stringify({
             status: "APPROVED"
           })
-        });
+        })
         
         if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Approval successful:', data);
-          toast.success(`Tenant ${getTenantName(tenant)} approved successfully`);
+          const data = await response.json()
+          console.log('✅ Approval successful:', data)
+          toast.success(`Tenant ${getTenantName(tenant)} approved successfully`)
           
-          await loadAllTenants();
-          emit('updated');
+          // Refresh the tenant list
+          await loadAllTenants()
+          emit('updated')
         } else {
-          console.error('❌ Approval failed with status:', response.status);
-          const errorData = await response.text();
-          console.error('Error response:', errorData);
-          toast.error(`Failed to approve tenant: ${response.statusText}`);
+          console.error('❌ Approval failed with status:', response.status)
+          const errorData = await response.text()
+          console.error('Error response:', errorData)
+          toast.error(`Failed to approve tenant: ${response.statusText}`)
         }
       } catch (error) {
-        console.error('❌ Error in approval process:', error);
-        toast.error('Error approving tenant: ' + (error.message || 'Unknown error'));
+        console.error('❌ Error in approval process:', error)
+        toast.error('Error approving tenant: ' + (error.message || 'Unknown error'))
       } finally {
-        isProcessing.value = false;
+        isProcessing.value = false
       }
-    };
+    }
     
     const handleRejectClick = (tenant) => {
       if (!tenant) {
-        toast.error('Cannot reject: Missing tenant');
-        return;
+        toast.error('Cannot reject: Missing tenant')
+        return
       }
       
-      const tenantId = tenant.id || tenant.ID;
+      const tenantId = tenant.id || tenant.ID
       
       if (!tenantId) {
-        toast.error('Cannot reject: Missing tenant ID');
-        return;
+        toast.error('Cannot reject: Missing tenant ID')
+        return
       }
       
-      selectedTenant.value = tenant;
-      rejectReason.value = '';
-      showRejectModal.value = true;
-    };
+      selectedTenant.value = tenant
+      rejectReason.value = ''
+      showRejectModal.value = true
+    }
     
     const confirmReject = async () => {
-      const tenant = selectedTenant.value;
+      const tenant = selectedTenant.value
       
       if (!tenant) {
-        toast.error('Cannot reject: Missing tenant');
-        showRejectModal.value = false;
-        return;
+        toast.error('Cannot reject: Missing tenant')
+        showRejectModal.value = false
+        return
       }
       
-      const tenantId = tenant.id || tenant.ID;
+      const tenantId = tenant.id || tenant.ID
       
       if (!tenantId) {
-        toast.error('Cannot reject: Missing tenant ID');
-        showRejectModal.value = false;
-        return;
+        toast.error('Cannot reject: Missing tenant ID')
+        showRejectModal.value = false
+        return
       }
       
       if (!rejectReason.value.trim()) {
-        toast.warning('Please provide a rejection reason');
-        return;
+        toast.warning('Please provide a rejection reason')
+        return
       }
       
-      isProcessing.value = true;
+      isProcessing.value = true
       
       try {
         const response = await fetch(API_URL + `/superadmin/tenants/${tenantId}/approval`, {
@@ -1023,48 +1039,49 @@ export default {
             status: "REJECTED",
             reason: rejectReason.value
           })
-        });
+        })
         
         if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Rejection successful:', data);
-          toast.success(`Tenant ${getTenantName(tenant)} rejected successfully`);
-          showRejectModal.value = false;
+          const data = await response.json()
+          console.log('✅ Rejection successful:', data)
+          toast.success(`Tenant ${getTenantName(tenant)} rejected successfully`)
+          showRejectModal.value = false
           
-          await loadAllTenants();
-          emit('updated');
+          // Refresh the tenant list
+          await loadAllTenants()
+          emit('updated')
         } else {
-          console.error('❌ Rejection failed with status:', response.status);
-          const errorData = await response.text();
-          console.error('Error response:', errorData);
-          toast.error(`Failed to reject tenant: ${response.statusText}`);
+          console.error('❌ Rejection failed with status:', response.status)
+          const errorData = await response.text()
+          console.error('Error response:', errorData)
+          toast.error(`Failed to reject tenant: ${response.statusText}`)
         }
       } catch (error) {
-        console.error('❌ Error in rejection process:', error);
-        toast.error('Error rejecting tenant: ' + (error.message || 'Unknown error'));
+        console.error('❌ Error in rejection process:', error)
+        toast.error('Error rejecting tenant: ' + (error.message || 'Unknown error'))
       } finally {
-        isProcessing.value = false;
+        isProcessing.value = false
       }
-    };
+    }
     
     // ==================== WATCHERS ====================
     
     watch(statusFilter, (newValue, oldValue) => {
       if (newValue !== oldValue) {
-        currentPage.value = 1;
+        currentPage.value = 1
       }
-    });
+    })
     
     watch(allTenants, (newTenants) => {
-      console.log(`🔄 allTenants changed: ${newTenants.length} tenants`);
-    }, { deep: true });
+      console.log(`🔄 allTenants changed: ${newTenants.length} tenants`)
+    }, { deep: true })
     
     // ==================== LIFECYCLE ====================
     
     onMounted(() => {
-      console.log('🚀 Component mounted, loading tenants...');
-      loadAllTenants();
-    });
+      console.log('🚀 Component mounted, loading tenants...')
+      loadAllTenants()
+    })
     
     return {
       loading,
@@ -1106,9 +1123,8 @@ export default {
       handleApproveFromDetails,
       getTempleDetail,
       getTempleDescription,
-      debugMode,
-      normalizeStatus
-    };
+      debugMode
+    }
   }
-};
+}
 </script>

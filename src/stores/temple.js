@@ -534,9 +534,39 @@ const updateTempleStatus = async (templeId, isActive) => {
     )
   }
 
-  const getTempleById = computed(() => (id) => {
-    return temples.value.find(temple => temple.id === parseInt(id))
-  })
+
+
+const getTempleById = async (id) => {
+  try {
+    loading.value = true
+    error.value = null
+    
+    console.log(`🏛️ STORE: Fetching fresh temple details for ID: ${id}`)
+    
+    // Make a fresh API call to get complete temple details including rejection info
+    const response = await templeService.getTempleById(id)
+    
+    console.log('🏛️ STORE: Fresh temple data received:', response)
+    
+    // Update current temple
+    currentTemple.value = response
+    
+    // Also update in temples array if it exists
+    const index = temples.value.findIndex(t => t.id === parseInt(id))
+    if (index !== -1) {
+      temples.value[index] = response
+    }
+    
+    return response
+  } catch (err) {
+    const errorMessage = err.message || 'Failed to fetch temple details'
+    error.value = errorMessage
+    console.error('Error fetching temple by ID:', err)
+    throw err
+  } finally {
+    loading.value = false
+  }
+}
 
   const clearError = () => {
     error.value = null

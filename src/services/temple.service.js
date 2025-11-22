@@ -873,63 +873,69 @@ async toggleTempleStatus(templeId, isActive) {
   },
 
   normalizeTempleData(temple) {
-    if (!temple) return null
+  if (!temple) return null
 
-    return {
-      id: temple.id || temple.ID || 0,
-      name: temple.name || temple.Name || 'Unknown Temple',
-      description: temple.description || temple.Description || '',
-      templeType: temple.temple_type || temple.TempleType || '',
-      category: temple.temple_type || temple.TempleType || '',
+  return {
+    id: temple.id || temple.ID || 0,
+    name: temple.name || temple.Name || 'Unknown Temple',
+    description: temple.description || temple.Description || '',
+    templeType: temple.temple_type || temple.TempleType || '',
+    category: temple.temple_type || temple.TempleType || '',
 
-      addressLine1: temple.street_address || temple.StreetAddress || '',
+    addressLine1: temple.street_address || temple.StreetAddress || '',
+    city: temple.city || temple.City || '',
+    state: temple.state || temple.State || '',
+    district: temple.district || temple.District || '',
+    pincode: temple.pincode || temple.Pincode || '',
+    country: 'India',
+
+    phone: temple.phone || temple.Phone || '',
+    email: temple.email || temple.Email || '',
+
+    status: temple.status || temple.Status || 'pending',
+    
+    // 🆕 ADD THESE THREE LINES for rejection/approval data
+    rejectionReason: temple.rejection_reason || temple.rejectionReason || temple.admin_notes || temple.adminNotes || '',
+    rejectedAt: temple.rejected_at || temple.rejectedAt || null,
+    approvedAt: temple.approved_at || temple.approvedAt || null,
+    
+    devoteeCount: temple.devotee_count || temple.DevoteeCount || 0,
+    volunteersCount: temple.volunteers_count || temple.VolunteersCount || 0,
+
+    image: temple.image_url || temple.ImageUrl || null,
+
+    mainDeity: temple.main_deity || temple.MainDeity || '',
+    establishedYear: temple.established_year || temple.EstablishedYear || null,
+
+    createdAt: temple.created_at || temple.CreatedAt || null,
+    updatedAt: temple.updated_at || temple.UpdatedAt || null,
+    
+    // Add tenant/creator information for filtering
+    createdBy: temple.created_by || temple.CreatedBy || null,
+    tenantId: temple.tenant_id || temple.TenantId || temple.created_by || temple.CreatedBy || null,
+
+    // Document information
+    registrationCertUrl: temple.registration_cert_url || temple.RegistrationCertUrl || null,
+    trustDeedUrl: temple.trust_deed_url || temple.TrustDeedUrl || null,
+    propertyDocsUrl: temple.property_docs_url || temple.PropertyDocsUrl || null,
+    additionalDocsUrls: temple.additional_docs_urls || temple.AdditionalDocsUrls || null,
+
+    address: {
+      street: temple.street_address || temple.StreetAddress || '',
       city: temple.city || temple.City || '',
       state: temple.state || temple.State || '',
       district: temple.district || temple.District || '',
       pincode: temple.pincode || temple.Pincode || '',
-      country: 'India',
+      country: 'India'
+    },
 
+    contact: {
       phone: temple.phone || temple.Phone || '',
       email: temple.email || temple.Email || '',
-
-      status: temple.status || temple.Status || 'pending',
-      devoteeCount: temple.devotee_count || temple.DevoteeCount || 0,
-      volunteersCount: temple.volunteers_count || temple.VolunteersCount || 0,
-
-      image: temple.image_url || temple.ImageUrl || null,
-
-      mainDeity: temple.main_deity || temple.MainDeity || '',
-      establishedYear: temple.established_year || temple.EstablishedYear || null,
-
-      createdAt: temple.created_at || temple.CreatedAt || null,
-      updatedAt: temple.updated_at || temple.UpdatedAt || null,
-      
-      // Add tenant/creator information for filtering
-      createdBy: temple.created_by || temple.CreatedBy || null,
-      tenantId: temple.tenant_id || temple.TenantId || temple.created_by || temple.CreatedBy || null,
-
-      // Document information
-      registrationCertUrl: temple.registration_cert_url || temple.RegistrationCertUrl || null,
-      trustDeedUrl: temple.trust_deed_url || temple.TrustDeedUrl || null,
-      propertyDocsUrl: temple.property_docs_url || temple.PropertyDocsUrl || null,
-      additionalDocsUrls: temple.additional_docs_urls || temple.AdditionalDocsUrls || null,
-
-      address: {
-        street: temple.street_address || temple.StreetAddress || '',
-        city: temple.city || temple.City || '',
-        state: temple.state || temple.State || '',
-        district: temple.district || temple.District || '',
-        pincode: temple.pincode || temple.Pincode || '',
-        country: 'India'
-      },
-
-      contact: {
-        phone: temple.phone || temple.Phone || '',
-        email: temple.email || temple.Email || '',
-        website: temple.website || temple.Website || ''
-      }
+      website: temple.website || temple.Website || ''
     }
-  },
+  }
+},
   // In your seva.service.js or entity.service.js
 async getEntityDetails(entityId) {
   const response = await api.get(`/entities/${entityId}`)
