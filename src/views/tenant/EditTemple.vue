@@ -376,63 +376,130 @@
                 </div>
               </div>
             </div>
+<!-- Additional Documents - FIXED VERSION -->
+<div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
+  <div class="text-center">
+    <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+    </svg>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">Additional Documents</h3>
+    <p class="text-gray-600 mb-4">Upload any additional supporting documents (Optional)</p>
 
-            <!-- Additional Documents -->
-            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
-              <div class="text-center">
-                <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-                </svg>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Additional Documents</h3>
-                <p class="text-gray-600 mb-4">Upload any additional supporting documents (Optional)</p>
+    <div class="flex flex-col items-center">
+      <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
+        <span>{{ 
+          (existingFiles.additional && existingFiles.additional.length > 0) || 
+          (form.documents.additional && form.documents.additional.length > 0) 
+            ? 'Add More Files' 
+            : 'Choose Files' 
+        }}</span>
+        <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple
+               @change="handleFileUpload($event, 'additional')" />
+      </label>
 
-                <div class="flex flex-col items-center">
-                  <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
-                    <span>{{ existingFiles.additional && existingFiles.additional.length > 0 ? 'Add More Files' : 'Choose Files' }}</span>
-                    <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple
-                           @change="handleFileUpload($event, 'additional')" />
-                  </label>
+      <!-- Show newly uploaded files (not yet saved) -->
+      <div v-if="form.documents.additional && form.documents.additional.length > 0" 
+           class="mt-4 w-full space-y-2">
+        <p class="text-sm font-medium text-gray-700 mb-2">📎 New Files to Upload:</p>
+        <div v-for="(file, idx) in form.documents.additional" 
+             :key="`new-${idx}`" 
+             class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+          <div class="flex items-center space-x-2 flex-1">
+            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-sm text-green-700 font-medium">{{ file.name }}</span>
+            <span class="text-xs text-green-600">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button type="button"
+                    @click="viewLocalAdditional(idx)"
+                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
+              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              View
+            </button>
+            <button type="button"
+                    @click="downloadLocalFile(file, `additional-document-${idx+1}`)"
+                    class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors">
+              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download
+            </button>
+            <button type="button"
+                    @click="removeNewAdditionalFile(idx)"
+                    class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
 
-                  <div v-if="form.documents.additional && form.documents.additional.length > 0" class="mt-2 w-full">
-                    <p v-for="(file, idx) in form.documents.additional" :key="`new-${idx}`" class="text-sm text-green-600 flex items-center justify-center space-x-2 mt-1">
-                      <span>{{ file.name }}</span>
-                      <button type="button"
-                              @click="viewLocalAdditional(idx)"
-                              class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
-                        View
-                      </button>
-                      <button type="button"
-                              @click="downloadLocalFile(file, `additional-document-${idx+1}`)"
-                              class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">
-                        Download
-                      </button>
-                    </p>
-                  </div>
+      <!-- Show existing saved files -->
+      <div v-if="existingFiles.additional && existingFiles.additional.length > 0" 
+           class="mt-4 w-full space-y-2">
+        <p class="text-sm font-medium text-gray-700 mb-2">
+          📁 Currently Saved Documents ({{ existingFiles.additional.length }}):
+        </p>
+        <div v-for="(name, index) in existingFiles.additional" 
+             :key="`existing-${index}`"
+             class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+          <div class="flex items-center space-x-2 flex-1">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <span class="text-sm text-blue-700">{{ name }}</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button type="button"
+                    v-if="documentUrls.additional && documentUrls.additional[index]"
+                    @click="viewRemote(documentUrls.additional[index], `Additional Document ${index+1}`)"
+                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
+              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              View
+            </button>
+            <button type="button"
+                    v-if="documentUrls.additional && documentUrls.additional[index]"
+                    :disabled="downloadingFiles[`additional-${index}`]"
+                    @click="downloadRemote(documentUrls.additional[index], `additional-document-${index+1}`, `additional-${index}`)"
+                    class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg v-if="!downloadingFiles[`additional-${index}`]" 
+                   class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              <span v-if="downloadingFiles[`additional-${index}`]">Downloading...</span>
+              <span v-else>Download</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-                  <div v-if="existingFiles.additional && existingFiles.additional.length > 0" class="mt-2 w-full">
-                    <div v-for="(name, index) in existingFiles.additional" :key="`existing-${index}`"
-                         class="flex items-center justify-center space-x-2 mt-1">
-                      <p class="text-sm text-gray-600">Current: {{ name }}</p>
-                      <button type="button"
-                              v-if="documentUrls.additional && documentUrls.additional[index]"
-                              @click="viewRemote(documentUrls.additional[index], `Additional Document ${index+1}`)"
-                              class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
-                        View
-                      </button>
-                      <button type="button"
-                              v-if="documentUrls.additional && documentUrls.additional[index]"
-                              :disabled="downloadingFiles[`additional-${index}`]"
-                              @click="downloadRemote(documentUrls.additional[index], `additional-document-${index+1}`, `additional-${index}`)"
-                              class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span v-if="downloadingFiles[`additional-${index}`]">Downloading...</span>
-                        <span v-else>Download</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <!-- Empty state -->
+      <div v-if="(!existingFiles.additional || existingFiles.additional.length === 0) && 
+                 (!form.documents.additional || form.documents.additional.length === 0)"
+           class="mt-4 text-sm text-gray-500 italic">
+        No additional documents uploaded yet
+      </div>
+    </div>
+  </div>
+</div>
 
             <!-- Status Information -->
             <div class="mt-8 p-4 bg-gray-50 rounded-lg">
@@ -1029,39 +1096,116 @@ const validateCurrentStep = () => {
   return true
 }
 
-// Submit
+
 const handleSubmit = async () => {
   if (!validateCurrentStep()) return
+  
   try {
     isSubmitting.value = true
+    
+    // Parse established year
     let establishedYear = null
     if (form.establishedYear && !isNaN(parseInt(form.establishedYear))) {
       establishedYear = parseInt(form.establishedYear)
     }
-    // Use snake_case field names to match backend expectations
-    const payload = {
-      id: parseInt(templeId.value),
-      name: (form.name || '').trim(),
-      maindeity: (form.mainDeity || '').trim(),
-      templetype: (form.templeType || '').trim(),
-      establishedyear: establishedYear,
-      phone: (form.phone || '').trim(),
-      email: (form.email || '').trim(),
-      description: (form.description || '').trim(),
-      streetaddress: (form.streetAddress || '').trim(),
-      city: (form.city || '').trim(),
-      state: (form.state || '').trim(),
-      district: (form.district || '').trim(),
-      pincode: (form.pincode || '').trim(),
-      landmark: (form.landmark || '').trim(),
-      maplink: (form.mapLink || '').trim()
+    
+    // 🔥 CRITICAL FIX: Create FormData for file upload support
+    const formData = new FormData()
+    
+    // Add basic temple information with EXACT field names backend expects
+    formData.append('name', (form.name || '').trim())
+    formData.append('main_deity', (form.mainDeity || '').trim())
+    formData.append('temple_type', (form.templeType || '').trim())
+    
+    if (establishedYear) {
+      formData.append('established_year', establishedYear.toString())
     }
-    console.log('📤 Submitting update with payload:', payload)
-    await templeService.updateTemple(templeId.value, payload)
-    showToast('Temple information updated successfully!')
+    
+    formData.append('phone', (form.phone || '').trim())
+    formData.append('email', (form.email || '').trim())
+    formData.append('description', (form.description || '').trim())
+    
+    // Address information
+    formData.append('street_address', (form.streetAddress || '').trim())
+    formData.append('city', (form.city || '').trim())
+    formData.append('state', (form.state || '').trim())
+    formData.append('district', (form.district || '').trim())
+    formData.append('pincode', (form.pincode || '').trim())
+    formData.append('landmark', (form.landmark || '').trim())
+    formData.append('map_link', (form.mapLink || '').trim())
+    
+    // 🔥 CRITICAL: Add document files ONLY if they are new File objects
+    let hasNewFiles = false
+    
+    if (form.documents.registration instanceof File) {
+      formData.append('registration_cert', form.documents.registration)
+      hasNewFiles = true
+      console.log('📄 Adding NEW registration certificate:', form.documents.registration.name)
+    } else {
+      console.log('ℹ️ No new registration certificate - keeping existing')
+    }
+    
+    if (form.documents.trustDeed instanceof File) {
+      formData.append('trust_deed', form.documents.trustDeed)
+      hasNewFiles = true
+      console.log('📄 Adding NEW trust deed:', form.documents.trustDeed.name)
+    } else {
+      console.log('ℹ️ No new trust deed - keeping existing')
+    }
+    
+    if (form.documents.property instanceof File) {
+      formData.append('property_docs', form.documents.property)
+      hasNewFiles = true
+      console.log('📄 Adding NEW property documents:', form.documents.property.name)
+    } else {
+      console.log('ℹ️ No new property docs - keeping existing')
+    }
+    
+    if (form.documents.additional && form.documents.additional.length > 0) {
+      let hasAdditionalFiles = false
+      form.documents.additional.forEach((file, index) => {
+        if (file instanceof File) {
+          formData.append(`additional_docs_${index}`, file)
+          hasNewFiles = true
+          hasAdditionalFiles = true
+          console.log(`📄 Adding NEW additional document ${index}:`, file.name)
+        }
+      })
+      if (!hasAdditionalFiles) {
+        console.log('ℹ️ No new additional docs - keeping existing')
+      }
+    }
+    
+    // 🔥 Log FormData contents for debugging
+    console.log('📦 FormData contents:')
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${value.size} bytes)`)
+      } else {
+        console.log(`${key}: ${value}`)
+      }
+    }
+    
+    console.log(`🚀 Submitting temple update with ${hasNewFiles ? 'NEW FILES' : 'NO NEW FILES'}`)
+    
+    // Call the service with FormData
+    const response = await templeService.updateTemple(templeId.value, formData)
+    
+    console.log('✅ Temple update response:', response)
+    
+    // Show appropriate success message
+    if (response.files_updated) {
+      showToast(`Temple information and ${response.files_updated} file(s) updated successfully!`)
+    } else {
+      showToast('Temple information updated successfully!')
+    }
+    
+    // Navigate back to dashboard
     router.push('/tenant/dashboard')
+    
   } catch (error) {
     console.error('Failed to update temple', error)
+    
     // Extract more specific error message
     const errorData = error?.response?.data
     let msg = 'Failed to update temple information. Please try again.'
@@ -1080,6 +1224,24 @@ const handleSubmit = async () => {
   }
 }
 
+// 🆕 ALSO ADD THIS METHOD to remove additional files
+const removeNewAdditionalFile = (index) => {
+  if (form.documents.additional && form.documents.additional.length > index) {
+    // Revoke the blob URL if it exists
+    if (localPreviews.additional[index]) {
+      try {
+        URL.revokeObjectURL(localPreviews.additional[index])
+      } catch (e) {
+        console.warn('Failed to revoke URL:', e)
+      }
+    }
+    
+    // Remove the file from the array
+    form.documents.additional.splice(index, 1)
+    localPreviews.additional.splice(index, 1)
+  }
+}
+
 // Data fetch and mapping
 const safeGet = (obj, keys) => {
   for (const k of keys) {
@@ -1087,81 +1249,135 @@ const safeGet = (obj, keys) => {
   }
   return ''
 }
+
+
 const fetchTempleData = async () => {
   isLoading.value = true
   loadError.value = null
+  
   try {
     const response = await templeService.getTempleById(templeId.value)
     const d = response?.data || response || {}
 
+    // Basic info
     form.name = d.name || d.Name || ''
-    form.mainDeity = d.maindeity || d.mainDeity || d.MainDeity || ''
-    form.templeType = d.templetype || d.templeType || d.TempleType || ''
-    form.establishedYear = d.establishedyear || d.establishedYear || d.EstablishedYear || ''
+    form.mainDeity = d.maindeity || d.mainDeity || d.MainDeity || d.main_deity || ''
+    form.templeType = d.templetype || d.templeType || d.TempleType || d.temple_type || ''
+    form.establishedYear = d.establishedyear || d.establishedYear || d.EstablishedYear || d.established_year || ''
     form.phone = d.phone || d.Phone || ''
     form.email = d.email || d.Email || ''
     form.description = d.description || d.Description || ''
 
-    form.streetAddress = d.streetaddress || d.streetAddress || d.Address || ''
+    // Address fields - CHECK ALL VARIATIONS
+    form.streetAddress = d.streetaddress || d.streetAddress || d.street_address || 
+                        d.StreetAddress || d.Address || d.addressLine1 || ''
     form.city = d.city || d.City || ''
     form.state = d.state || d.State || ''
     form.district = d.district || d.District || ''
     form.pincode = d.pincode || d.Pincode || ''
     form.landmark = d.landmark || d.Landmark || ''
-    form.mapLink = d.maplink || d.mapLink || ''
+    form.mapLink = d.maplink || d.mapLink || d.map_link || d.MapLink || ''
+    
+    // Status
     form.status = (d.status || d.Status || 'PENDING').toString().toUpperCase()
-    form.rejectionReason = d.rejectionReason || d.RejectionReason || ''
-    form.adminNotes = d.adminNotes || d.AdminNotes || ''
+    form.rejectionReason = d.rejectionReason || d.rejection_reason || d.RejectionReason || ''
+    form.adminNotes = d.adminNotes || d.admin_notes || d.AdminNotes || ''
 
-    // Existing document display names (if backend provides them)
-    existingFiles.registration =
+    // Existing document display names
+    existingFiles.registration = 
       d.registrationCertName ||
       d.registration_cert_name ||
       d.registration_certificate_name ||
       ''
+    
     existingFiles.trustDeed =
       d.trustDeedName ||
       d.trust_deed_name ||
       ''
+    
     existingFiles.property =
       d.propertyDocsName ||
       d.property_docs_name ||
       ''
-    existingFiles.additional =
-      Array.isArray(d.additionalDocsNames || d.additional_docs_names)
-        ? (d.additionalDocsNames || d.additional_docs_names)
-        : []
 
-    // Build normalized absolute URLs similar to dashboard base
+    // CRITICAL: Additional documents names - CHECK ALL VARIATIONS
+    const additionalNames = 
+      d.additionalDocsNames || 
+      d.additional_docs_names || 
+      d.additionalDocumentsNames ||
+      d.additional_documents_names ||
+      []
+    
+    existingFiles.additional = Array.isArray(additionalNames) ? additionalNames : []
+
+    console.log('📋 Additional document names found:', existingFiles.additional)
+
+    // Build normalized absolute URLs
     const getFirstUrl = (obj, keys) => {
       const raw = safeGet(obj, keys)
       return fixToAbsoluteUrl(raw)
     }
 
     documentUrls.registration = getFirstUrl(d, [
-      'registrationCertUrl', 'registration_cert_url', 'registrationUrl', 'registration_url', 'registrationCert', 'registration_cert'
+      'registrationCertUrl', 'registration_cert_url', 'registrationUrl', 
+      'registration_url', 'registrationCert', 'registration_cert'
     ])
+    
     documentUrls.trustDeed = getFirstUrl(d, [
       'trustDeedUrl', 'trust_deed_url', 'trustDeed', 'trust_deed'
     ])
+    
     documentUrls.property = getFirstUrl(d, [
-      'propertyDocsUrl', 'property_docs_url', 'propertyUrl', 'property_url', 'propertyDocs', 'property_docs'
+      'propertyDocsUrl', 'property_docs_url', 'propertyUrl', 
+      'property_url', 'propertyDocs', 'property_docs'
     ])
 
-    // Additional docs: may be array of strings or objects
-    const addl = d.additionalDocuments || d.additional_documents || d.additionalDocs || d.additional_docs || []
-    documentUrls.additional = Array.isArray(addl)
-      ? addl.map(item => {
-          if (typeof item === 'string') return fixToAbsoluteUrl(item)
-          if (item && typeof item === 'object') {
-            const raw = item.url || item.fileUrl || item.downloadUrl || item.path || ''
-            return fixToAbsoluteUrl(raw)
-          }
-          return ''
-        }).filter(Boolean)
-      : []
+    // CRITICAL: Additional documents URLs - CHECK ALL VARIATIONS
+    const additionalDocsData = 
+      d.additionalDocuments || 
+      d.additional_documents || 
+      d.additionalDocs || 
+      d.additional_docs ||
+      d.additionalDocsUrls ||
+      d.additional_docs_urls ||
+      []
 
-    // If names are missing, infer from URLs for display consistency
+    console.log('📋 Additional documents data received:', additionalDocsData)
+
+    // Handle different response formats
+    if (Array.isArray(additionalDocsData)) {
+      documentUrls.additional = additionalDocsData.map(item => {
+        if (typeof item === 'string') {
+          return fixToAbsoluteUrl(item)
+        }
+        if (item && typeof item === 'object') {
+          const raw = item.url || item.fileUrl || item.downloadUrl || 
+                     item.path || item.file_url || item.download_url || ''
+          return fixToAbsoluteUrl(raw)
+        }
+        return ''
+      }).filter(Boolean)
+    } else if (typeof additionalDocsData === 'string') {
+  // Backend sent stringified array → parse it
+  try {
+    const parsed = JSON.parse(additionalDocsData)
+    if (Array.isArray(parsed)) {
+      documentUrls.additional = parsed.map(u => fixToAbsoluteUrl(u))
+    } else {
+      documentUrls.additional = [fixToAbsoluteUrl(parsed)]
+    }
+  } catch (e) {
+    console.warn("Failed to parse additionalDocsData:", additionalDocsData)
+    documentUrls.additional = []
+  }
+}
+ else {
+      documentUrls.additional = []
+    }
+
+    console.log('📋 Additional document URLs processed:', documentUrls.additional)
+
+    // If names are missing but URLs exist, infer names from URLs
     if (!existingFiles.registration && documentUrls.registration) {
       existingFiles.registration = getFilenameFromUrl(documentUrls.registration)
     }
@@ -1171,9 +1387,16 @@ const fetchTempleData = async () => {
     if (!existingFiles.property && documentUrls.property) {
       existingFiles.property = getFilenameFromUrl(documentUrls.property)
     }
+    
+    // If additional names missing, infer from URLs
     if (existingFiles.additional.length === 0 && documentUrls.additional.length > 0) {
       existingFiles.additional = documentUrls.additional.map(u => getFilenameFromUrl(u))
+      console.log('📋 Inferred additional file names from URLs:', existingFiles.additional)
     }
+
+    // Log final state for debugging
+    console.log('✅ Final existingFiles:', existingFiles)
+    console.log('✅ Final documentUrls:', documentUrls)
 
     isLoading.value = false
   } catch (err) {

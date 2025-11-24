@@ -749,15 +749,24 @@
                 </div>
                 
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                  <input
-                    v-model="sevaForm.duration"
-                    type="number"
-                    min="1"
-                    class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
-                    placeholder="e.g. 30, 60, 120"
-                  />
-                </div>
+  <label class="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+  <input
+    v-model="sevaForm.duration"
+    type="number"
+    min="1"
+    :disabled="sevaForm.startTime && sevaForm.endTime"
+    :class="[
+      'w-full px-3 py-2.5 border border-gray-300 rounded-lg transition-all duration-200',
+      sevaForm.startTime && sevaForm.endTime 
+        ? 'bg-gray-100 cursor-not-allowed text-gray-500' 
+        : 'focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500'
+    ]"
+    placeholder="Auto-calculated from time range"
+  />
+  <p v-if="sevaForm.startTime && sevaForm.endTime" class="mt-1 text-xs text-gray-500">
+    Auto-calculated from start and end time
+  </p>
+</div>
                 
                 <!-- Maximum Slots Per Day Field -->
                 <div>
@@ -937,7 +946,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSevaStore } from '@/stores/seva'
 import { sevaService } from '@/services/seva.service'
@@ -1654,6 +1663,43 @@ const clearSevaFilters = () => {
   sevaTypeFilter.value = ''
   sevaStatusFilter.value = ''
 }
+
+// Watch for changes in start and end time to auto-calculate duration
+watch([() => sevaForm.value.startTime, () => sevaForm.value.endTime], ([newStartTime, newEndTime]) => {
+  if (newStartTime && newEndTime) {
+    try {
+      // Parse time strings (HH:MM format)
+      const [startHour, startMin] = newStartTime.split(':').map(Number)
+      const [endHour, endMin] = newEndTime.split(':').map(Number)
+      
+      // Create date objects for today with the specified times
+      const startDate = new Date()
+      startDate.setHours(startHour, startMin, 0, 0)
+      
+      const endDate = new Date()
+      endDate.setHours(endHour, endMin, 0, 0)
+      
+      // If end time is before start time, assume it's next day
+      if (endDate < startDate) {
+        endDate.setDate(endDate.getDate() + 1)
+      }
+      
+      // Calculate difference in minutes
+      const diffMs = endDate - startDate
+      const diffMins = Math.floor(diffMs / (1000 * 60))
+      
+      // Update duration only if it's a positive value
+      if (diffMins > 0) {
+        sevaForm.value.duration = diffMins
+      } else {
+        sevaForm.value.duration = 30 // Default fallback
+      }
+    } catch (error) {
+      console.error('Error calculating duration:', error)
+      sevaForm.value.duration = 30 // Default fallback on error
+    }
+  }
+})
 
 onMounted(async () => {
   console.log('SevaManagement component mounted for entity:', entityId)

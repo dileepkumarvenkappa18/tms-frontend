@@ -95,7 +95,7 @@
                 </div>
               </div>
 
-              <!-- Description + Rejection Info Two Column Layout -->
+              <!-- Description + Status Info Two Column Layout -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 
                 <!-- LEFT SIDE: Description -->
@@ -149,41 +149,49 @@
                   </div>
                 </div>
 
-              </div>
-              <!-- End Two Column -->
-
-              <!-- Approved -->
-              <div v-if="isApproved" class="mb-6">
-                <h3 class="text-sm font-medium text-green-600 mb-2">Approval Details</h3>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div class="flex items-center space-x-2 text-sm">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <span class="font-medium text-green-800">Approved on:</span>
-                    <span class="text-green-700">{{ approvedDate || 'Date not available' }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Pending -->
-              <div v-if="isPending" class="mb-6">
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div class="flex items-start">
-                    <svg class="w-5 h-5 text-yellow-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <div>
-                      <h3 class="text-sm font-medium text-yellow-800">Pending Approval</h3>
-                      <p class="text-sm text-yellow-700 mt-1">
-                        Your temple submission is currently under review.
-                      </p>
+                <!-- RIGHT SIDE: Approval Information -->
+                <div v-if="isApproved">
+                  <h3 class="text-sm font-medium text-green-600 mb-2">Approval Details</h3>
+                  <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-center space-x-2 text-sm">
+                      <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <span class="font-medium text-green-800">Approved on:</span>
+                      <span class="text-green-700">{{ approvedDate || 'Date not available' }}</span>
+                    </div>
+                    
+                    <!-- Debug Info (Remove in production) -->
+                    <div v-if="!approvedDate" class="mt-2 text-xs text-gray-500">
+                      <details>
+                        <summary class="cursor-pointer">Debug: Show available date fields</summary>
+                        <pre class="mt-2 p-2 bg-white rounded text-xs overflow-auto">{{ availableDateFields }}</pre>
+                      </details>
                     </div>
                   </div>
                 </div>
+
+                <!-- RIGHT SIDE: Pending Information -->
+                <div v-if="isPending">
+                  <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                      <svg class="w-5 h-5 text-yellow-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      </svg>
+                      <div>
+                        <h3 class="text-sm font-medium text-yellow-800">Pending Approval</h3>
+                        <p class="text-sm text-yellow-700 mt-1">
+                          Your temple submission is currently under review.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
+              <!-- End Two Column -->
 
               <!-- Action Buttons -->
               <div class="flex flex-wrap gap-3">
@@ -363,14 +371,24 @@ const rejectedDate = computed(() => {
   }
 })
 
-// Approval date
+// Approval date - Enhanced with more field checks
 const approvedDate = computed(() => {
   const date = safeGet(temple.value, [
     'approvedAt',
     'approved_at',
     'ApprovedAt',
     'approvalDate',
-    'approval_date'
+    'approval_date',
+    'approved_date',
+    'approvedDate',
+    'updatedAt',
+    'updated_at',
+    'UpdatedAt',
+    'modifiedAt',
+    'modified_at',
+    'ModifiedAt',
+    'lastModified',
+    'last_modified'
   ])
   
   if (!date) return ''
@@ -386,6 +404,30 @@ const approvedDate = computed(() => {
   } catch {
     return date
   }
+})
+
+// Debug info for available date fields
+const availableDateFields = computed(() => {
+  if (!temple.value) return {}
+  
+  const dateFields = {}
+  const possibleDateKeys = [
+    'approvedAt', 'approved_at', 'ApprovedAt',
+    'approvalDate', 'approval_date', 'approved_date',
+    'updatedAt', 'updated_at', 'UpdatedAt',
+    'createdAt', 'created_at', 'CreatedAt',
+    'modifiedAt', 'modified_at', 'ModifiedAt',
+    'rejectedAt', 'rejected_at', 'RejectedAt',
+    'timestamp', 'Timestamp'
+  ]
+  
+  possibleDateKeys.forEach(key => {
+    if (temple.value[key]) {
+      dateFields[key] = temple.value[key]
+    }
+  })
+  
+  return dateFields
 })
 
 // Fetch Temple
@@ -404,6 +446,9 @@ const fetchTempleData = async () => {
       console.log('📋 Status:', temple.value?.status)
       console.log('❌ Rejection Reason:', rejectionReason.value)
       console.log('📝 Admin Notes:', adminNotes.value)
+      console.log('🔍 All Temple Fields:', Object.keys(temple.value))
+      console.log('📅 Date Fields:', availableDateFields.value)
+      console.log('✅ Approval Date:', approvedDate.value)
     } else {
       error.value = 'Temple not found'
     }

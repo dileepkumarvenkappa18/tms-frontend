@@ -183,17 +183,12 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button 
+                  type="button"
                   @click="viewBookingDetails(booking)"
-                  class="text-indigo-600 hover:text-indigo-900 mr-3"
+                  class="text-indigo-600 hover:text-indigo-900 font-medium focus:outline-none hover:underline transition-colors duration-150"
+                  title="View Details"
                 >
-                  View
-                </button>
-                <button 
-                  v-if="(booking.status || booking.Status || '').toLowerCase() === 'pending'"
-                  @click="cancelBooking(booking)"
-                  class="text-red-600 hover:text-red-900"
-                >
-                  Cancel
+                  View Details
                 </button>
               </td>
             </tr>
@@ -220,101 +215,98 @@
     </div>
 
     <!-- Booking Details Modal -->
-    <BaseModal 
-      :show="showBookingDetailsModal" 
-      @close="showBookingDetailsModal = false"
-      title="Booking Details"
+    <div
+      v-if="selectedBooking"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
     >
-      <div v-if="selectedBooking" class="p-4">
-        <div class="space-y-4">
-          <div class="flex justify-between">
-            <h3 class="text-lg font-medium text-gray-900">{{ selectedBooking.seva_name || (selectedBooking.seva && selectedBooking.seva.name) || `Seva ${selectedBooking.seva_id || selectedBooking.SevaID || ''}` }}</h3>
-            <span 
-              :class="getStatusClass(selectedBooking.status || selectedBooking.Status)" 
-              class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-            >
-              {{ formatStatus(selectedBooking.status || selectedBooking.Status) }}
-            </span>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p class="text-gray-500">Booking Date</p>
-              <p class="font-medium">{{ formatDate(selectedBooking.booking_time || selectedBooking.BookingTime) }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500">Booking Time</p>
-              <p class="font-medium">{{ formatTime(selectedBooking.booking_time || selectedBooking.BookingTime) }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500">Seva Schedule Date</p>
-              <p class="font-medium">{{ getSevaScheduleDate(selectedBooking) }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500">Seva Schedule Time</p>
-              <p class="font-medium">{{ getSevaScheduleTime(selectedBooking) }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500">Amount</p>
-              <p class="font-medium">₹{{ selectedBooking.price || selectedBooking.amount || 0 }}</p>
-            </div>
-            <div>
-              <p class="text-gray-500">Type</p>
-              <p class="font-medium">{{ selectedBooking.seva_type || (selectedBooking.seva && selectedBooking.seva.type) || '' }}</p>
-            </div>
-            <div class="col-span-2">
-              <p class="text-gray-500">Description</p>
-              <p class="font-medium">{{ selectedBooking.seva_description || (selectedBooking.seva && selectedBooking.seva.description) || 'No description available' }}</p>
-            </div>
-            <div v-if="selectedBooking.special_requests || selectedBooking.SpecialRequests" class="col-span-2">
-              <p class="text-gray-500">Special Requests</p>
-              <p class="font-medium">{{ selectedBooking.special_requests || selectedBooking.SpecialRequests }}</p>
-            </div>
-          </div>
+      <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 class="text-xl font-bold text-gray-900">Seva Booking Details</h2>
+          <button
+            type="button"
+            @click="selectedBooking = null"
+            class="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+          >
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         
-        <div class="mt-6 flex justify-end space-x-3">
-          <button 
-            @click="showBookingDetailsModal = false"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Close
-          </button>
-          <button 
-            v-if="(selectedBooking.status || selectedBooking.Status || '').toLowerCase() === 'pending'"
-            @click="cancelBookingFromModal"
-            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none"
-          >
-            Cancel Booking
-          </button>
+        <div class="p-6">
+          <div class="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-gray-900">
+                {{ selectedBooking.seva_name || (selectedBooking.seva && selectedBooking.seva.name) || `Seva ${selectedBooking.seva_id || selectedBooking.SevaID || ''}` }}
+              </h3>
+              <span 
+                :class="getStatusClass(selectedBooking.status || selectedBooking.Status)" 
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+              >
+                <span :class="getStatusDotClass(selectedBooking.status || selectedBooking.Status)" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
+                {{ formatStatus(selectedBooking.status || selectedBooking.Status) }}
+              </span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+              <div>
+                <p class="text-sm font-medium text-gray-500">Seva Type</p>
+                <p class="mt-1 text-base text-gray-900">{{ selectedBooking.seva_type || (selectedBooking.seva && selectedBooking.seva.type) || 'Not specified' }}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-500">Amount</p>
+                <p class="mt-1 text-base font-semibold text-indigo-600">
+                  ₹{{ getBookingAmount(selectedBooking) }}
+                </p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-500">Booking Date</p>
+                <p class="mt-1 text-base text-gray-900">{{ formatDate(selectedBooking.booking_time || selectedBooking.BookingTime) }}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-500">Booking Time</p>
+                <p class="mt-1 text-base text-gray-900">{{ formatTime(selectedBooking.booking_time || selectedBooking.BookingTime) }}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-500">Seva Schedule Date</p>
+                <p class="mt-1 text-base text-gray-900">{{ getSevaScheduleDate(selectedBooking) }}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-500">Seva Schedule Time</p>
+                <p class="mt-1 text-base text-gray-900">{{ getSevaScheduleTime(selectedBooking) }}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-500">Booking ID</p>
+                <p class="mt-1 text-base text-gray-900">#{{ selectedBooking.id || selectedBooking.ID }}</p>
+              </div>
+            </div>
+
+            <div class="border-t border-gray-200 pt-4">
+              <p class="text-sm font-medium text-gray-500 mb-2">Description</p>
+              <p class="text-base text-gray-700">
+                {{ selectedBooking.seva_description || (selectedBooking.seva && selectedBooking.seva.description) || 'No description available' }}
+              </p>
+            </div>
+
+            <div v-if="selectedBooking.special_requests || selectedBooking.SpecialRequests" class="border-t border-gray-200 pt-4 mt-4">
+              <p class="text-sm font-medium text-gray-500 mb-2">Special Requests</p>
+              <p class="text-base text-gray-700">{{ selectedBooking.special_requests || selectedBooking.SpecialRequests }}</p>
+            </div>
+          </div>
+          
+          <!-- Modal Footer -->
+          <div class="flex justify-end border-t border-gray-200 pt-6">
+            <button 
+              type="button"
+              @click="selectedBooking = null"
+              class="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
-    </BaseModal>
-    
-    <!-- Confirm Cancel Modal -->
-    <BaseModal 
-      :show="showCancelConfirmModal" 
-      @close="showCancelConfirmModal = false"
-      title="Cancel Seva Booking"
-    >
-      <div class="p-4">
-        <p class="text-gray-700">Are you sure you want to cancel this seva booking? This action cannot be undone.</p>
-        <div class="mt-6 flex justify-end space-x-3">
-          <button 
-            @click="showCancelConfirmModal = false"
-            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            No, Keep Booking
-          </button>
-          <button 
-            @click="confirmCancelBooking"
-            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none"
-          >
-            Yes, Cancel Booking
-          </button>
-        </div>
-      </div>
-    </BaseModal>
+    </div>
   </div>
 </template>
 
@@ -341,8 +333,6 @@ const filters = ref({
   search: ''
 })
 const selectedBooking = ref(null)
-const showBookingDetailsModal = ref(false)
-const showCancelConfirmModal = ref(false)
 
 // Temple and User info
 const currentTemple = ref({
@@ -551,6 +541,38 @@ const getStatusClass = (status) => {
   return statusMap[status.toLowerCase()] || 'bg-gray-100 text-gray-800'
 }
 
+const getStatusDotClass = (status) => {
+  if (!status) return 'bg-gray-400'
+  
+  const dotMap = {
+    pending: 'bg-yellow-400',
+    approved: 'bg-green-400',
+    completed: 'bg-blue-400',
+    cancelled: 'bg-red-400',
+    rejected: 'bg-red-400'
+  }
+  
+  return dotMap[status.toLowerCase()] || 'bg-gray-400'
+}
+
+// Helper to get booking amount - checks multiple possible fields
+const getBookingAmount = (booking) => {
+  if (!booking) return 0
+  
+  // Check various possible amount fields (uppercase and lowercase)
+  const amount = booking.amount || 
+                 booking.Amount || 
+                 booking.price || 
+                 booking.Price || 
+                 booking.amount_paid || 
+                 booking.AmountPaid ||
+                 (booking.seva && booking.seva.price) ||
+                 (booking.seva && booking.seva.Price) ||
+                 0
+  
+  return parseFloat(amount).toLocaleString('en-IN')
+}
+
 // Computed - Filter bookings by current entity
 const filteredBookings = computed(() => {
   let result = sevaStore.recentSevas || []
@@ -675,37 +697,10 @@ const fetchSevaBookings = async () => {
 }
 
 const viewBookingDetails = (booking) => {
+  console.log('=== VIEW BOOKING DETAILS CLICKED ===')
+  console.log('Booking data:', booking)
   selectedBooking.value = booking
-  showBookingDetailsModal.value = true
-}
-
-const cancelBooking = (booking) => {
-  selectedBooking.value = booking
-  showCancelConfirmModal.value = true
-}
-
-const cancelBookingFromModal = () => {
-  showBookingDetailsModal.value = false
-  showCancelConfirmModal.value = true
-}
-
-const confirmCancelBooking = async () => {
-  try {
-    const bookingId = selectedBooking.value.id || selectedBooking.value.ID
-    
-    // Call API to cancel the booking
-    await sevaService.updateBookingStatus(bookingId, 'cancelled')
-    
-    // Refresh the list
-    await fetchSevaBookings()
-    
-    toast.success('Seva booking cancelled successfully')
-    showCancelConfirmModal.value = false
-    showBookingDetailsModal.value = false
-  } catch (err) {
-    console.error('Error cancelling booking:', err)
-    toast.error('Failed to cancel booking: ' + (err.message || 'Unknown error'))
-  }
+  console.log('selectedBooking.value set to:', selectedBooking.value)
 }
 
 // Watch for route changes to refetch data

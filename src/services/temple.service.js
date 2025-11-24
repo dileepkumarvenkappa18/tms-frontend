@@ -681,46 +681,102 @@ async createTemple(templeData) {
   }
 },
 
- async updateTemple(id, updates) {
-    try {
-      console.log(`📡 Updating temple with ID: ${id}`);
-      console.log('📦 Update data:', updates);
 
-      // Convert frontend field names to backend field names
-      // CRITICAL: Check BOTH camelCase and snake_case variations
-      const payload = {
-        id: parseInt(id),
-        name: updates.name || '',
-        main_deity: updates.maindeity || updates.mainDeity || updates.main_deity || '',
-        temple_type: updates.templetype || updates.templeType || updates.temple_type || updates.category || '',
-        established_year: updates.establishedyear || updates.establishedYear || updates.established_year ? 
-          parseInt(updates.establishedyear || updates.establishedYear || updates.established_year) : null,
-        phone: updates.contact?.phone || updates.phone || '',
-        email: updates.contact?.email || updates.email || '',
-        description: updates.description || '',
-        street_address: updates.streetaddress || updates.streetAddress || updates.street_address || 
-          updates.address?.street || updates.addressLine1 || '',
-        city: updates.address?.city || updates.city || '',
-        district: updates.district || '',
-        state: updates.address?.state || updates.state || '',
-        pincode: updates.pincode || updates.address?.pincode || '',
-        landmark: updates.landmark || '',
-        map_link: updates.maplink || updates.mapLink || updates.map_link || ''
-      };
+async updateTemple(id, updates) {
+  try {
+    console.log(`📡 Updating temple with ID: ${id}`);
+    console.log('📦 Update data type:', updates instanceof FormData ? 'FormData' : 'Object');
+
+    let payload;
+    let headers = {};
+
+    // Check if updates is FormData (contains files) or plain object
+    if (updates instanceof FormData) {
+      console.log('📦 Using FormData (files included)');
+      payload = updates;
+      // 🔥 CRITICAL FIX: DO NOT set Content-Type for FormData
+      // Let the browser set it automatically with the correct boundary
+      // headers['Content-Type'] = 'multipart/form-data'; // ❌ WRONG - Remove this!
       
-      console.log('📦 Final update payload:', payload);
+    } else {
+      console.log('📦 Creating FormData from update object');
       
-      const response = await api.put(`/entities/${id}`, payload);
-      console.log('📥 Update temple response:', response);
-      return response.data || response;
-    } catch (error) {
-      console.error(`❌ Error updating temple ID ${id}:`, error);
-      console.error('Error details:', error.message || error.response?.data);
-      throw error;
+      // Convert plain object to FormData to match backend expectations
+      const formData = new FormData();
+      
+      // Basic temple information
+      if (updates.name) formData.append('name', updates.name);
+      if (updates.mainDeity || updates.maindeity) {
+        formData.append('main_deity', updates.mainDeity || updates.maindeity);
+      }
+      if (updates.templeType || updates.templetype) {
+        formData.append('temple_type', updates.templeType || updates.templetype);
+      }
+      
+      const estYear = updates.establishedYear || updates.establishedyear || '';
+      if (estYear) {
+        formData.append('established_year', estYear.toString());
+      }
+      
+      if (updates.phone) formData.append('phone', updates.phone);
+      if (updates.email) formData.append('email', updates.email);
+      if (updates.description) formData.append('description', updates.description);
+      
+      // Address information
+      if (updates.streetAddress || updates.streetaddress) {
+        formData.append('street_address', updates.streetAddress || updates.streetaddress);
+      }
+      if (updates.city) formData.append('city', updates.city);
+      if (updates.district) formData.append('district', updates.district);
+      if (updates.state) formData.append('state', updates.state);
+      if (updates.pincode) formData.append('pincode', updates.pincode);
+      if (updates.landmark) formData.append('landmark', updates.landmark);
+      if (updates.mapLink || updates.maplink) {
+        formData.append('map_link', updates.mapLink || updates.maplink);
+      }
+      
+      // Files (if provided in updates.documents)
+      if (updates.documents) {
+        if (updates.documents.registration instanceof File) {
+          formData.append('registration_cert', updates.documents.registration);
+        }
+        if (updates.documents.trustDeed instanceof File) {
+          formData.append('trust_deed', updates.documents.trustDeed);
+        }
+        if (updates.documents.property instanceof File) {
+          formData.append('property_docs', updates.documents.property);
+        }
+        if (updates.documents.additional && Array.isArray(updates.documents.additional)) {
+          updates.documents.additional.forEach((file, index) => {
+            if (file instanceof File) {
+              formData.append(`additional_docs_${index}`, file);
+            }
+          });
+        }
+      }
+      
+      payload = formData;
     }
-  },
-// Add this method to your temple.service.js file
-// Add this to your temple.service.js file
+
+    console.log('🚀 Making API request to /entities/' + id);
+    
+    // 🔥 CRITICAL: Pass headers object but let axios handle Content-Type for FormData
+    const response = await api.put(`/entities/${id}`, payload, { 
+      headers,
+      // This tells axios to NOT set Content-Type, let browser do it
+      transformRequest: [(data) => data]
+    });
+
+    console.log('✅ Temple updated successfully:', response.data);
+    return response.data || response;
+  } catch (error) {
+    console.error(`❌ Error updating temple ID ${id}:`, error);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error config:', error.config);
+    throw error;
+  }
+},
+
 
 async toggleTempleStatus(templeId, isActive) {
   try {
@@ -872,67 +928,101 @@ async toggleTempleStatus(templeId, isActive) {
     }
   },
 
-  normalizeTempleData(temple) {
+ // FIXED: temple.service.js - normalizeTempleData method
+// Replace your current normalizeTempleData method with this:
+
+normalizeTempleData(temple) {
   if (!temple) return null
+
+  // Helper to get first available value from multiple possible field names
+  const getField = (obj, ...keys) => {
+    for (const key of keys) {
+      if (obj && obj[key] !== undefined && obj[key] !== null && obj[key] !== '') {
+        return obj[key]
+      }
+    }
+    return ''
+  }
 
   return {
     id: temple.id || temple.ID || 0,
-    name: temple.name || temple.Name || 'Unknown Temple',
-    description: temple.description || temple.Description || '',
-    templeType: temple.temple_type || temple.TempleType || '',
-    category: temple.temple_type || temple.TempleType || '',
+    name: getField(temple, 'name', 'Name') || 'Unknown Temple',
+    description: getField(temple, 'description', 'Description'),
+    
+    // Temple type - check ALL possible variations
+    templeType: getField(temple, 'temple_type', 'templeType', 'templetype', 'TempleType'),
+    category: getField(temple, 'temple_type', 'templeType', 'templetype', 'TempleType'),
 
-    addressLine1: temple.street_address || temple.StreetAddress || '',
-    city: temple.city || temple.City || '',
-    state: temple.state || temple.State || '',
-    district: temple.district || temple.District || '',
-    pincode: temple.pincode || temple.Pincode || '',
+    // Address fields - CRITICAL FIX for missing street address
+    streetAddress: getField(temple, 'street_address', 'streetAddress', 'streetaddress', 'StreetAddress'),
+    addressLine1: getField(temple, 'street_address', 'streetAddress', 'streetaddress', 'StreetAddress'),
+    city: getField(temple, 'city', 'City'),
+    state: getField(temple, 'state', 'State'),
+    district: getField(temple, 'district', 'District'),
+    pincode: getField(temple, 'pincode', 'Pincode'),
+    landmark: getField(temple, 'landmark', 'Landmark'),  // ADDED landmark
+    mapLink: getField(temple, 'map_link', 'mapLink', 'maplink', 'MapLink'),  // ADDED mapLink
     country: 'India',
 
-    phone: temple.phone || temple.Phone || '',
-    email: temple.email || temple.Email || '',
+    // Contact
+    phone: getField(temple, 'phone', 'Phone'),
+    email: getField(temple, 'email', 'Email'),
 
-    status: temple.status || temple.Status || 'pending',
+    // Status
+    status: getField(temple, 'status', 'Status') || 'pending',
     
-    // 🆕 ADD THESE THREE LINES for rejection/approval data
-    rejectionReason: temple.rejection_reason || temple.rejectionReason || temple.admin_notes || temple.adminNotes || '',
-    rejectedAt: temple.rejected_at || temple.rejectedAt || null,
-    approvedAt: temple.approved_at || temple.approvedAt || null,
+    // Rejection/approval data
+    rejectionReason: getField(temple, 'rejection_reason', 'rejectionReason', 'admin_notes', 'adminNotes'),
+    rejectedAt: getField(temple, 'rejected_at', 'rejectedAt'),
+    approvedAt: getField(temple, 'approved_at', 'approvedAt'),
     
+    // Counts
     devoteeCount: temple.devotee_count || temple.DevoteeCount || 0,
     volunteersCount: temple.volunteers_count || temple.VolunteersCount || 0,
 
-    image: temple.image_url || temple.ImageUrl || null,
+    // Image
+    image: getField(temple, 'image_url', 'ImageUrl'),
 
-    mainDeity: temple.main_deity || temple.MainDeity || '',
-    establishedYear: temple.established_year || temple.EstablishedYear || null,
-
-    createdAt: temple.created_at || temple.CreatedAt || null,
-    updatedAt: temple.updated_at || temple.UpdatedAt || null,
+    // Main deity
+    mainDeity: getField(temple, 'main_deity', 'mainDeity', 'maindeity', 'MainDeity'),
     
-    // Add tenant/creator information for filtering
-    createdBy: temple.created_by || temple.CreatedBy || null,
-    tenantId: temple.tenant_id || temple.TenantId || temple.created_by || temple.CreatedBy || null,
+    // Established year
+    establishedYear: getField(temple, 'established_year', 'establishedYear', 'establishedyear', 'EstablishedYear'),
 
-    // Document information
-    registrationCertUrl: temple.registration_cert_url || temple.RegistrationCertUrl || null,
-    trustDeedUrl: temple.trust_deed_url || temple.TrustDeedUrl || null,
-    propertyDocsUrl: temple.property_docs_url || temple.PropertyDocsUrl || null,
+    // Timestamps
+    createdAt: getField(temple, 'created_at', 'CreatedAt'),
+    updatedAt: getField(temple, 'updated_at', 'UpdatedAt'),
+    
+    // Tenant/creator info
+    createdBy: getField(temple, 'created_by', 'CreatedBy'),
+    tenantId: getField(temple, 'tenant_id', 'TenantId', 'created_by', 'CreatedBy'),
+
+    // Document URLs - ADDED additional documents support
+    registrationCertUrl: getField(temple, 'registration_cert_url', 'RegistrationCertUrl'),
+    trustDeedUrl: getField(temple, 'trust_deed_url', 'TrustDeedUrl'),
+    propertyDocsUrl: getField(temple, 'property_docs_url', 'PropertyDocsUrl'),
     additionalDocsUrls: temple.additional_docs_urls || temple.AdditionalDocsUrls || null,
 
+    // Document names (for display)
+    registrationCertName: getField(temple, 'registration_cert_name', 'registrationCertName'),
+    trustDeedName: getField(temple, 'trust_deed_name', 'trustDeedName'),
+    propertyDocsName: getField(temple, 'property_docs_name', 'propertyDocsName'),
+    additionalDocsNames: temple.additional_docs_names || temple.additionalDocsNames || [],
+
+    // Nested objects for backward compatibility
     address: {
-      street: temple.street_address || temple.StreetAddress || '',
-      city: temple.city || temple.City || '',
-      state: temple.state || temple.State || '',
-      district: temple.district || temple.District || '',
-      pincode: temple.pincode || temple.Pincode || '',
+      street: getField(temple, 'street_address', 'streetAddress', 'streetaddress', 'StreetAddress'),
+      city: getField(temple, 'city', 'City'),
+      state: getField(temple, 'state', 'State'),
+      district: getField(temple, 'district', 'District'),
+      pincode: getField(temple, 'pincode', 'Pincode'),
       country: 'India'
     },
 
     contact: {
-      phone: temple.phone || temple.Phone || '',
-      email: temple.email || temple.Email || '',
-      website: temple.website || temple.Website || ''
+      phone: getField(temple, 'phone', 'Phone'),
+      email: getField(temple, 'email', 'Email'),
+      website: getField(temple, 'website', 'Website')
     }
   }
 },

@@ -710,9 +710,11 @@ const normalizeTempleDocuments = (temple) => {
 }
 
 // Clean and stable buildDocUrl - FINAL VERSION
+// Clean and stable buildDocUrl - FINAL VERSION
 const buildDocUrl = (doc, appId, action = 'view') => {
   console.log("buildDocUrl - doc:", doc);
   console.log("buildDocUrl - appId:", appId);
+  console.log("buildDocUrl - action:", action);
 
   let direct =
     doc.download_url ||
@@ -750,17 +752,16 @@ const buildDocUrl = (doc, appId, action = 'view') => {
     direct = direct.replace(/uploads\/\d+\//, "uploads/");
   }
 
-  // --------------------------------------------------------
-  // 3. ABSOLUTE URL handling: leave it as-is (after cleaning)
-  // --------------------------------------------------------
   if (direct.startsWith("http://") || direct.startsWith("https://")) {
-    console.log("buildDocUrl - absolute URL returned:", direct);
-    return direct;
+    let finalUrl = direct;
+    if (action === 'download') {
+      const separator = finalUrl.includes('?') ? '&' : '?';
+      finalUrl = `${finalUrl}${separator}download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`;
+    }
+    console.log("buildDocUrl - absolute URL returned:", finalUrl);
+    return finalUrl;
   }
 
-  // --------------------------------------------------------
-  // 4. Normalize to ensure the final path is: /uploads/<file>
-  // --------------------------------------------------------
   let cleanPath = direct.replace(/^\/+/, ""); // remove leading slashes
 
   // If path starts with uploads/... keep it
@@ -771,7 +772,13 @@ const buildDocUrl = (doc, appId, action = 'view') => {
   // Fix double uploads
   cleanPath = cleanPath.replace(/uploads\/uploads\//g, "uploads/");
 
-  const finalUrl = `http://localhost:8080/${cleanPath}`;
+  let finalUrl = `http://localhost:8080/${cleanPath}`;
+  
+  // Add download parameters if action is download
+  if (action === 'download') {
+    finalUrl = `${finalUrl}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`;
+  }
+  
   console.log("buildDocUrl - FINAL URL:", finalUrl);
 
   return finalUrl;
