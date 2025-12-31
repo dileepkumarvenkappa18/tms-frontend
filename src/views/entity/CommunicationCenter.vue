@@ -57,12 +57,7 @@
           <div class="flex items-center space-x-2">
             <component :is="tab.icon" class="w-5 h-5" />
             <span>{{ tab.name }}</span>
-            <span
-              v-if="tab.count"
-              class="bg-gray-100 text-gray-900 py-0.5 px-2 rounded-full text-xs"
-            >
-              {{ tab.count }}
-            </span>
+            
           </div>
         </button>
       </nav>

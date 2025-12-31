@@ -114,9 +114,7 @@
               <!-- Status Badge -->
               <div class="flex flex-col gap-2 items-start sm:items-end">
                 <div class="flex items-center gap-2">
-                  <span :class="getEventStatusClass(event)">
-                    {{ getEventStatus(event) }}
-                  </span>
+                 
                 </div>
               </div>
             </div>
