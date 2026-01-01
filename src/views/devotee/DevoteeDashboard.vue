@@ -111,13 +111,13 @@
           :to="{ name: 'DevoteeMySevaBookings', params: { id: $route.params.id } }"
           class="block"
         >
-          <DashboardWidget 
-            title="Seva Bookings"
-            :value="sevaCount"
-            icon="calendar"
-            color="indigo"
-          
-          />
+         <DashboardWidget 
+  title="Seva Bookings"
+  :value="sevaCount"
+  icon="calendar"
+  color="indigo"
+  :subtitle="`${upcomingSevaCount} Sevas Booked`"
+/>
         </router-link>
 
         <!-- Total Events Card -->
@@ -616,9 +616,12 @@ const upcomingEventCount = computed(() => {
 const lockCounters = () => {
   if (dashboardCounts.countsInitialized) return
   
+  // Get current entity ID
+  const currentEntityId = route.params.id;
+  
   // Only lock if we have at least some valid data
   if (sevaCount.value > 0 || eventCount.value > 0) {
-    console.log('📊 Locking dashboard counters:')
+    console.log('📊 Locking dashboard counters for entity:', currentEntityId)
     console.log(`- Seva count: ${sevaCount.value}`)
     console.log(`- Upcoming seva count: ${upcomingSevaCount.value}`)
     console.log(`- Event count: ${eventCount.value}`)
@@ -630,9 +633,10 @@ const lockCounters = () => {
     dashboardCounts.upcomingEventCount = upcomingEventCount.value
     dashboardCounts.countsInitialized = true
     
-    // Save to localStorage for persistence
+    // Save to localStorage for persistence WITH ENTITY ID
     try {
       localStorage.setItem('dashboard_counts', JSON.stringify({
+        entityId: currentEntityId,  // ← ADD THIS
         sevaCount: dashboardCounts.sevaCount,
         upcomingSevaCount: dashboardCounts.upcomingSevaCount,
         eventCount: dashboardCounts.eventCount,
@@ -749,20 +753,28 @@ const loadingRecentSevas = computed(() => sevaStore.loadingRecentSevas && !dataL
 // Restore saved data from localStorage on mount
 const restoreSavedData = () => {
   try {
+    // Get current entity ID
+    const currentEntityId = route.params.id;
+    
     // Try to restore saved dashboard counts
     const savedCounts = localStorage.getItem('dashboard_counts')
     if (savedCounts) {
       const parsed = JSON.parse(savedCounts)
       
-      // Only use if saved less than 1 hour ago
+      // Only use if saved less than 1 hour ago AND for the SAME entity
       const oneHourAgo = Date.now() - (60 * 60 * 1000)
-      if (parsed.timestamp && parsed.timestamp > oneHourAgo) {
-        console.log('📊 Restoring saved dashboard counts:', parsed)
+      if (parsed.timestamp && 
+          parsed.timestamp > oneHourAgo && 
+          parsed.entityId === currentEntityId) {  // ← CHECK ENTITY ID
+        console.log('📊 Restoring saved dashboard counts for entity:', currentEntityId, parsed)
         dashboardCounts.sevaCount = parsed.sevaCount || 0
         dashboardCounts.upcomingSevaCount = parsed.upcomingSevaCount || 0
         dashboardCounts.eventCount = parsed.eventCount || 0
         dashboardCounts.upcomingEventCount = parsed.upcomingEventCount || 0
         dashboardCounts.countsInitialized = true
+      } else if (parsed.entityId !== currentEntityId) {
+        console.log('🔄 Clearing old counts from different entity')
+        localStorage.removeItem('dashboard_counts')
       }
     }
     
@@ -1096,16 +1108,16 @@ const formatTime = (time) => {
   }
 }
 
-const formatEventDate = (date) => {
-  if (!date) return '?'
-  try {
-    return new Intl.DateTimeFormat('en-IN', {
-      day: 'numeric'
-    }).format(new Date(date))
-  } catch (error) {
-    return '?'
-  }
+const formatEventDate = (dateString) => {
+  if (!dateString) return ''
+
+  const date = new Date(dateString)
+  const day = date.getDate()
+  const month = date.toLocaleString('en-US', { month: 'short' })
+
+  return `${day} ${month}`
 }
+
 
 const getDonationStatusClass = (status) => {
   const statusMap = {
