@@ -1,11 +1,11 @@
 <template>
   <div class="min-h-screen bg-gray-50">
     <div class="flex items-center space-x-4">
-  <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
-    </svg>
-  </div>
+<div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+          <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        </div>
   <div>
     <h2 class="text-lg font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
     <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : '' }}</p>
@@ -290,18 +290,18 @@ const templeId = computed(() =>
   route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
 )
 
+
 // Load temple data
 const loadTempleData = async () => {
-  const storedTemple = templeStore.getTempleById(templeId.value)
-  if (storedTemple) {
-    temple.value = storedTemple
-  } else {
-    try {
-      const response = await api.get(`/entities/${templeId.value}`)
-      if (response.data) temple.value = response.data
-    } catch (err) {
-      console.error('Failed to fetch temple details:', err)
+  try {
+    // FIX: getTempleById is async, so we need to await it
+    const fetchedTemple = await templeStore.getTempleById(templeId.value)
+    if (fetchedTemple) {
+      temple.value = fetchedTemple
     }
+  } catch (error) {
+    console.error('Error loading temple data:', error)
+    showToast('Failed to load temple details', 'error')
   }
 }
 

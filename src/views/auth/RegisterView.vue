@@ -33,6 +33,8 @@
       </div>
     </div>
 
+   
+
     <form v-if="!registrationSuccess" @submit.prevent="handleRegister" class="space-y-6">
       <!-- Full Name Field -->
       <div>
@@ -64,8 +66,9 @@
           :error="errors.email"
           required
           autocomplete="email"
-          @input="clearError('email')"
+          @input="clearError('email'); globalError = ''"
         />
+       
       </div>
 
       <!-- Password Field -->
@@ -374,6 +377,7 @@ const showSuccessModal = ref(false)
 const needsApproval = ref(false)
 const registrationSuccess = ref(false)
 const errors = ref({})
+const globalError = ref('')
 const captchaToken = ref('')
 const isCaptchaVerified = ref(false)
 
@@ -548,8 +552,12 @@ const resetCaptcha = () => {
 
 // Register handler
 const handleRegister = async () => {
+  // Clear global error
+  globalError.value = ''
+  
   // Check CAPTCHA verification first
   if (!isCaptchaVerified.value) {
+    globalError.value = 'Please complete the CAPTCHA verification'
     showError('Please complete the CAPTCHA verification')
     return
   }
@@ -620,17 +628,35 @@ const handleRegister = async () => {
     } catch (apiError) {
       console.error('API Error during registration:', apiError)
 
+      // Handle duplicate email error with multiple detection patterns
       if (apiError.response?.data?.error) {
         const backendError = apiError.response.data.error
+        const errorLower = backendError.toLowerCase()
 
-        if (backendError === 'Email is already registered') {
-          errors.value.email = 'This email is already registered. Please login or use another email.'
-          showError(errors.value.email)
+        // Check for duplicate email errors (multiple variations)
+        if (errorLower.includes('email') && 
+            (errorLower.includes('already') || 
+             errorLower.includes('exists') ||
+             errorLower.includes('registered') ||
+             errorLower.includes('duplicate'))) {
+          
+          const errorMessage = 'This email is already registered. Please use a different email or try logging in.'
+          errors.value.email = errorMessage
+          globalError.value = errorMessage
+          showError(errorMessage)
+          
+          // Scroll to email field
+          nextTick(() => {
+            document.getElementById('email')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          })
         } else {
+          // Other backend errors
+          globalError.value = backendError
           showError(backendError)
         }
       }
 
+      // Handle field-specific errors from backend
       if (apiError.response?.data?.errors) {
         const backendErrors = apiError.response.data.errors
         Object.keys(backendErrors).forEach(field => {
@@ -646,6 +672,7 @@ const handleRegister = async () => {
     }
   } catch (err) {
     console.error('Registration error:', err)
+    globalError.value = 'An error occurred during registration. Please try again.'
     showError('An error occurred during registration. Please try again.')
     
     // Reset CAPTCHA on error
@@ -676,6 +703,7 @@ const resetForm = () => {
   }
 
   errors.value = {}
+  globalError.value = ''
 }
 
 // Redirect to login

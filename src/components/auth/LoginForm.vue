@@ -132,6 +132,7 @@ const rememberMe = ref(false)
 const isLoading = ref(false)
 const error = ref(null)
 const captchaToken = ref('')
+const widgetId = ref(null)
 const isCaptchaVerified = ref(false)
 const siteKey = import.meta.env.VITE_CLOUDFLARE_CAPTCHA_KEY || ''
 
@@ -219,14 +220,17 @@ const handleLogin = async () => {
 const resetCaptcha = () => {
   isCaptchaVerified.value = false
   captchaToken.value = ''
-  if (window.turnstile) {
-    window.turnstile.reset()
+
+  console.log("widgetId.value= ", widgetId.value)  
+  if (window.turnstile && widgetId.value !== null) {
+    window.turnstile.reset(widgetId.value)
   }
 }
 
 onMounted(() => {
+  console.log("OnMounted() getting called for CAPTCHA rendering")
   if (window.turnstile) {
-    window.turnstile.render(
+    widgetId.value = window.turnstile.render(
       '#turnstile', 
       {
         sitekey: '0x4AAAAAAB5PF2XfNfEgAul2',

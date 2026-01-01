@@ -5,11 +5,11 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center space-x-4">
-            <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-              <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-2 0H3m2-16l9-9 9 9"></path>
-              </svg>
-            </div>
+           <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+          <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        </div>
             <div>
               <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
               <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
@@ -179,26 +179,18 @@ export default {
     )
 
     // Load temple data
-    const loadTempleData = async () => {
-      try {
-        const storedTemple = templeStore.getTempleById(templeId.value)
-        
-        if (storedTemple) {
-          temple.value = storedTemple
-        } else {
-          try {
-            const response = await api.get(`/entities/${templeId.value}`)
-            if (response.data) {
-              temple.value = response.data
-            }
-          } catch (err) {
-            console.error('Failed to fetch temple details:', err)
-          }
-        }
-      } catch (error) {
-        console.error('Error loading temple data:', error)
-      }
+   const loadTempleData = async () => {
+  try {
+    
+    const fetchedTemple = await templeStore.getTempleById(templeId.value)
+    if (fetchedTemple) {
+      temple.value = fetchedTemple
     }
+  } catch (error) {
+    console.error('Error loading temple data:', error)
+    showToast('Failed to load temple details', 'error')
+  }
+}
     
     // This is a lookup table for donor information based on user ID
     const userLookup = {

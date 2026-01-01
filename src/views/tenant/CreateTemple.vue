@@ -1013,7 +1013,7 @@ const handleSubmit = async () => {
     } else if (err.response?.status === 400) {
       error.value = err.response.data?.message || 'Invalid data submitted. Please check your inputs.'
     } else if (err.response?.status >= 500) {
-      error.value = 'Server error occurred. Please try again later or contact support.'
+      error.value = 'Temple email already exists. '
     } else {
       error.value = err.response?.data?.error || err.response?.data?.message || 'Failed to submit temple registration. Please try again.'
     }
