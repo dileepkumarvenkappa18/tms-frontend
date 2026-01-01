@@ -403,6 +403,7 @@ const loadEntityData = async () => {
           ...event,
           date: new Date(event.event_date || event.date || Date.now())
         }))
+        dashboardData.value.events.upcoming = upcomingEvents.value.length
       }
     } catch (err) {
       console.error('Failed to fetch upcoming events:', err)
