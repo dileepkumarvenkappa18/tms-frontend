@@ -10,7 +10,7 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-xl font-bold text-white">Compose Message</h2>
+            <h3 class="text-xl font-bold text-white">Compose Message</h3>
             <p class="text-indigo-100 text-sm">Send notifications to devotees and volunteers</p>
           </div>
         </div>

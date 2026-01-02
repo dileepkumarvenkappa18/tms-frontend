@@ -11,7 +11,7 @@
               </svg>
             </button>
             <div>
-              <h1 class="text-xl font-semibold text-gray-900">Devotee Profile</h1>
+              <h2 class="text-xl font-semibold text-gray-900">Devotee Profile</h2>
               <p class="text-sm text-gray-500">Complete devotee information</p>
             </div>
           </div>
@@ -39,7 +39,7 @@
             <span class="text-3xl font-bold text-indigo-600">{{ getInitial(profile.full_name) }}</span>
           </div>
           <div>
-            <h2 class="text-3xl font-bold text-gray-900">{{ profile.full_name || 'N/A' }}</h2>
+            <h3 class="text-3xl font-bold text-gray-900">{{ profile.full_name || 'N/A' }}</h3>
             <p class="text-sm text-gray-500">User ID: #{{ profile.user_id }}</p>
             <span :class="getStatusClass(profile.status)" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-2">
               {{ profile.status || 'active' }}

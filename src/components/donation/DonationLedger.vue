@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Donation Ledger</h2>
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">Donation Ledger</h3>
         <p class="text-gray-600">Complete financial record</p>
       </div>
       <div class="flex flex-col sm:flex-row gap-3">

@@ -12,9 +12,9 @@
               </svg>
             </div>
             <div>
-              <h2 class="text-lg font-semibold text-gray-900">
+              <h1 class="text-lg font-semibold text-gray-900">
                 {{ currentTemple.name || 'Loading Temple...' }}
-              </h2>
+              </h1>
               <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
                 {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
               </p>
@@ -41,7 +41,7 @@
     <div class="bg-white p-6 rounded-xl shadow-sm mb-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">My Seva Bookings</h1>
+          <h2 class="text-2xl font-bold text-gray-900">My Seva Bookings</h2>
           <p class="text-gray-600 mt-1">View and manage all your seva bookings</p>
         </div>
         <router-link 

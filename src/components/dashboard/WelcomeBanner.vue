@@ -22,9 +22,9 @@
 
         <!-- Welcome Text -->
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">
+          <h2 class="text-2xl md:text-3xl font-bold text-white mb-1">
             {{ welcomeMessage }}
-          </h1>
+          </h2>
           <p class="text-base md:text-lg text-white/90">
             {{ subMessage }}
           </p>

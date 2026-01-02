@@ -11,7 +11,7 @@
           </svg>
         </div>
             <div>
-              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <h2 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
               <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
             </div>
           </div>
@@ -31,7 +31,7 @@
       <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl p-6 mb-8">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-2xl font-bold text-white mb-2">Welcome back, {{ user ? user.fullName : 'Admin' }}!</h2>
+            <h3 class="text-2xl font-bold text-white mb-2">Welcome back, {{ user ? user.fullName : 'Admin' }}!</h3>
             <p class="text-indigo-100">Here's what's happening at your temple today</p>
           </div>
           

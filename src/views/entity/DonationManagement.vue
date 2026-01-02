@@ -11,7 +11,7 @@
           </svg>
         </div>
             <div>
-              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <h2 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
               <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
             </div>
           </div>
@@ -28,7 +28,7 @@
     <div class="bg-white border-b border-gray-200 px-6 py-4">
       <div class="flex items-center justify-between flex-wrap gap-y-2">
         <div>
-          <h1 class="text-2xl font-bold text-indigo-700">Donation Management</h1>
+          <h3 class="text-2xl font-bold text-indigo-700">Donation Management</h3>
           <p class="text-gray-600 mt-1">Track donations, generate receipts, and view financial reports</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">

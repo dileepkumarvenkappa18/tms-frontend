@@ -11,9 +11,9 @@
               </svg>
             </div>
             <div>
-              <h2 class="text-lg font-semibold text-gray-900">
+              <h1 class="text-lg font-semibold text-gray-900">
                 {{ currentTemple.name || 'Temple' }}
-              </h2>
+              </h1>
               <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
                 {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
               </p>

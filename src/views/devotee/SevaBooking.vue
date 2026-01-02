@@ -21,9 +21,9 @@
                 </svg>
               </div>
               <div>
-                <h2 class="text-lg font-semibold text-gray-900">
+                <h1 class="text-lg font-semibold text-gray-900">
                   {{ currentTemple.name || 'Temple' }}
-                </h2>
+                </h1>
                 <p class="text-sm text-gray-500" v-if="currentTemple.city || currentTemple.state">
                   {{ currentTemple.city }}{{ currentTemple.city && currentTemple.state ? ', ' : '' }}{{ currentTemple.state }}
                 </p>
@@ -52,7 +52,7 @@
           <div class="py-6">
             <div class="flex items-center justify-between">
               <div>
-                <h1 class="text-3xl font-bold text-gray-900">Book Seva</h1>
+                <h2 class="text-3xl font-bold text-gray-900">Book Seva</h2>
                 <p class="mt-2 text-sm text-gray-600">Choose from available sevas and book your preferred time slots</p>
               </div>
             </div>

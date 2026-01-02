@@ -16,7 +16,7 @@
     <div class="bg-white border-b border-gray-200 px-4 py-6 sm:px-6">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Communication Center</h1>
+          <h3 class="text-2xl font-bold text-indigo-700">Communication Center</h3>
           <p class="mt-1 text-sm text-gray-600">
             Send messages, manage templates, and track communication history
           </p>
@@ -69,7 +69,7 @@
       <div v-if="activeTab === 'compose'" class="space-y-6">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
           <div class="p-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Compose New Message</h2>
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Compose New Message</h3>
             <MessageComposer 
               @message-sent="handleMessageSent"
               @save-template="handleSaveTemplate"

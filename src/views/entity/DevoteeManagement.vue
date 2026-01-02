@@ -11,7 +11,7 @@
           </svg>
         </div>  
             <div>
-              <h1 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h1>
+              <h2 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
               <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
             </div>
           </div>
@@ -30,7 +30,7 @@
         <div class="py-3">
           <div class="flex items-center justify-between">
             <div>
-              <h1 class="text-xl font-bold text-gray-900">Devotee Management</h1>
+              <h3 class="text-xl font-bold text-indigo-700">Devotee Management</h3>
               <p class="mt-1 text-sm text-gray-600">Manage your temple's registered devotees</p>
             </div>
             <div class="flex items-center space-x-2">
@@ -146,7 +146,7 @@
         <div class="p-3">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <h2 class="text-lg font-semibold text-gray-900">All Devotees</h2>
+              <h3 class="text-lg font-semibold text-gray-900">All Devotees</h3>
               <p class="text-sm text-gray-600">
                 Showing {{ paginationInfo.start }}-{{ paginationInfo.end }} of {{ paginationInfo.total }} devotees
               </p>
