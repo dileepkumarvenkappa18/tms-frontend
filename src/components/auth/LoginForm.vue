@@ -115,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -227,7 +227,8 @@ const resetCaptcha = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick()
   console.log("OnMounted() getting called for CAPTCHA rendering")
   if (window.turnstile) {
     widgetId.value = window.turnstile.render(
