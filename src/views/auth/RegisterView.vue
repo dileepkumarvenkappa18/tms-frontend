@@ -712,31 +712,35 @@ const goToLogin = () => {
   nextTick(() => router.push('/login'))
 }
 
-onMounted(() => {
-  if (window.turnstile) {
-    window.turnstile.render(
-      '#turnstile', 
-      {
-        sitekey: '0x4AAAAAAB5PF2XfNfEgAul2',
-        callback: function(token) {
-          captchaToken.value = token
-          isCaptchaVerified.value = true
-          console.log("✅ CAPTCHA verification successful")
-        },
-        'error-callback': function() {
-          captchaToken.value = ''
-          isCaptchaVerified.value = false
-          showError('CAPTCHA verification failed. Please try again.')
-          console.log("❌ CAPTCHA verification failed")
-        },
-        'expired-callback': function() {
-          captchaToken.value = ''
-          isCaptchaVerified.value = false
-          showError('CAPTCHA expired. Please verify again.')
-          console.log("⏰ CAPTCHA expired")
+onMounted(async () => {
+  await nextTick()
+  console.log("OnMounted() getting called for CAPTCHA rendering")
+  window.turnstile.ready(function() {
+    if (window.turnstile) {
+      widgetId.value = window.turnstile.render(
+        '#turnstile', 
+        {
+          sitekey: '0x4AAAAAAB5PF2XfNfEgAul2',
+          callback: function(token) {
+            captchaToken.value = token
+            isCaptchaVerified.value = true
+            console.log("✅ CAPTCHA verification successful")
+          },
+          'error-callback': function() {
+            captchaToken.value = ''
+            isCaptchaVerified.value = false
+            error.value = 'CAPTCHA verification failed. Please try again.'
+            console.log("❌ CAPTCHA verification failed")
+          },
+          'expired-callback': function() {
+            captchaToken.value = ''
+            isCaptchaVerified.value = false
+            error.value = 'CAPTCHA expired. Please verify again.'
+            console.log("⏰ CAPTCHA expired")
+          }
         }
-      }
-    )
-  }
+      )
+    }
+  });
 })
 </script>
