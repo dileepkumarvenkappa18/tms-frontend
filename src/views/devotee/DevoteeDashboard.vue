@@ -1307,8 +1307,7 @@ const loadUpcomingEvents = async () => {
     // Log the entity ID we're using
     console.log(`🔍 Fetching upcoming events for entity ID: ${entityId}`);
     
-    // Make API call
-    //const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+    // Make API call    
     //const response = await axios.get(`${API_URL}/events/upcoming`, headers);
     const response = await axios.get(`/events/upcoming`, headers);
     

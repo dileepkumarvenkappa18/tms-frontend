@@ -4,17 +4,12 @@ import { useToast } from '@/composables/useToast'
 
 // API Configuration - FIXED to use proper URL structure
 const API_CONFIG = {
-  BASE_URL: import.meta.env.DEV     
-    ? '/api/v1'
-    //? (import.meta.env.VITE_API_URL)
-    : (import.meta.env.VITE_API_URL),
-    
+  BASE_URL:'/api/v1',
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000
 }
 
-console.log("import.meta.env.VITE_API_BASE_URL= ", import.meta.env.VITE_API_BASE_URL)
 console.log('🔧 API Config:', API_CONFIG)
 
 // Create axios instance

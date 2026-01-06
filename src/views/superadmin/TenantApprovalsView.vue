@@ -365,7 +365,7 @@ export default {
     const allTenants = ref([])
     const toast = useToast()
     const isProcessing = ref(false)
-    const API_URL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_URL
+    const API_URL = '/api/v1'
     
     const debugMode = ref(false)
     

@@ -380,6 +380,8 @@ const errors = ref({})
 const globalError = ref('')
 const captchaToken = ref('')
 const isCaptchaVerified = ref(false)
+const widgetId = ref(null)
+const siteKey = import.meta.env.VITE_CLOUDFLARE_CAPTCHA_KEY || ''
 
 // Fixed role options
 const roleOptions = [
@@ -543,10 +545,16 @@ const validateForm = () => {
 
 // Reset CAPTCHA function
 const resetCaptcha = () => {
+  if (import.meta.env.VITE_ENABLE_TURNSTILE === "false") {
+    console.log("⚠️ CAPTCHA is disabled via VITE_ENABLE_TURNSTILE=false")
+    isCaptchaVerified.value = true
+    return
+  }
+  
   isCaptchaVerified.value = false
   captchaToken.value = ''
-  if (window.turnstile) {
-    window.turnstile.reset()
+  if (window.turnstile && widgetId.value !== null) {
+    window.turnstile.reset(widgetId.value)
   }
 }
 
@@ -714,28 +722,51 @@ const goToLogin = () => {
 
 onMounted(async () => {
   await nextTick()
+  
+  if (import.meta.env.VITE_ENABLE_TURNSTILE === "false") {
+    console.log("⚠️ CAPTCHA is disabled via VITE_ENABLE_TURNSTILE=false")
+    isCaptchaVerified.value = true
+    return
+  }
+
+  // Validate sitekey before rendering
+  if (!siteKey) {
+    console.error('❌ Cloudflare Turnstile sitekey is missing. Please set VITE_CLOUDFLARE_CAPTCHA_KEY in your .env file')
+    globalError.value = 'CAPTCHA configuration error. Please contact support.'
+    return
+  }
+  
   console.log("OnMounted() getting called for CAPTCHA rendering")
   window.turnstile.ready(function() {
     if (window.turnstile) {
       widgetId.value = window.turnstile.render(
         '#turnstile', 
         {
-          sitekey: '0x4AAAAAAB5PF2XfNfEgAul2',
+          sitekey: siteKey,
           callback: function(token) {
             captchaToken.value = token
             isCaptchaVerified.value = true
             console.log("✅ CAPTCHA verification successful")
           },
-          'error-callback': function() {
+          'error-callback': function(error) {
             captchaToken.value = ''
             isCaptchaVerified.value = false
-            error.value = 'CAPTCHA verification failed. Please try again.'
-            console.log("❌ CAPTCHA verification failed")
+            const errorCode = error?.error || error || 'Unknown error'
+            console.error("❌ CAPTCHA verification failed:", errorCode, error)
+            
+            // Provide specific error messages for common error codes
+            if (String(errorCode).includes('300010') || String(error).includes('300010')) {
+              globalError.value = 'Invalid CAPTCHA sitekey. Please check your VITE_CLOUDFLARE_CAPTCHA_KEY environment variable.'
+            } else if (String(errorCode).includes('300011') || String(error).includes('300011')) {
+              globalError.value = 'CAPTCHA domain mismatch. The sitekey does not match this domain.'
+            } else {
+              globalError.value = `CAPTCHA verification failed (Error: ${errorCode}). Please try again.`
+            }
           },
           'expired-callback': function() {
             captchaToken.value = ''
             isCaptchaVerified.value = false
-            error.value = 'CAPTCHA expired. Please verify again.'
+            globalError.value = 'CAPTCHA expired. Please verify again.'
             console.log("⏰ CAPTCHA expired")
           }
         }

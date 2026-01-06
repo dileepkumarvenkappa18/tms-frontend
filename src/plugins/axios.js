@@ -1,10 +1,10 @@
 // src/plugins/axios.js
 import axios from 'axios'
 
-axios.defaults.baseURL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_URL;
+axios.defaults.baseURL = '/api/v1';
 
 // Base URL Configuration
-const baseURL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_URL;
+const baseURL = '/api/v1'
 
 // Create axios instance with base configuration
 const api = axios.create({  

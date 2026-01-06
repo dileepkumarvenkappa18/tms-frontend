@@ -430,7 +430,7 @@ export const useNotificationStore = defineStore('notification', () => {
     
     try {
       // Match the axios baseURL configuration
-      const baseURL = import.meta.env.DEV ? '/api/v1' : import.meta.env.VITE_API_URL
+      const baseURL = '/api/v1'
       const token = localStorage.getItem('auth_token')
       
       if (!token) {
