@@ -256,7 +256,84 @@
             </div>
           </div>
 
-          <!-- MEDIA SECTION - Logo and Video -->
+
+
+          <!-- Temple Details -->
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Temple Information
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- First Column -->
+              <div class="space-y-4">
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Application Date</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ formatDate(selectedTenant.created_at || selectedTenant.CreatedAt) }}
+                  </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Phone Number</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ selectedTenant.phone || selectedTenant.Phone || 'Not provided' }}
+                  </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Name</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_name') }}
+                  </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Location</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_place') }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Second Column -->
+              <div class="space-y-4">
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">User ID</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ selectedTenant.id || selectedTenant.ID || 'Not available' }}
+                  </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Address</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_address') }}
+                  </div>
+                </div>
+                
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">Temple Phone</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ getTempleDetail(selectedTenant, 'temple_phone_no') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Description Section -->
+            <div class="mt-5 border-t border-gray-100 pt-4">
+              <div class="text-sm font-medium text-gray-500 mb-2">Temple Description</div>
+              <div class="text-base text-gray-900 bg-gray-50 p-4 rounded-lg">
+                {{ getTempleDescription(selectedTenant) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- MEDIA SECTION - Logo and Video -->
           <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100">
             <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,82 +423,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Temple Details -->
-          <div>
-            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-              Temple Information
-            </h4>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- First Column -->
-              <div class="space-y-4">
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Application Date</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ formatDate(selectedTenant.created_at || selectedTenant.CreatedAt) }}
-                  </div>
-                </div>
-                
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Phone Number</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ selectedTenant.phone || selectedTenant.Phone || 'Not provided' }}
-                  </div>
-                </div>
-                
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Temple Name</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ getTempleDetail(selectedTenant, 'temple_name') }}
-                  </div>
-                </div>
-                
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Temple Location</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ getTempleDetail(selectedTenant, 'temple_place') }}
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Second Column -->
-              <div class="space-y-4">
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">User ID</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ selectedTenant.id || selectedTenant.ID || 'Not available' }}
-                  </div>
-                </div>
-                
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Temple Address</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ getTempleDetail(selectedTenant, 'temple_address') }}
-                  </div>
-                </div>
-                
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Temple Phone</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ getTempleDetail(selectedTenant, 'temple_phone_no') }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Description Section -->
-            <div class="mt-5 border-t border-gray-100 pt-4">
-              <div class="text-sm font-medium text-gray-500 mb-2">Temple Description</div>
-              <div class="text-base text-gray-900 bg-gray-50 p-4 rounded-lg">
-                {{ getTempleDescription(selectedTenant) }}
-              </div>
-            </div>
-          </div>
-        </div>
         
         <!-- Actions -->
         <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
