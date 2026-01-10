@@ -33,8 +33,6 @@
       </div>
     </div>
 
-   
-
     <form v-if="!registrationSuccess" @submit.prevent="handleRegister" class="space-y-6">
       <!-- Full Name Field -->
       <div>
@@ -68,7 +66,6 @@
           autocomplete="email"
           @input="clearError('email'); globalError = ''"
         />
-       
       </div>
 
       <!-- Password Field -->
@@ -250,7 +247,7 @@
             </div>
           </div>
           
-          <!-- Temple Description - Now Mandatory -->
+          <!-- Temple Description -->
           <div>
             <label for="templeDescription" class="block text-sm font-medium text-gray-700 mb-1">
               Description <span class="text-red-500">*</span>
@@ -266,6 +263,121 @@
             ></textarea>
             <div v-if="errors.templeDescription" class="mt-1 text-xs text-red-600">
               {{ errors.templeDescription }}
+            </div>
+          </div>
+
+          <!-- Temple Logo Upload -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Temple Logo <span class="text-red-500">*</span>
+            </label>
+            
+            <!-- File Input -->
+            <div class="mt-1 flex items-center space-x-4">
+              <input
+                ref="logoInput"
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                @change="onLogoChange"
+                class="hidden"
+              />
+              
+              <button
+                type="button"
+                @click="$refs.logoInput.click()"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Choose Logo
+              </button>
+              
+              <span v-if="logoFile" class="text-sm text-gray-600">
+                {{ logoFile.name }}
+              </span>
+              <span v-else class="text-sm text-gray-400">
+                No file chosen
+              </span>
+            </div>
+            
+            <!-- Logo Preview -->
+            <div v-if="logoPreview" class="mt-3">
+              <img 
+                :src="logoPreview" 
+                alt="Logo Preview" 
+                class="h-24 w-24 object-cover rounded-lg border-2 border-gray-200"
+              />
+              <button
+                type="button"
+                @click="removeLogo"
+                class="mt-2 text-sm text-red-600 hover:text-red-800"
+              >
+                Remove
+              </button>
+            </div>
+            
+            <p class="mt-1 text-xs text-gray-500">
+              PNG, JPG, JPEG (max 2MB, recommended: 500x500px)
+            </p>
+            <div v-if="errors.logo" class="mt-1 text-xs text-red-600">
+              {{ errors.logo }}
+            </div>
+          </div>
+
+          <!-- Temple Intro Video Upload -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Temple Intro Video <span class="text-red-500">*</span>
+            </label>
+            
+            <!-- File Input -->
+            <div class="mt-1 flex items-center space-x-4">
+              <input
+                ref="videoInput"
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                @change="onVideoChange"
+                class="hidden"
+              />
+              
+              <button
+                type="button"
+                @click="$refs.videoInput.click()"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Choose Video
+              </button>
+              
+              <span v-if="videoFile" class="text-sm text-gray-600">
+                {{ videoFile.name }}
+              </span>
+              <span v-else class="text-sm text-gray-400">
+                No file chosen
+              </span>
+            </div>
+            
+            <!-- Video Preview -->
+            <div v-if="videoPreview" class="mt-3">
+              <video 
+                :src="videoPreview" 
+                controls 
+                class="w-full max-w-md rounded-lg border-2 border-gray-200"
+                style="max-height: 200px;"
+              >
+                Your browser does not support the video tag.
+              </video>
+              <button
+                type="button"
+                @click="removeVideo"
+                class="mt-2 text-sm text-red-600 hover:text-red-800"
+              >
+                Remove
+              </button>
+            </div>
+            
+            <p class="mt-1 text-xs text-gray-500">
+              MP4, WebM, MOV (max 20MB, recommended: under 2 minutes)
+            </p>
+            <div v-if="errors.video" class="mt-1 text-xs text-red-600">
+              {{ errors.video }}
             </div>
           </div>
         </div>
@@ -372,6 +484,10 @@ const authStore = useAuthStore()
 const { success, error: showError } = useToast()
 
 // State
+const logoFile = ref(null)
+const videoFile = ref(null)
+const logoPreview = ref(null)
+const videoPreview = ref(null)
 const isLoading = ref(false)
 const showSuccessModal = ref(false)
 const needsApproval = ref(false)
@@ -414,10 +530,16 @@ const templeDetails = ref({
 watch(() => form.value.role, (newRole, oldRole) => {
   if (oldRole === 'tenant' && newRole !== 'tenant') {
     // Clear all temple-related errors when switching away from temple admin
-    const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription']
+    const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription', 'logo', 'video']
     templeErrorKeys.forEach(key => {
       delete errors.value[key]
     })
+    
+    // Clear file uploads
+    logoFile.value = null
+    videoFile.value = null
+    logoPreview.value = null
+    videoPreview.value = null
   }
 })
 
@@ -435,12 +557,87 @@ const isFormValid = computed(() => {
                            templeDetails.value.place && 
                            templeDetails.value.address && 
                            templeDetails.value.phoneNumber &&
-                           templeDetails.value.description)
+                           templeDetails.value.description &&
+                           logoFile.value &&
+                           videoFile.value)
                            
   return hasBasicFields && hasTempleDetails && Object.keys(errors.value).length === 0
 })
 
 // Methods
+const onLogoChange = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+
+  // Validate file type
+  const validTypes = ['image/png', 'image/jpeg', 'image/jpg']
+  if (!validTypes.includes(file.type)) {
+    errors.value.logo = 'Please upload a PNG, JPG, or JPEG file'
+    showError('Please upload a PNG, JPG, or JPEG file')
+    return
+  }
+
+  // Validate file size (2MB)
+  const maxSize = 2 * 1024 * 1024 // 2MB in bytes
+  if (file.size > maxSize) {
+    errors.value.logo = 'Logo file size must be less than 2MB'
+    showError('Logo file size must be less than 2MB')
+    return
+  }
+
+  logoFile.value = file
+  clearError('logo')
+  
+  // Create preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    logoPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const onVideoChange = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+
+  // Validate file type
+  const validTypes = ['video/mp4', 'video/webm', 'video/quicktime']
+  if (!validTypes.includes(file.type)) {
+    errors.value.video = 'Please upload an MP4, WebM, or MOV file'
+    showError('Please upload an MP4, WebM, or MOV file')
+    return
+  }
+
+  // Validate file size (20MB)
+  const maxSize = 20 * 1024 * 1024 // 20MB in bytes
+  if (file.size > maxSize) {
+    errors.value.video = 'Video file size must be less than 20MB'
+    showError('Video file size must be less than 20MB')
+    return
+  }
+
+  videoFile.value = file
+  clearError('video')
+  
+  // Create preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    videoPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+const removeLogo = () => {
+  logoFile.value = null
+  logoPreview.value = null
+  clearError('logo')
+}
+
+const removeVideo = () => {
+  videoFile.value = null
+  videoPreview.value = null
+  clearError('video')
+}
 
 // Clear specific error when user starts typing
 const clearError = (field) => {
@@ -458,7 +655,7 @@ const selectRole = (role) => {
   
   // Clear temple-related errors when changing roles
   if (role !== 'tenant') {
-    const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription']
+    const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription', 'logo', 'video']
     templeErrorKeys.forEach(key => delete errors.value[key])
     errors.value = { ...errors.value }
   }
@@ -521,6 +718,12 @@ const validateForm = () => {
     }
     if (!templeDetails.value.description) {
       newErrors.templeDescription = 'Temple description is required'
+    }
+    if (!logoFile.value) {
+      newErrors.logo = 'Temple logo is required'
+    }
+    if (!videoFile.value) {
+      newErrors.video = 'Temple intro video is required'
     }
     
     // Set temple details in form for submission
@@ -593,26 +796,35 @@ const handleRegister = async () => {
       'volunteer': 'volunteer'
     }
 
-    const registrationData = {
-      fullName: form.value.fullName,
-      email: form.value.email,
-      password: form.value.password,
-      phone: form.value.phone,
-      role: roleMapping[form.value.role] || form.value.role,
-      captchaToken: captchaToken.value
-    }
+    const formData = new FormData()
 
-    // Add temple details for temple admin role
+    formData.append('fullName', form.value.fullName)
+    formData.append('email', form.value.email)
+    formData.append('password', form.value.password)
+    formData.append('phone', form.value.phone)
+    formData.append('role', roleMapping[form.value.role] || form.value.role)
+    formData.append('captchaToken', captchaToken.value)
+
+    // Temple admin extra fields
     if (form.value.role === 'tenant') {
-      registrationData.templeName = templeDetails.value.name
-      registrationData.templePlace = templeDetails.value.place
-      registrationData.templeAddress = templeDetails.value.address
-      registrationData.templePhoneNo = templeDetails.value.phoneNumber
-      registrationData.templeDescription = templeDetails.value.description || ''
+      formData.append('templeName', templeDetails.value.name)
+      formData.append('templePlace', templeDetails.value.place)
+      formData.append('templeAddress', templeDetails.value.address)
+      formData.append('templePhoneNo', templeDetails.value.phoneNumber)
+      formData.append('templeDescription', templeDetails.value.description)
+
+      if (logoFile.value) {
+        formData.append('logo', logoFile.value)
+      }
+
+      if (videoFile.value) {
+        formData.append('video', videoFile.value)
+      }
     }
 
     try {
-      const response = await apiClient.auth.register(registrationData)
+      const response = await apiClient.auth.register(formData)
+      console.log('Registration successful:', response.data)
       needsApproval.value = form.value.role === 'tenant'
       showSuccessModal.value = true
       registrationSuccess.value = true
@@ -709,6 +921,11 @@ const resetForm = () => {
     phoneNumber: '',
     description: ''
   }
+
+  logoFile.value = null
+  videoFile.value = null
+  logoPreview.value = null
+  videoPreview.value = null
 
   errors.value = {}
   globalError.value = ''
