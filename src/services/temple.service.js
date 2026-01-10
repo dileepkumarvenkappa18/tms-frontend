@@ -568,214 +568,208 @@ async createTemple(templeData) {
     console.log('📡 Creating new temple entity');
     console.log('📋 Temple data received:', templeData);
 
-    // Check if we have files in the documents object
-    const hasFiles = templeData.documents && (
-      templeData.documents.registration || 
-      templeData.documents.trustDeed || 
-      templeData.documents.property || 
-      (templeData.documents.additional && templeData.documents.additional.length > 0)
-    );
+    const hasFiles =
+      templeData.documents &&
+      (
+        templeData.documents.registration ||
+        templeData.documents.trustDeed ||
+        templeData.documents.property ||
+        (templeData.documents.additional && templeData.documents.additional.length > 0) ||
+        templeData.logo ||
+        templeData.video
+      );
 
     let payload;
     let headers = {};
 
     if (hasFiles) {
-      // Create FormData for file upload - MATCH BACKEND FIELD NAMES
       console.log('📦 Creating FormData with files');
       const formData = new FormData();
-      
-      // Basic temple information - EXACT FIELD NAMES BACKEND EXPECTS
+
+      // ================= BASIC DETAILS =================
       formData.append('name', templeData.name || '');
       formData.append('main_deity', templeData.main_deity || templeData.mainDeity || '');
-      formData.append('temple_type', templeData.temple_type || templeData.templeType || templeData.category || '');
-      formData.append('established_year', templeData.established_year ? templeData.established_year.toString() : '');
+      formData.append('temple_type', templeData.temple_type || templeData.templeType || '');
+      formData.append(
+        'established_year',
+        templeData.established_year ? templeData.established_year.toString() : ''
+      );
       formData.append('phone', templeData.phone || '');
       formData.append('email', templeData.email || '');
       formData.append('description', templeData.description || '');
-      
-      // Address information - EXACT FIELD NAMES BACKEND EXPECTS
-      formData.append('street_address', templeData.street_address || templeData.address?.street || templeData.streetAddress || '');
+
+      // ================= ADDRESS =================
+      formData.append('street_address', templeData.street_address || templeData.address?.street || '');
       formData.append('city', templeData.city || templeData.address?.city || '');
       formData.append('district', templeData.district || '');
       formData.append('state', templeData.state || templeData.address?.state || '');
       formData.append('pincode', templeData.pincode || templeData.address?.pincode || '');
       formData.append('landmark', templeData.landmark || '');
       formData.append('map_link', templeData.map_link || templeData.mapLink || '');
-      
-      // Status (will be set to pending by backend)
-      formData.append('status', 'pending');
 
-      // Add files with EXACT FIELD NAMES BACKEND EXPECTS
-      if (templeData.documents.registration) {
+      // ================= DOCUMENT FILES =================
+      if (templeData.documents?.registration instanceof File) {
         formData.append('registration_cert', templeData.documents.registration);
-        console.log('📄 Added registration certificate:', templeData.documents.registration.name);
+        console.log('📄 Added registration certificate');
       }
-      
-      if (templeData.documents.trustDeed) {
+
+      if (templeData.documents?.trustDeed instanceof File) {
         formData.append('trust_deed', templeData.documents.trustDeed);
-        console.log('📄 Added trust deed:', templeData.documents.trustDeed.name);
+        console.log('📄 Added trust deed');
       }
-      
-      if (templeData.documents.property) {
+
+      if (templeData.documents?.property instanceof File) {
         formData.append('property_docs', templeData.documents.property);
-        console.log('📄 Added property documents:', templeData.documents.property.name);
+        console.log('📄 Added property documents');
       }
-      
-      if (templeData.documents.additional && templeData.documents.additional.length > 0) {
+
+      if (Array.isArray(templeData.documents?.additional)) {
         templeData.documents.additional.forEach((file, index) => {
-          formData.append(`additional_docs_${index}`, file);
-          console.log(`📄 Added additional document ${index}:`, file.name);
+          if (file instanceof File) {
+            formData.append(`additional_docs_${index}`, file);
+          }
         });
       }
 
+      // ================= 🆕 LOGO & VIDEO =================
+      if (templeData.logo instanceof File) {
+        formData.append('temple_logo', templeData.logo);
+        console.log('🖼️ Added temple logo:', templeData.logo.name);
+      }
+
+      if (templeData.video instanceof File) {
+        formData.append('temple_video', templeData.video);
+        console.log('🎥 Added temple video:', templeData.video.name);
+      }
+
       payload = formData;
-      // Don't set Content-Type header - let browser set it with boundary
-      
-      // Log FormData contents for debugging
-      console.log('📄 FormData contents:');
-      for (let [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File - ${value.name} (${value.size} bytes)`);
-        } else {
-          console.log(`${key}: ${value}`);
-        }
+
+      // Debug
+      console.log('📦 FormData contents:');
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value instanceof File ? value.name : value);
       }
 
     } else {
-      // No files, send as JSON with EXACT FIELD NAMES BACKEND EXPECTS
       console.log('📦 Creating JSON payload (no files)');
       payload = {
         name: templeData.name || '',
-        main_deity: templeData.main_deity || templeData.mainDeity || '',
-        temple_type: templeData.temple_type || templeData.templeType || templeData.category || '',
-        established_year: templeData.established_year ? parseInt(templeData.established_year) : null,
+        main_deity: templeData.main_deity || '',
+        temple_type: templeData.temple_type || '',
+        established_year: templeData.established_year || null,
         phone: templeData.phone || '',
         email: templeData.email || '',
         description: templeData.description || '',
-        street_address: templeData.street_address || templeData.address?.street || templeData.streetAddress || '',
-        city: templeData.city || templeData.address?.city || '',
+        street_address: templeData.street_address || '',
+        city: templeData.city || '',
         district: templeData.district || '',
-        state: templeData.state || templeData.address?.state || '',
-        pincode: templeData.pincode || templeData.address?.pincode || '',
+        state: templeData.state || '',
+        pincode: templeData.pincode || '',
         landmark: templeData.landmark || '',
-        map_link: templeData.map_link || templeData.mapLink || '',
+        map_link: templeData.map_link || '',
         status: 'pending'
       };
-      
+
       headers['Content-Type'] = 'application/json';
-      console.log('📦 JSON payload:', payload);
     }
 
     console.log('🚀 Making API request to /entities');
-    console.log('🚀 Headers:', headers);
-    
     const response = await api.post('/entities', payload, { headers });
-    
+
     console.log('✅ Temple created successfully:', response.data);
-    return response.data || response;
+    return response.data;
   } catch (error) {
     console.error('❌ Error creating temple:', error);
-    console.error('❌ Error response:', error.response?.data);
-    console.error('❌ Error config:', error.config);
     throw error;
   }
 },
+
 
 
 async updateTemple(id, updates) {
   try {
     console.log(`📡 Updating temple with ID: ${id}`);
-    console.log('📦 Update data type:', updates instanceof FormData ? 'FormData' : 'Object');
 
     let payload;
     let headers = {};
 
-    // Check if updates is FormData (contains files) or plain object
+    // ================= CASE 1: FormData PASSED DIRECTLY =================
     if (updates instanceof FormData) {
-      console.log('📦 Using FormData (files included)');
+      console.log('📦 Using FormData directly');
       payload = updates;
-      // 🔥 CRITICAL FIX: DO NOT set Content-Type for FormData
-      // Let the browser set it automatically with the correct boundary
-      // headers['Content-Type'] = 'multipart/form-data'; // ❌ WRONG - Remove this!
-      
+
     } else {
-      console.log('📦 Creating FormData from update object');
-      
-      // Convert plain object to FormData to match backend expectations
+      console.log('📦 Converting object → FormData');
       const formData = new FormData();
-      
-      // Basic temple information
+
+      // ================= BASIC DETAILS =================
       if (updates.name) formData.append('name', updates.name);
-      if (updates.mainDeity || updates.maindeity) {
-        formData.append('main_deity', updates.mainDeity || updates.maindeity);
+      if (updates.mainDeity) formData.append('main_deity', updates.mainDeity);
+      if (updates.templeType) formData.append('temple_type', updates.templeType);
+      if (updates.establishedYear) {
+        formData.append('established_year', updates.establishedYear.toString());
       }
-      if (updates.templeType || updates.templetype) {
-        formData.append('temple_type', updates.templeType || updates.templetype);
-      }
-      
-      const estYear = updates.establishedYear || updates.establishedyear || '';
-      if (estYear) {
-        formData.append('established_year', estYear.toString());
-      }
-      
+
       if (updates.phone) formData.append('phone', updates.phone);
       if (updates.email) formData.append('email', updates.email);
       if (updates.description) formData.append('description', updates.description);
-      
-      // Address information
-      if (updates.streetAddress || updates.streetaddress) {
-        formData.append('street_address', updates.streetAddress || updates.streetaddress);
-      }
+
+      // ================= ADDRESS =================
+      if (updates.streetAddress) formData.append('street_address', updates.streetAddress);
       if (updates.city) formData.append('city', updates.city);
       if (updates.district) formData.append('district', updates.district);
       if (updates.state) formData.append('state', updates.state);
       if (updates.pincode) formData.append('pincode', updates.pincode);
       if (updates.landmark) formData.append('landmark', updates.landmark);
-      if (updates.mapLink || updates.maplink) {
-        formData.append('map_link', updates.mapLink || updates.maplink);
+      if (updates.mapLink) formData.append('map_link', updates.mapLink);
+
+      // ================= DOCUMENT FILES =================
+      if (updates.documents?.registration instanceof File) {
+        formData.append('registration_cert', updates.documents.registration);
       }
-      
-      // Files (if provided in updates.documents)
-      if (updates.documents) {
-        if (updates.documents.registration instanceof File) {
-          formData.append('registration_cert', updates.documents.registration);
-        }
-        if (updates.documents.trustDeed instanceof File) {
-          formData.append('trust_deed', updates.documents.trustDeed);
-        }
-        if (updates.documents.property instanceof File) {
-          formData.append('property_docs', updates.documents.property);
-        }
-        if (updates.documents.additional && Array.isArray(updates.documents.additional)) {
-          updates.documents.additional.forEach((file, index) => {
-            if (file instanceof File) {
-              formData.append(`additional_docs_${index}`, file);
-            }
-          });
-        }
+      if (updates.documents?.trustDeed instanceof File) {
+        formData.append('trust_deed', updates.documents.trustDeed);
       }
-      
+      if (updates.documents?.property instanceof File) {
+        formData.append('property_docs', updates.documents.property);
+      }
+      if (Array.isArray(updates.documents?.additional)) {
+        updates.documents.additional.forEach((file, index) => {
+          if (file instanceof File) {
+            formData.append(`additional_docs_${index}`, file);
+          }
+        });
+      }
+
+      // ================= 🆕 LOGO & VIDEO =================
+      if (updates.logo instanceof File) {
+        formData.append('temple_logo', updates.logo);
+        console.log('🖼️ Added temple logo:', updates.logo.name);
+      }
+
+      if (updates.video instanceof File) {
+        formData.append('temple_video', updates.video);
+        console.log('🎥 Added temple video:', updates.video.name);
+      }
+
       payload = formData;
     }
 
     console.log('🚀 Making API request to /entities/' + id);
-    
-    // 🔥 CRITICAL: Pass headers object but let axios handle Content-Type for FormData
-    const response = await api.put(`/entities/${id}`, payload, { 
+
+    const response = await api.put(`/entities/${id}`, payload, {
       headers,
-      // This tells axios to NOT set Content-Type, let browser do it
-      transformRequest: [(data) => data]
+      transformRequest: [(data) => data] // let browser set boundary
     });
 
     console.log('✅ Temple updated successfully:', response.data);
-    return response.data || response;
+    return response.data;
   } catch (error) {
-    console.error(`❌ Error updating temple ID ${id}:`, error);
-    console.error('❌ Error response:', error.response?.data);
-    console.error('❌ Error config:', error.config);
+    console.error(`❌ Error updating temple ${id}:`, error);
     throw error;
   }
-},
+}
+,
 
 
 async toggleTempleStatus(templeId, isActive) {

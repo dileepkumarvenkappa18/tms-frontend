@@ -46,7 +46,8 @@ export const useTempleStore = defineStore('temple', () => {
       property: null,
       additional: []
     },
-    
+    logo: null,
+video: null,
     status: 'pending', // Will be set by backend
     rejection_reason: '',
     admin_notes: ''
@@ -260,7 +261,9 @@ export const useTempleStore = defineStore('temple', () => {
         mapLink: templeData.mapLink || '',
         
         // Documents (if any)
-        documents: templeData.documents || {}
+        documents: templeData.documents || {},
+         logo: templeData.logo || null,
+  video: templeData.video || null
       };
 
       console.log('🏛️ STORE: Transformed data for service:', transformedData);
@@ -361,7 +364,9 @@ export const useTempleStore = defineStore('temple', () => {
         mapLink: updates.mapLink || '',
         
         // Documents (if any)
-        documents: updates.documents || {}
+        documents: updates.documents || {},
+         logo: templeData.logo || null,
+  video: templeData.video || null
       };
 
       const response = await templeService.updateTemple(id, transformedUpdates)
@@ -506,7 +511,9 @@ const updateTempleStatus = async (templeId, isActive) => {
         property: null,
         additional: []
       },
-      
+      logo: null,
+video: null,
+
       status: 'pending',
       rejection_reason: '',
       admin_notes: ''
