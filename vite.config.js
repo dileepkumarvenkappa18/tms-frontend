@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
   server: {    
     proxy: {
       '/api/v1': {        
-        target: env.VITE_API_URL,
+        target: env.VITE_DEBUG_API_URL,
         changeOrigin: true,
         rewrite: path => path // Simply pass through the path as is        
       }
