@@ -152,9 +152,9 @@
               <select id="state" v-model="form.state" required
                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200">
                 <option value="">Select state</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
                 <option value="Karnataka">Karnataka</option>
                 <option value="Tamil Nadu">Tamil Nadu</option>
-                <option value="Andhra Pradesh">Andhra Pradesh</option>
                 <option value="Kerala">Kerala</option>
                 <option value="Maharashtra">Maharashtra</option>
                 <option value="Gujarat">Gujarat</option>
@@ -195,12 +195,12 @@
           </div>
         </div>
 
-        <!-- Step 3: Documents Upload -->
+        <!-- Step 3: Documents & Media Upload -->
         <div v-show="currentStep === 3" class="p-8">
           <div class="mb-6 flex items-center justify-between">
             <div>
-              <h2 class="text-xl font-bold text-gray-900 mb-2">Update Documents</h2>
-              <p class="text-gray-600">Upload or update temple verification documents</p>
+              <h2 class="text-xl font-bold text-gray-900 mb-2">Update Documents & Media</h2>
+              <p class="text-gray-600">Upload or update temple verification documents and media</p>
             </div>
             <button
               type="button"
@@ -214,7 +214,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
               </svg>
-              View Stored Documents
+              View All Documents
             </button>
           </div>
 
@@ -237,7 +237,7 @@
                   </label>
 
                   <div v-if="form.documents.registration" class="flex items-center space-x-2 mt-2">
-                    <p class="text-sm text-green-600">{{ form.documents.registration.name }}</p>
+                    <p class="text-sm text-green-600">✓ {{ form.documents.registration.name }}</p>
                     <button type="button"
                             @click="viewLocalFile(form.documents.registration, 'Registration Certificate', 'registration')"
                             class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
@@ -289,7 +289,7 @@
                   </label>
 
                   <div v-if="form.documents.trustDeed" class="flex items-center space-x-2 mt-2">
-                    <p class="text-sm text-green-600">{{ form.documents.trustDeed.name }}</p>
+                    <p class="text-sm text-green-600">✓ {{ form.documents.trustDeed.name }}</p>
                     <button type="button"
                             @click="viewLocalFile(form.documents.trustDeed, 'Trust Deed', 'trustDeed')"
                             class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
@@ -343,7 +343,7 @@
                   </label>
 
                   <div v-if="form.documents.property" class="flex items-center space-x-2 mt-2">
-                    <p class="text-sm text-green-600">{{ form.documents.property.name }}</p>
+                    <p class="text-sm text-green-600">✓ {{ form.documents.property.name }}</p>
                     <button type="button"
                             @click="viewLocalFile(form.documents.property, 'Property Documents', 'property')"
                             class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
@@ -376,130 +376,238 @@
                 </div>
               </div>
             </div>
-<!-- Additional Documents - FIXED VERSION -->
-<div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
-  <div class="text-center">
-    <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
-    </svg>
-    <h3 class="text-lg font-medium text-gray-900 mb-2">Additional Documents</h3>
-    <p class="text-gray-600 mb-4">Upload any additional supporting documents (Optional)</p>
 
-    <div class="flex flex-col items-center">
-      <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
-        <span>{{ 
-          (existingFiles.additional && existingFiles.additional.length > 0) || 
-          (form.documents.additional && form.documents.additional.length > 0) 
-            ? 'Add More Files' 
-            : 'Choose Files' 
-        }}</span>
-        <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple
-               @change="handleFileUpload($event, 'additional')" />
-      </label>
+            <!-- Additional Documents -->
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
+              <div class="text-center">
+                <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Additional Documents</h3>
+                <p class="text-gray-600 mb-4">Upload any additional supporting documents (Optional)</p>
 
-      <!-- Show newly uploaded files (not yet saved) -->
-      <div v-if="form.documents.additional && form.documents.additional.length > 0" 
-           class="mt-4 w-full space-y-2">
-        <p class="text-sm font-medium text-gray-700 mb-2">📎 New Files to Upload:</p>
-        <div v-for="(file, idx) in form.documents.additional" 
-             :key="`new-${idx}`" 
-             class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-          <div class="flex items-center space-x-2 flex-1">
-            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <span class="text-sm text-green-700 font-medium">{{ file.name }}</span>
-            <span class="text-xs text-green-600">({{ (file.size / 1024).toFixed(1) }} KB)</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <button type="button"
-                    @click="viewLocalAdditional(idx)"
-                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
-              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-              </svg>
-              View
-            </button>
-            <button type="button"
-                    @click="downloadLocalFile(file, `additional-document-${idx+1}`)"
-                    class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors">
-              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              Download
-            </button>
-            <button type="button"
-                    @click="removeNewAdditionalFile(idx)"
-                    class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+                <div class="flex flex-col items-center">
+                  <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                    <span>{{ 
+                      (existingFiles.additional && existingFiles.additional.length > 0) || 
+                      (form.documents.additional && form.documents.additional.length > 0) 
+                        ? 'Add More Files' 
+                        : 'Choose Files' 
+                    }}</span>
+                    <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" multiple
+                           @change="handleFileUpload($event, 'additional')" />
+                  </label>
 
-      <!-- Show existing saved files -->
-      <div v-if="existingFiles.additional && existingFiles.additional.length > 0" 
-           class="mt-4 w-full space-y-2">
-        <p class="text-sm font-medium text-gray-700 mb-2">
-          📁 Currently Saved Documents ({{ existingFiles.additional.length }}):
-        </p>
-        <div v-for="(name, index) in existingFiles.additional" 
-             :key="`existing-${index}`"
-             class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-          <div class="flex items-center space-x-2 flex-1">
-            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            <span class="text-sm text-blue-700">{{ name }}</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <button type="button"
-                    v-if="documentUrls.additional && documentUrls.additional[index]"
-                    @click="viewRemote(documentUrls.additional[index], `Additional Document ${index+1}`)"
-                    class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
-              <svg class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-              </svg>
-              View
-            </button>
-            <button type="button"
-                    v-if="documentUrls.additional && documentUrls.additional[index]"
-                    :disabled="downloadingFiles[`additional-${index}`]"
-                    @click="downloadRemote(documentUrls.additional[index], `additional-document-${index+1}`, `additional-${index}`)"
-                    class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              <svg v-if="!downloadingFiles[`additional-${index}`]" 
-                   class="w-3 h-3 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-              <span v-if="downloadingFiles[`additional-${index}`]">Downloading...</span>
-              <span v-else>Download</span>
-            </button>
-          </div>
-        </div>
-      </div>
+                  <!-- Show newly uploaded files (not yet saved) -->
+                  <div v-if="form.documents.additional && form.documents.additional.length > 0" 
+                       class="mt-4 w-full space-y-2">
+                    <p class="text-sm font-medium text-gray-700 mb-2">📎 New Files to Upload:</p>
+                    <div v-for="(file, idx) in form.documents.additional" 
+                         :key="`new-${idx}`" 
+                         class="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+                      <div class="flex items-center space-x-2 flex-1">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-sm text-green-700 font-medium">{{ file.name }}</span>
+                        <span class="text-xs text-green-600">({{ (file.size / 1024).toFixed(1) }} KB)</span>
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <button type="button"
+                                @click="viewLocalAdditional(idx)"
+                                class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
+                          View
+                        </button>
+                        <button type="button"
+                                @click="downloadLocalFile(file, `additional-document-${idx+1}`)"
+                                class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors">
+                          Download
+                        </button>
+                        <button type="button"
+                                @click="removeNewAdditionalFile(idx)"
+                                class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200 transition-colors">
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
 
-      <!-- Empty state -->
-      <div v-if="(!existingFiles.additional || existingFiles.additional.length === 0) && 
-                 (!form.documents.additional || form.documents.additional.length === 0)"
-           class="mt-4 text-sm text-gray-500 italic">
-        No additional documents uploaded yet
-      </div>
-    </div>
-  </div>
-</div>
+                  <!-- Show existing saved files -->
+                  <div v-if="existingFiles.additional && existingFiles.additional.length > 0" 
+                       class="mt-4 w-full space-y-2">
+                    <p class="text-sm font-medium text-gray-700 mb-2">
+                      📁 Currently Saved Documents ({{ existingFiles.additional.length }}):
+                    </p>
+                    <div v-for="(name, index) in existingFiles.additional" 
+                         :key="`existing-${index}`"
+                         class="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                      <div class="flex items-center space-x-2 flex-1">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span class="text-sm text-blue-700">{{ name }}</span>
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <button type="button"
+                                v-if="documentUrls.additional && documentUrls.additional[index]"
+                                @click="viewRemote(documentUrls.additional[index], `Additional Document ${index+1}`)"
+                                class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 transition-colors">
+                          View
+                        </button>
+                        <button type="button"
+                                v-if="documentUrls.additional && documentUrls.additional[index]"
+                                :disabled="downloadingFiles[`additional-${index}`]"
+                                @click="downloadRemote(documentUrls.additional[index], `additional-document-${index+1}`, `additional-${index}`)"
+                                class="text-xs bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                          <span v-if="downloadingFiles[`additional-${index}`]">Downloading...</span>
+                          <span v-else>Download</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Empty state -->
+                  <div v-if="(!existingFiles.additional || existingFiles.additional.length === 0) && 
+                             (!form.documents.additional || form.documents.additional.length === 0)"
+                       class="mt-4 text-sm text-gray-500 italic">
+                    No additional documents uploaded yet
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Temple Logo -->
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
+              <div class="text-center">
+                <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Logo</h3>
+                <p class="text-gray-600 mb-4">Upload temple logo (JPG, PNG - Max 5MB)</p>
+                
+                <div class="flex flex-col items-center space-y-3">
+                  <!-- Current/New Logo Preview -->
+                  <div v-if="form.media.logo || mediaUrls.logo" class="mb-4">
+                    <img 
+                      :src="form.media.logo ? localPreviews.logo : mediaUrls.logo" 
+                      :alt="form.name || 'Temple Logo'"
+                      class="max-w-[200px] max-h-[200px] object-contain border-2 border-gray-300 rounded-lg shadow-sm"
+                    />
+                    <p class="text-xs text-gray-600 mt-2">
+                      {{ form.media.logo ? '🆕 New Logo (not saved yet)' : '📁 Current Logo' }}
+                    </p>
+                  </div>
+
+                  <label class="cursor-pointer bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
+                    <span>{{ form.media.logo || mediaUrls.logo ? 'Replace Logo' : 'Choose Logo' }}</span>
+                    <input 
+                      type="file" 
+                      class="hidden" 
+                      accept="image/jpeg,image/jpg,image/png" 
+                      @change="handleMediaUpload($event, 'logo')" 
+                    />
+                  </label>
+
+                  <div v-if="form.media.logo" class="flex items-center space-x-2">
+                    <p class="text-sm text-green-600">✓ {{ form.media.logo.name }}</p>
+                    <button type="button"
+                            @click="viewLocalMedia('logo')"
+                            class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
+                      View Full
+                    </button>
+                    <button type="button"
+                            @click="downloadLocalFile(form.media.logo, 'temple-logo')"
+                            class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">
+                      Download
+                    </button>
+                    <button type="button"
+                            @click="clearMediaFile('logo')"
+                            class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div v-else-if="existingFiles.logo && mediaUrls.logo" class="flex items-center space-x-2">
+                    <p class="text-sm text-gray-600">Current: {{ existingFiles.logo }}</p>
+                    <button type="button"
+                            @click="viewRemote(mediaUrls.logo, 'Temple Logo')"
+                            class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">
+                      View
+                    </button>
+                    <button type="button"
+                            :disabled="downloadingFiles.logo"
+                            @click="downloadRemote(mediaUrls.logo, 'temple-logo', 'logo')"
+                            class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 disabled:opacity-50">
+                      {{ downloadingFiles.logo ? 'Downloading...' : 'Download' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Temple Video -->
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
+              <div class="text-center">
+                <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Video (Optional)</h3>
+                <p class="text-gray-600 mb-4">Upload temple video (MP4, MOV, AVI - Max 50MB)</p>
+                
+                <div class="flex flex-col items-center space-y-3">
+                  <!-- Current/New Video Preview -->
+                  <div v-if="form.media.video || mediaUrls.video" class="mb-4 w-full max-w-md">
+                    <video 
+                      :src="form.media.video ? localPreviews.video : mediaUrls.video"
+                      controls
+                      class="w-full max-h-[300px] border-2 border-gray-300 rounded-lg shadow-sm"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                    <p class="text-xs text-gray-600 mt-2">
+                      {{ form.media.video ? '🆕 New Video (not saved yet)' : '📁 Current Video' }}
+                    </p>
+                  </div>
+
+                  <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                    <span>{{ form.media.video || mediaUrls.video ? 'Replace Video' : 'Choose Video' }}</span>
+                    <input 
+                      type="file" 
+                      class="hidden" 
+                      accept="video/mp4,video/quicktime,video/x-msvideo" 
+                      @change="handleMediaUpload($event, 'video')" 
+                    />
+                  </label>
+
+                  <div v-if="form.media.video" class="flex items-center space-x-2">
+                    <p class="text-sm text-green-600">✓ {{ form.media.video.name }}</p>
+                    <button type="button"
+                            @click="downloadLocalFile(form.media.video, 'temple-video')"
+                            class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200">
+                      Download
+                    </button>
+                    <button type="button"
+                            @click="clearMediaFile('video')"
+                            class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded hover:bg-red-200">
+                      Remove
+                    </button>
+                  </div>
+
+                  <div v-else-if="existingFiles.video && mediaUrls.video" class="flex items-center space-x-2">
+                    <p class="text-sm text-gray-600">Current: {{ existingFiles.video }}</p>
+                    <button type="button"
+                            :disabled="downloadingFiles.video"
+                            @click="downloadRemote(mediaUrls.video, 'temple-video', 'video')"
+                            class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 disabled:opacity-50">
+                      {{ downloadingFiles.video ? 'Downloading...' : 'Download' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Status Information -->
             <div class="mt-8 p-4 bg-gray-50 rounded-lg">
@@ -532,13 +640,12 @@
           <div v-else></div>
 
           <div class="flex space-x-3">
- <button 
-  type="button" 
-  @click="router.back()"
-  class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200">
-  Cancel
-</button>
-
+            <button 
+              type="button" 
+              @click="router.back()"
+              class="inline-flex items-center px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors duration-200">
+              Cancel
+            </button>
 
             <button v-if="currentStep < 3"
                     type="button"
@@ -579,7 +686,7 @@
       </div>
     </div>
 
-    <!-- Documents Modal (Stored) -->
+    <!-- Documents Modal -->
     <div v-if="showDocumentsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
@@ -734,12 +841,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import templeService from '@/services/temple.service.js'
 
-// Router and UI
+const API_URL = 'http://localhost:8080'
+
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 
-// State
 const currentStep = ref(1)
 const isSubmitting = ref(false)
 const isLoading = ref(true)
@@ -750,23 +857,24 @@ const showDocumentViewer = ref(false)
 const currentDocumentUrl = ref('')
 const currentDocumentTitle = ref('')
 
-// Download states
 const downloadingFiles = reactive({
   registration: false,
   trustDeed: false,
   property: false,
+  logo: false,
+  video: false,
   viewer: false
 })
 
-// Local previews for selected files
 const localPreviews = reactive({
   registration: '',
   trustDeed: '',
   property: '',
-  additional: []
+  additional: [],
+  logo: '',
+  video: ''
 })
 
-// Form model
 const form = reactive({
   name: '',
   mainDeity: '',
@@ -788,20 +896,24 @@ const form = reactive({
     property: null,
     additional: []
   },
+  media: {
+    logo: null,
+    video: null
+  },
   status: 'PENDING',
   rejectionReason: '',
   adminNotes: ''
 })
 
-// Existing files metadata
 const existingFiles = reactive({
   registration: '',
   trustDeed: '',
   property: '',
-  additional: []
+  additional: [],
+  logo: '',
+  video: ''
 })
 
-// Stored document URLs
 const documentUrls = reactive({
   registration: '',
   trustDeed: '',
@@ -809,7 +921,11 @@ const documentUrls = reactive({
   additional: []
 })
 
-// Helpers
+const mediaUrls = reactive({
+  logo: '',
+  video: ''
+})
+
 const showToast = (message, type = 'success') => {
   try {
     if (type === 'success' && toast.success) toast.success(message)
@@ -844,12 +960,12 @@ const isDocumentPdf = computed(() => {
   return url.includes('.pdf') || url.includes('application/pdf') || (url.startsWith('blob:') && currentDocumentTitle.value.toLowerCase().includes('pdf'))
 })
 
-// Filename helpers (same style as dashboard)
 const sanitizeFileName = (name) => {
   const fallback = 'document'
   const raw = (name || '').trim() || fallback
   return raw.replace(/[\\/:*?"<>|\u0000-\u001F]/g, '_').slice(0, 200)
 }
+
 const getFilenameFromDisposition = (disposition) => {
   if (!disposition) return ''
   const star = /filename\*\s*=\s*([^;]+)/i.exec(disposition)
@@ -862,6 +978,7 @@ const getFilenameFromDisposition = (disposition) => {
   if (normal && normal[2]) return sanitizeFileName(normal[2])
   return ''
 }
+
 const getFilenameFromUrl = (url) => {
   try {
     const u = new URL(url, window.location.origin)
@@ -873,6 +990,7 @@ const getFilenameFromUrl = (url) => {
     try { return sanitizeFileName(decodeURIComponent(last)) } catch { return sanitizeFileName(last) }
   }
 }
+
 const pickDownloadName = (preferred, url, disposition) => {
   return sanitizeFileName(
     getFilenameFromDisposition(disposition) ||
@@ -882,19 +1000,15 @@ const pickDownloadName = (preferred, url, disposition) => {
   )
 }
 
-// URL normalization similar to dashboard base
 const fixToAbsoluteUrl = (direct) => {
   if (!direct) return ''
   let url = String(direct)
 
-  // remove any /files/ segments as dashboard does
   if (url.includes('/files/')) {
     url = url.replace(/\/files\//g, '/')
   }
 
-  // absolute http(s)
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    // ensure localhost:8080 URLs are prefixed with /uploads if missing
     if (url.includes('://localhost:8080/') && !/\/(uploads|api|public)\//.test(url)) {
       const parts = url.split('://localhost:8080/')
       if (parts.length === 2) {
@@ -907,17 +1021,15 @@ const fixToAbsoluteUrl = (direct) => {
     return url
   }
 
-  // relative paths -> /uploads/...
   let path
   if (url.startsWith('/uploads/')) path = url
   else if (url.startsWith('uploads/')) path = `/${url}`
   else if (url.startsWith('/')) path = `/uploads${url}`
   else path = `/uploads/${url}`
 
-  return `http://localhost:8080${path}`
+  return `${API_URL}${path}`
 }
 
-// View handlers
 const viewRemote = (rawUrl, title) => {
   const url = fixToAbsoluteUrl(rawUrl)
   if (!url) {
@@ -928,6 +1040,7 @@ const viewRemote = (rawUrl, title) => {
   currentDocumentTitle.value = title || 'Document'
   showDocumentViewer.value = true
 }
+
 const viewLocalFile = (file, title, key) => {
   if (!file) {
     showToast('No file selected', 'error')
@@ -940,6 +1053,7 @@ const viewLocalFile = (file, title, key) => {
   currentDocumentTitle.value = title || file.name
   showDocumentViewer.value = true
 }
+
 const viewLocalAdditional = (idx) => {
   const file = form.documents.additional?.[idx]
   if (!file) return
@@ -951,7 +1065,16 @@ const viewLocalAdditional = (idx) => {
   showDocumentViewer.value = true
 }
 
-// Download handlers
+const viewLocalMedia = (type) => {
+  if (!form.media[type]) {
+    showToast(`No ${type} file selected`, 'error')
+    return
+  }
+  currentDocumentUrl.value = localPreviews[type]
+  currentDocumentTitle.value = `Temple ${type.charAt(0).toUpperCase() + type.slice(1)}`
+  showDocumentViewer.value = true
+}
+
 const downloadFromViewer = async () => {
   try {
     downloadingFiles.viewer = true
@@ -974,6 +1097,7 @@ const downloadFromViewer = async () => {
     downloadingFiles.viewer = false
   }
 }
+
 const downloadLocalFile = (file, fallbackName = 'document') => {
   if (!file) return
   const url = URL.createObjectURL(file)
@@ -986,6 +1110,7 @@ const downloadLocalFile = (file, fallbackName = 'document') => {
   setTimeout(() => URL.revokeObjectURL(url), 0)
   showToast('Document download started')
 }
+
 const downloadRemote = async (rawUrl, filename, key) => {
   const url = fixToAbsoluteUrl(rawUrl)
   if (!url) {
@@ -994,10 +1119,9 @@ const downloadRemote = async (rawUrl, filename, key) => {
   }
   try { downloadingFiles[key] = true } catch {}
 
-  // Blob-first with Authorization (dashboard pattern)
   try {
     const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || ''
-    const resp = await fetch(API_URL + url, {
+    const resp = await fetch(url, {
       method: 'GET',
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), Accept: '*/*' },
       credentials: 'include'
@@ -1021,7 +1145,6 @@ const downloadRemote = async (rawUrl, filename, key) => {
     console.log('Blob download failed, falling back', e)
   }
 
-  // Direct anchor fallback
   try {
     const a = document.createElement('a')
     a.href = url
@@ -1037,7 +1160,6 @@ const downloadRemote = async (rawUrl, filename, key) => {
     console.log('Direct link failed, trying iframe', e2)
   }
 
-  // Hidden iframe
   try {
     const iframe = document.createElement('iframe')
     iframe.style.display = 'none'
@@ -1054,8 +1176,8 @@ const downloadRemote = async (rawUrl, filename, key) => {
   }
 }
 
-// File input handling
 const revokeIfExists = (u) => { if (u) try { URL.revokeObjectURL(u) } catch {} }
+
 const handleFileUpload = (event, type) => {
   const files = Array.from(event.target.files || [])
   if (type === 'additional') {
@@ -1069,7 +1191,62 @@ const handleFileUpload = (event, type) => {
   }
 }
 
-// Navigation and validation
+const handleMediaUpload = (event, type) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  const maxSize = type === 'video' ? 50 * 1024 * 1024 : 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    const sizeMB = type === 'video' ? '50MB' : '5MB'
+    showToast(`File size exceeds ${sizeMB} limit`, 'error')
+    return
+  }
+
+  const allowedTypes = {
+    logo: ['image/jpeg', 'image/jpg', 'image/png'],
+    video: ['video/mp4', 'video/quicktime', 'video/x-msvideo']
+  }
+
+  if (!allowedTypes[type].includes(file.type)) {
+    showToast(`Invalid ${type} file type`, 'error')
+    return
+  }
+
+  if (localPreviews[type]) {
+    revokeIfExists(localPreviews[type])
+  }
+
+  form.media[type] = file
+  localPreviews[type] = URL.createObjectURL(file)
+  
+  console.log(`✅ ${type.toUpperCase()} selected:`, file.name, file.type, file.size)
+  showToast(`${type.toUpperCase()} uploaded successfully`)
+}
+
+const clearMediaFile = (type) => {
+  if (localPreviews[type]) {
+    revokeIfExists(localPreviews[type])
+    localPreviews[type] = ''
+  }
+  form.media[type] = null
+  showToast(`${type.toUpperCase()} removed`)
+}
+
+const removeNewAdditionalFile = (index) => {
+  if (form.documents.additional && form.documents.additional.length > index) {
+    if (localPreviews.additional[index]) {
+      try {
+        URL.revokeObjectURL(localPreviews.additional[index])
+      } catch (e) {
+        console.warn('Failed to revoke URL:', e)
+      }
+    }
+    
+    form.documents.additional.splice(index, 1)
+    localPreviews.additional.splice(index, 1)
+  }
+}
+
 const nextStep = () => { if (validateCurrentStep()) currentStep.value++ }
 const previousStep = () => { currentStep.value-- }
 
@@ -1096,23 +1273,19 @@ const validateCurrentStep = () => {
   return true
 }
 
-
 const handleSubmit = async () => {
   if (!validateCurrentStep()) return
   
   try {
     isSubmitting.value = true
     
-    // Parse established year
     let establishedYear = null
     if (form.establishedYear && !isNaN(parseInt(form.establishedYear))) {
       establishedYear = parseInt(form.establishedYear)
     }
     
-    // 🔥 CRITICAL FIX: Create FormData for file upload support
     const formData = new FormData()
     
-    // Add basic temple information with EXACT field names backend expects
     formData.append('name', (form.name || '').trim())
     formData.append('main_deity', (form.mainDeity || '').trim())
     formData.append('temple_type', (form.templeType || '').trim())
@@ -1125,7 +1298,6 @@ const handleSubmit = async () => {
     formData.append('email', (form.email || '').trim())
     formData.append('description', (form.description || '').trim())
     
-    // Address information
     formData.append('street_address', (form.streetAddress || '').trim())
     formData.append('city', (form.city || '').trim())
     formData.append('state', (form.state || '').trim())
@@ -1134,31 +1306,24 @@ const handleSubmit = async () => {
     formData.append('landmark', (form.landmark || '').trim())
     formData.append('map_link', (form.mapLink || '').trim())
     
-    // 🔥 CRITICAL: Add document files ONLY if they are new File objects
     let hasNewFiles = false
     
     if (form.documents.registration instanceof File) {
       formData.append('registration_cert', form.documents.registration)
       hasNewFiles = true
       console.log('📄 Adding NEW registration certificate:', form.documents.registration.name)
-    } else {
-      console.log('ℹ️ No new registration certificate - keeping existing')
     }
     
     if (form.documents.trustDeed instanceof File) {
       formData.append('trust_deed', form.documents.trustDeed)
       hasNewFiles = true
       console.log('📄 Adding NEW trust deed:', form.documents.trustDeed.name)
-    } else {
-      console.log('ℹ️ No new trust deed - keeping existing')
     }
     
     if (form.documents.property instanceof File) {
       formData.append('property_docs', form.documents.property)
       hasNewFiles = true
       console.log('📄 Adding NEW property documents:', form.documents.property.name)
-    } else {
-      console.log('ℹ️ No new property docs - keeping existing')
     }
     
     if (form.documents.additional && form.documents.additional.length > 0) {
@@ -1176,7 +1341,18 @@ const handleSubmit = async () => {
       }
     }
     
-    // 🔥 Log FormData contents for debugging
+    if (form.media.logo instanceof File) {
+      formData.append('temple_logo', form.media.logo)
+      hasNewFiles = true
+      console.log('🖼️ Adding NEW temple logo:', form.media.logo.name, form.media.logo.type)
+    }
+
+    if (form.media.video instanceof File) {
+      formData.append('temple_video', form.media.video)
+      hasNewFiles = true
+      console.log('🎥 Adding NEW temple video:', form.media.video.name, form.media.video.type)
+    }
+    
     console.log('📦 FormData contents:')
     for (let [key, value] of formData.entries()) {
       if (value instanceof File) {
@@ -1188,25 +1364,21 @@ const handleSubmit = async () => {
     
     console.log(`🚀 Submitting temple update with ${hasNewFiles ? 'NEW FILES' : 'NO NEW FILES'}`)
     
-    // Call the service with FormData
     const response = await templeService.updateTemple(templeId.value, formData)
     
     console.log('✅ Temple update response:', response)
     
-    // Show appropriate success message
     if (response.files_updated) {
       showToast(`Temple information and ${response.files_updated} file(s) updated successfully!`)
     } else {
       showToast('Temple information updated successfully!')
     }
     
-    // Navigate back to dashboard
     router.push('/tenant/dashboard')
     
   } catch (error) {
     console.error('Failed to update temple', error)
     
-    // Extract more specific error message
     const errorData = error?.response?.data
     let msg = 'Failed to update temple information. Please try again.'
     
@@ -1224,32 +1396,12 @@ const handleSubmit = async () => {
   }
 }
 
-// 🆕 ALSO ADD THIS METHOD to remove additional files
-const removeNewAdditionalFile = (index) => {
-  if (form.documents.additional && form.documents.additional.length > index) {
-    // Revoke the blob URL if it exists
-    if (localPreviews.additional[index]) {
-      try {
-        URL.revokeObjectURL(localPreviews.additional[index])
-      } catch (e) {
-        console.warn('Failed to revoke URL:', e)
-      }
-    }
-    
-    // Remove the file from the array
-    form.documents.additional.splice(index, 1)
-    localPreviews.additional.splice(index, 1)
-  }
-}
-
-// Data fetch and mapping
 const safeGet = (obj, keys) => {
   for (const k of keys) {
     if (obj && typeof obj[k] === 'string' && obj[k]) return obj[k]
   }
   return ''
 }
-
 
 const fetchTempleData = async () => {
   isLoading.value = true
@@ -1259,7 +1411,6 @@ const fetchTempleData = async () => {
     const response = await templeService.getTempleById(templeId.value)
     const d = response?.data || response || {}
 
-    // Basic info
     form.name = d.name || d.Name || ''
     form.mainDeity = d.maindeity || d.mainDeity || d.MainDeity || d.main_deity || ''
     form.templeType = d.templetype || d.templeType || d.TempleType || d.temple_type || ''
@@ -1268,7 +1419,6 @@ const fetchTempleData = async () => {
     form.email = d.email || d.Email || ''
     form.description = d.description || d.Description || ''
 
-    // Address fields - CHECK ALL VARIATIONS
     form.streetAddress = d.streetaddress || d.streetAddress || d.street_address || 
                         d.StreetAddress || d.Address || d.addressLine1 || ''
     form.city = d.city || d.City || ''
@@ -1278,12 +1428,10 @@ const fetchTempleData = async () => {
     form.landmark = d.landmark || d.Landmark || ''
     form.mapLink = d.maplink || d.mapLink || d.map_link || d.MapLink || ''
     
-    // Status
     form.status = (d.status || d.Status || 'PENDING').toString().toUpperCase()
     form.rejectionReason = d.rejectionReason || d.rejection_reason || d.RejectionReason || ''
     form.adminNotes = d.adminNotes || d.admin_notes || d.AdminNotes || ''
 
-    // Existing document display names
     existingFiles.registration = 
       d.registrationCertName ||
       d.registration_cert_name ||
@@ -1300,7 +1448,6 @@ const fetchTempleData = async () => {
       d.property_docs_name ||
       ''
 
-    // CRITICAL: Additional documents names - CHECK ALL VARIATIONS
     const additionalNames = 
       d.additionalDocsNames || 
       d.additional_docs_names || 
@@ -1310,9 +1457,22 @@ const fetchTempleData = async () => {
     
     existingFiles.additional = Array.isArray(additionalNames) ? additionalNames : []
 
-    console.log('📋 Additional document names found:', existingFiles.additional)
+    existingFiles.logo = 
+      d.templeLogoName ||
+      d.temple_logo_name ||
+      d.logoName ||
+      d.logo_name ||
+      ''
+    
+    existingFiles.video = 
+      d.templeVideoName ||
+      d.temple_video_name ||
+      d.videoName ||
+      d.video_name ||
+      ''
 
-    // Build normalized absolute URLs
+    console.log('🎬 Media files found - Logo:', existingFiles.logo, 'Video:', existingFiles.video)
+
     const getFirstUrl = (obj, keys) => {
       const raw = safeGet(obj, keys)
       return fixToAbsoluteUrl(raw)
@@ -1332,7 +1492,18 @@ const fetchTempleData = async () => {
       'property_url', 'propertyDocs', 'property_docs'
     ])
 
-    // CRITICAL: Additional documents URLs - CHECK ALL VARIATIONS
+    mediaUrls.logo = getFirstUrl(d, [
+      'templeLogoUrl', 'temple_logo_url', 'logoUrl', 'logo_url',
+      'templeLogo', 'temple_logo'
+    ])
+    
+    mediaUrls.video = getFirstUrl(d, [
+      'templeVideoUrl', 'temple_video_url', 'videoUrl', 'video_url',
+      'templeVideo', 'temple_video'
+    ])
+
+    console.log('🎬 Media URLs:', { logo: mediaUrls.logo, video: mediaUrls.video })
+
     const additionalDocsData = 
       d.additionalDocuments || 
       d.additional_documents || 
@@ -1342,9 +1513,6 @@ const fetchTempleData = async () => {
       d.additional_docs_urls ||
       []
 
-    console.log('📋 Additional documents data received:', additionalDocsData)
-
-    // Handle different response formats
     if (Array.isArray(additionalDocsData)) {
       documentUrls.additional = additionalDocsData.map(item => {
         if (typeof item === 'string') {
@@ -1358,26 +1526,21 @@ const fetchTempleData = async () => {
         return ''
       }).filter(Boolean)
     } else if (typeof additionalDocsData === 'string') {
-  // Backend sent stringified array → parse it
-  try {
-    const parsed = JSON.parse(additionalDocsData)
-    if (Array.isArray(parsed)) {
-      documentUrls.additional = parsed.map(u => fixToAbsoluteUrl(u))
+      try {
+        const parsed = JSON.parse(additionalDocsData)
+        if (Array.isArray(parsed)) {
+          documentUrls.additional = parsed.map(u => fixToAbsoluteUrl(u))
+        } else {
+          documentUrls.additional = [fixToAbsoluteUrl(parsed)]
+        }
+      } catch (e) {
+        console.warn("Failed to parse additionalDocsData:", additionalDocsData)
+        documentUrls.additional = []
+      }
     } else {
-      documentUrls.additional = [fixToAbsoluteUrl(parsed)]
-    }
-  } catch (e) {
-    console.warn("Failed to parse additionalDocsData:", additionalDocsData)
-    documentUrls.additional = []
-  }
-}
- else {
       documentUrls.additional = []
     }
 
-    console.log('📋 Additional document URLs processed:', documentUrls.additional)
-
-    // If names are missing but URLs exist, infer names from URLs
     if (!existingFiles.registration && documentUrls.registration) {
       existingFiles.registration = getFilenameFromUrl(documentUrls.registration)
     }
@@ -1387,16 +1550,20 @@ const fetchTempleData = async () => {
     if (!existingFiles.property && documentUrls.property) {
       existingFiles.property = getFilenameFromUrl(documentUrls.property)
     }
+    if (!existingFiles.logo && mediaUrls.logo) {
+      existingFiles.logo = getFilenameFromUrl(mediaUrls.logo)
+    }
+    if (!existingFiles.video && mediaUrls.video) {
+      existingFiles.video = getFilenameFromUrl(mediaUrls.video)
+    }
     
-    // If additional names missing, infer from URLs
     if (existingFiles.additional.length === 0 && documentUrls.additional.length > 0) {
       existingFiles.additional = documentUrls.additional.map(u => getFilenameFromUrl(u))
-      console.log('📋 Inferred additional file names from URLs:', existingFiles.additional)
     }
 
-    // Log final state for debugging
     console.log('✅ Final existingFiles:', existingFiles)
     console.log('✅ Final documentUrls:', documentUrls)
+    console.log('✅ Final mediaUrls:', mediaUrls)
 
     isLoading.value = false
   } catch (err) {
@@ -1406,27 +1573,25 @@ const fetchTempleData = async () => {
   }
 }
 
-// Modal controls
 const closeDocumentsModal = () => {
   showDocumentsModal.value = false
 }
+
 const closeDocumentViewer = () => {
   showDocumentViewer.value = false
   currentDocumentUrl.value = ''
   currentDocumentTitle.value = ''
 }
 
-// Cleanup object URLs
 const revokeAllPreviews = () => {
   try {
-    ;['registration', 'trustDeed', 'property'].forEach(k => revokeIfExists(localPreviews[k]))
+    ;['registration', 'trustDeed', 'property', 'logo', 'video'].forEach(k => revokeIfExists(localPreviews[k]))
     if (Array.isArray(localPreviews.additional)) {
       localPreviews.additional.forEach(u => revokeIfExists(u))
     }
   } catch {}
 }
 
-// Lifecycle
 onMounted(async () => {
   await fetchTempleData()
 })

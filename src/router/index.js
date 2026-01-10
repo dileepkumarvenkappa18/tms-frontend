@@ -238,6 +238,18 @@ const routes = [
         }
       },
       {
+      path: 'profile',
+      name: 'TenantProfile',
+      component: () => import('@/views/tenant/TenantProfile.vue'),
+      meta: { 
+        title: 'Temple Profile',
+        breadcrumb: 'Profile',
+        requiresAuth: true,
+        allowedRoles: ['tenant', 'templeadmin', 'standarduser', 'standard_user', 'monitoringuser', 'monitoring_user']
+      }
+    },
+    
+      {
   path: 'user-management',
   name: 'TenantUserManagement',
   component: () => import('@/views/tenant/UserManagement.vue'),
