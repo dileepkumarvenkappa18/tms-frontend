@@ -1,16 +1,76 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div 
+    class="min-h-screen relative overflow-x-hidden"
+  >
+    <!-- Full viewport background layer - light grey -->
+    <div 
+      v-if="hasValidLogo"
+      class="fixed inset-0 pointer-events-none"
+      style="z-index: 0; background-color: #e5e7eb;"
+    ></div>
+    
+    <!-- Background logo layer - black and white impression watermark -->
+    <div 
+      v-if="hasValidLogo"
+      class="fixed inset-0 pointer-events-none flex"
+      style="z-index: 1; justify-content: center; align-items: center; padding-left: 20%; padding-top: 5%;"
+    >
+      <img
+        :src="dashboardLogo"
+        alt="Background Logo"
+        class="object-contain"
+        style="max-width: 80%; max-height: 80%; width: auto; height: auto; display: block; opacity: 0.15; filter: grayscale(100%) brightness(0.5) contrast(0.8);"
+        @error="handleImageError"
+        @load="handleImageLoad"
+      />
+    </div>
+    
+    <!-- Background overlay - removed for now to show original image -->
+    <!-- <div 
+      v-if="hasValidLogo"
+      class="fixed inset-0 pointer-events-none"
+      style="z-index: 1; background: linear-gradient(to bottom, rgba(44, 62, 80, 0.7), rgba(44, 62, 80, 0.85));"
+    ></div> -->
+    
+    <!-- Content wrapper with relative positioning -->
+    <div class="relative" style="z-index: 10;">
     <!-- Header Section -->
     <div class="bg-white shadow-sm border-b border-gray-200 rounded-2xl">
       <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6">
        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div class="mb-4 sm:mb-0">
-           <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Tenant Dashboard</h1>
-           <p class="text-sm sm:text-base text-gray-600 mt-1">
+        <div class="mb-4 sm:mb-0 flex items-center space-x-3 -ml-2 sm:-ml-4 -mt-2 -mb-2 sm:-mt-4 sm:-mb-4">
+          <img 
+            v-if="hasValidLogo"
+            :key="dashboardLogo"
+            :src="dashboardLogo" 
+            alt="Tenant Logo" 
+            class="object-contain flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity"
+            @error="handleImageError"
+            @load="handleImageLoad"
+            @click="expandLogo"
+            style="height: 80px; width: auto; max-width: 300px; display: block;"
+            title="Click to view logo"
+          />
+          <div v-else class="h-20 w-20 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+            <span class="text-gray-400 text-xs">{{ dashboardLogo && dashboardLogo.trim() !== '' ? 'Loading...' : 'No logo' }}</span>
+          </div>
+          <div>
+           <h1 
+             :class="[
+               'text-base sm:text-lg font-bold',
+               hasVideo ? 'cursor-pointer hover:text-indigo-600 transition-colors' : 'text-gray-900'
+             ]"
+             @click="hasVideo ? playVideo() : null"
+             :title="hasVideo ? 'Click to play intro video' : ''"
+           >
+             {{ dashboardTitle }}
+           </h1>
+           <p class="text-xs sm:text-sm text-gray-600 mt-1">
               Manage your temple registrations and applications
               <span v-if="tenantId" class="text-indigo-600 font-medium"> (Tenant ID: {{ tenantId }})</span>
             </p>
           </div>
+        </div>
           <div class="flex items-center space-x-4">
             <div class="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
               <span class="text-indigo-800 font-medium">{{ userStore.user?.name || userStore.user?.fullName }}</span>
@@ -282,18 +342,111 @@
         </div>
       </div>
     </div>
+    </div>
+    
+    <!-- Logo Expand Modal -->
+    <div 
+      v-if="showLogoModal && hasValidLogo"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+      @click.self="closeLogoModal"
+    >
+      <div class="relative w-full max-w-4xl mx-4">
+        <button
+          @click="closeLogoModal"
+          class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+          style="z-index: 51;"
+        >
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="bg-white rounded-lg shadow-2xl p-8">
+          <img
+            :src="dashboardLogo"
+            alt="Tenant Logo"
+            class="w-full h-auto object-contain max-h-[80vh]"
+            @error="handleImageError"
+            @load="handleImageLoad"
+          />
+        </div>
+      </div>
+    </div>
+    
+    <!-- Video Player Modal -->
+    <div 
+      v-if="showVideoPlayer && introVideoUrl"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75"
+      @click.self="closeVideoPlayer"
+    >
+      <div class="relative w-full max-w-4xl mx-4">
+        <button
+          @click="closeVideoPlayer"
+          class="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+          style="z-index: 51;"
+        >
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+        <video
+          :src="introVideoUrl"
+          controls
+          autoplay
+          class="w-full h-auto rounded-lg shadow-2xl"
+          @ended="closeVideoPlayer"
+        >
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, watch, ref } from 'vue'
+import { computed, onMounted, watch, ref, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useTempleStore } from '@/stores/temple'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import TempleApprovalStatus from '@/components/temple/TempleApprovalStatus.vue'
+import api from '@/services/api'
 
-const selectedSection = ref('dashboard') 
+const selectedSection = ref('dashboard')
+
+// Dashboard logo - will be fetched from API
+const dashboardLogo = ref('') // Start empty, will be set from API
+
+// Video URL - will be fetched from API
+const introVideoUrl = ref('')
+
+// Video player state
+const showVideoPlayer = ref(false)
+
+// Logo expand modal state
+const showLogoModal = ref(false)
+
+// Tenant name - will be fetched from API
+const tenantName = ref('')
+
+// Computed property to check if logo is valid
+const hasValidLogo = computed(() => {
+  return dashboardLogo.value && 
+         dashboardLogo.value.trim() !== '' && 
+         !dashboardLogo.value.includes('jay-jagannath-group-logo.png')
+})
+
+// Computed property to check if video is available
+const hasVideo = computed(() => {
+  return introVideoUrl.value && introVideoUrl.value.trim() !== ''
+})
+
+// Computed property for dashboard title
+const dashboardTitle = computed(() => {
+  if (tenantName.value) {
+    return `${tenantName.value} Dashboard`
+  }
+  return 'Tenant Dashboard'
+}) 
 const router = useRouter()
 const route = useRoute()
 const templeStore = useTempleStore()
@@ -525,11 +678,142 @@ const formatAddress = (address) => {
   }
 }
 
+// Image loading handlers
+const handleImageError = (event) => {
+  // Silently handle image error
+}
+
+const handleImageLoad = (event) => {
+  // Silently handle image load
+}
+
+// Play video function
+const playVideo = () => {
+  if (introVideoUrl.value) {
+    showVideoPlayer.value = true
+  } else {
+    showToast('No video available for this tenant', 'info')
+  }
+}
+
+// Close video player
+const closeVideoPlayer = () => {
+  showVideoPlayer.value = false
+}
+
+// Expand logo function
+const expandLogo = () => {
+  if (hasValidLogo.value) {
+    showLogoModal.value = true
+  }
+}
+
+// Close logo modal
+const closeLogoModal = () => {
+  showLogoModal.value = false
+}
+
+// Fetch logo from API
+const fetchLogoFromAPI = async () => {
+  try {
+    const response = await api.get('/tenantsInfo?status=active')
+    
+    // Handle different response structures
+    let tenants = []
+    if (Array.isArray(response)) {
+      tenants = response
+    } else if (response && Array.isArray(response.data)) {
+      tenants = response.data
+    } else if (response && response.tenants && Array.isArray(response.tenants)) {
+      tenants = response.tenants
+    }
+    
+    // Get current user ID to match with tenant
+    const currentUserId = userStore.user?.id || tenantId.value
+    
+    // Find the tenant that matches the current user ID
+    if (tenants.length > 0 && currentUserId) {
+      const matchingTenant = tenants.find(tenant => {
+        const tenantId = tenant.id || 
+                        tenant.user_id || 
+                        tenant.userId || 
+                        tenant.ID ||
+                        null
+        return tenantId && String(tenantId) === String(currentUserId)
+      })
+      
+      if (matchingTenant) {
+        // Extract tenant name
+        const name = matchingTenant.full_name || 
+                    matchingTenant.fullName || 
+                    matchingTenant.name || 
+                    matchingTenant.FullName ||
+                    null
+        
+        if (name) {
+          tenantName.value = name
+        }
+        
+        // Extract logo_url from temple_details (nested structure)
+        const logoUrl = matchingTenant.temple_details?.logo_url || 
+                       matchingTenant.logo_url || 
+                       null
+        
+        // Extract intro_video_url from temple_details
+        const videoUrl = matchingTenant.temple_details?.intro_video_url || 
+                        matchingTenant.intro_video_url || 
+                        null
+        
+        // Check if logoUrl exists and is not empty
+        if (logoUrl && logoUrl.trim() !== '') {
+          // Construct full URL if it's a relative path
+          let finalLogoUrl = logoUrl
+          
+          if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
+            // It's a relative path, construct full URL
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+            const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
+            finalLogoUrl = `${API_BASE_URL}${cleanPath}`
+          }
+          
+          // Set the logo URL
+          dashboardLogo.value = finalLogoUrl
+          
+          // Use nextTick to ensure DOM updates
+          await nextTick()
+        }
+        
+        // Check if videoUrl exists and is not empty
+        if (videoUrl && videoUrl.trim() !== '') {
+          // Construct full URL if it's a relative path
+          let finalVideoUrl = videoUrl
+          
+          if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
+            // It's a relative path, construct full URL
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+            const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
+            finalVideoUrl = `${API_BASE_URL}${cleanPath}`
+          }
+          
+          // Set the video URL
+          introVideoUrl.value = finalVideoUrl
+        }
+      }
+    }
+    
+  } catch (error) {
+    // Silently handle error
+  }
+}
+
 // Lifecycle
 onMounted(async () => {
   console.log('TenantDashboard mounted with tenantId:', tenantId.value)
   console.log('User role:', userStore.userRole, 'Role ID:', userStore.user?.roleId)
   console.log('Is Monitoring User:', isMonitoringUser.value)
+  
+  // Fetch logo from API
+  await fetchLogoFromAPI()
   
   // Load temples for current tenant
   await loadTempleData()

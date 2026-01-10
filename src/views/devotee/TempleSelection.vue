@@ -270,12 +270,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import { useAuth } from '@/composables/useAuth'
+import { useAuthStore } from '@/stores/auth'
 import api from '@/plugins/axios'
 import templeService from '@/services/temple.service'
 
 const router = useRouter()
 const { showToast } = useToast()
 const { user } = useAuth()
+const authStore = useAuthStore()
 
 // Reactive data
 const searchQuery = ref('')
@@ -330,6 +332,38 @@ const fetchUserMemberships = async () => {
     
     joinedTemples.value = entityIds
     saveJoinedTemples()
+    
+    // Fetch tenants info right after memberships
+    try {
+      const tenantsResponse = await api.get('/tenantsInfo?status=active')
+      
+      // Handle different response structures
+      let tenants = []
+      if (Array.isArray(tenantsResponse)) {
+        tenants = tenantsResponse
+      } else if (tenantsResponse && Array.isArray(tenantsResponse.data)) {
+        tenants = tenantsResponse.data
+      } else if (tenantsResponse && tenantsResponse.tenants && Array.isArray(tenantsResponse.tenants)) {
+        tenants = tenantsResponse.tenants
+      }
+      
+      // Get current user ID to match with tenant
+      const currentUserId = authStore.user?.id || localStorage.getItem('current_tenant_id')
+      
+      // Find the tenant that matches the current user ID
+      if (tenants.length > 0 && currentUserId) {
+        const matchingTenant = tenants.find(tenant => {
+          const tenantId = tenant.id || 
+                          tenant.user_id || 
+                          tenant.userId || 
+                          tenant.ID ||
+                          null
+          return tenantId && String(tenantId) === String(currentUserId)
+        })
+      }
+    } catch (tenantsError) {
+      // Silently handle error
+    }
     
     return entityIds
   } catch (error) {
