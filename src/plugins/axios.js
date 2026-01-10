@@ -34,35 +34,54 @@ api.interceptors.request.use(
 
     const isAuthEndpoint = config.url.includes('/auth/') || config.url.includes('/v1/auth/')
     
- if (!isAuthEndpoint) {
-  const tenantId = localStorage.getItem('current_tenant_id')
-  const entityId = localStorage.getItem('current_entity_id')
+    if (!isAuthEndpoint) {
+      const tenantId = localStorage.getItem('current_tenant_id')
+      const entityId = localStorage.getItem('current_entity_id')
 
-  if (tenantId) {
-    config.headers['X-Tenant-ID'] = tenantId
-  }
+      if (tenantId) {
+        config.headers['X-Tenant-ID'] = tenantId
+      }
 
-  // Try to extract entity ID from request URL if missing or mismatched
-  const match = config.url?.match(/\/entities\/(\d+)/)
-  const entityFromUrl = match ? match[1] : null
+      // Try to extract entity ID from request URL if missing or mismatched
+      const match = config.url?.match(/\/entities\/(\d+)/)
+      const entityFromUrl = match ? match[1] : null
 
-  const finalEntityId = entityFromUrl || entityId
-  if (finalEntityId) {
-    config.headers['X-Entity-ID'] = finalEntityId
-  }
+      const finalEntityId = entityFromUrl || entityId
+      if (finalEntityId) {
+        config.headers['X-Entity-ID'] = finalEntityId
+      }
 
-  if (import.meta.env.DEV) {
-    console.log('🔹Request Headers ->', {
-      'X-Tenant-ID': config.headers['X-Tenant-ID'],
-      'X-Entity-ID': config.headers['X-Entity-ID']
-    })
-  }
-}
+      if (import.meta.env.DEV) {
+        console.log('🔹Request Headers ->', {
+          'X-Tenant-ID': config.headers['X-Tenant-ID'],
+          'X-Entity-ID': config.headers['X-Entity-ID']
+        })
+      }
+    }
 
-    if (import.meta.env.DEV) {
-      console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`)
-      console.log('Request headers:', config.headers)
-      console.log('Request data:', config.data)
+    // CRITICAL FIX: Handle FormData properly
+    if (config.data instanceof FormData) {
+      // Remove Content-Type header to let browser set it with proper boundary
+      delete config.headers['Content-Type']
+      
+      if (import.meta.env.DEV) {
+        console.log(`📦 API Request: ${config.method.toUpperCase()} ${config.url} [FormData]`)
+        console.log('FormData entries:')
+        for (let [key, value] of config.data.entries()) {
+          if (value instanceof File) {
+            console.log(`  ✓ ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`)
+          } else {
+            console.log(`  ✓ ${key}: ${value}`)
+          }
+        }
+      }
+    } else {
+      // Regular JSON request
+      if (import.meta.env.DEV) {
+        console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`)
+        console.log('Request headers:', config.headers)
+        console.log('Request data:', config.data)
+      }
     }
 
     return config
@@ -85,14 +104,14 @@ api.interceptors.response.use(
   },
   (error) => {
     // Log error
-    console.error('API Error:', error.message)
+    console.error('❌ API Error:', error.message)
     
     if (error.response) {
       // Log response error details
-      console.error(`Status: ${error.response.status}`, 
+      console.error(`❌ Status: ${error.response.status}`, 
                    `Method: ${error.config?.method?.toUpperCase()}`, 
                    `URL: ${error.config?.url}`)
-      console.error('Response data:', error.response.data)
+      console.error('❌ Response data:', error.response.data)
       
       // Handle 401 errors (except during login attempts)
       if (error.response.status === 401) {
@@ -122,11 +141,14 @@ api.interceptors.response.use(
 // Auth-specific API endpoints
 const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
-  register: (userData) => api.post('/auth/register', userData),
+  register: (userData) => {
+    // userData should be FormData for file uploads
+    return api.post('/auth/register', userData)
+  },
   logout: () => api.post('/auth/logout'),
   refreshToken: () => api.post('/auth/refresh'),
   getProfile: () => api.get('/auth/me'),
-  getPublicRoles: () => api.get('/auth/public-roles') // New method
+  getPublicRoles: () => api.get('/auth/public-roles')
 }
 
 // Temple/Entity endpoints

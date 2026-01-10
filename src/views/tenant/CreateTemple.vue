@@ -351,8 +351,8 @@
           <!-- Step 3: Documents Upload -->
           <div v-show="currentStep === 3" class="p-8">
             <div class="mb-6">
-              <h2 class="text-xl font-bold text-gray-900 mb-2">Upload Documents</h2>
-              <p class="text-gray-600">Upload required documents for temple verification</p>
+              <h2 class="text-xl font-bold text-gray-900 mb-2">Upload Documents & Media</h2>
+              <p class="text-gray-600">Upload required documents and temple media for verification</p>
             </div>
 
             <div class="space-y-6">
@@ -440,6 +440,58 @@
                     </p>
                   </div>
                   <p v-if="fileErrors.additional" class="text-red-600 text-sm mt-2">{{ fileErrors.additional }}</p>
+                </div>
+              </div>
+
+              <!-- Temple Logo -->
+              <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
+                <div class="text-center">
+                  <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Logo *</h3>
+                  <p class="text-gray-600 mb-4">Upload temple logo (JPG, PNG - Max 5MB)</p>
+                  <div class="flex justify-center">
+                    <label class="cursor-pointer bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
+                      <span>Choose Logo</span>
+                      <input 
+                        type="file" 
+                        class="hidden" 
+                        accept="image/jpeg,image/jpg,image/png" 
+                        @change="handleMediaUpload($event, 'logo')" 
+                      />
+                    </label>
+                  </div>
+                  <p v-if="form.media.logo" class="text-sm text-green-600 mt-2">
+                    ✓ {{ form.media.logo.name }}
+                  </p>
+                  <p v-if="fileErrors.logo" class="text-red-600 text-sm mt-2">{{ fileErrors.logo }}</p>
+                </div>
+              </div>
+
+              <!-- Temple Video -->
+              <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-indigo-400 transition-colors duration-200">
+                <div class="text-center">
+                  <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                  <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Video (Optional)</h3>
+                  <p class="text-gray-600 mb-4">Upload temple video (MP4, MOV, AVI - Max 50MB)</p>
+                  <div class="flex justify-center">
+                    <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
+                      <span>Choose Video</span>
+                      <input 
+                        type="file" 
+                        class="hidden" 
+                        accept="video/mp4,video/quicktime,video/x-msvideo" 
+                        @change="handleMediaUpload($event, 'video')" 
+                      />
+                    </label>
+                  </div>
+                  <p v-if="form.media.video" class="text-sm text-green-600 mt-2">
+                    ✓ {{ form.media.video.name }}
+                  </p>
+                  <p v-if="fileErrors.video" class="text-red-600 text-sm mt-2">{{ fileErrors.video }}</p>
                 </div>
               </div>
             </div>
@@ -538,15 +590,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTempleStore } from '@/stores/temple'
 import { useToast } from '@/composables/useToast'
-import { validators } from '@/utils/validators'
 import api from '@/plugins/axios'
 
 const router = useRouter()
-const templeStore = useTempleStore()
 const toast = useToast()
 
 // Form state
@@ -558,7 +607,7 @@ const error = ref(null)
 const fieldErrors = ref({})
 const fileErrors = ref({})
 
-// Form data with snake_case field names to EXACTLY match backend
+// Form data
 const form = reactive({
   name: '',
   main_deity: '',
@@ -580,67 +629,22 @@ const form = reactive({
     property: null,
     additional: []
   },
+  media: {
+    logo: null,
+    video: null
+  },
   acceptTerms: false
 })
 
-// Clear field errors when user starts typing
-const clearFieldError = (field) => {
-  if (fieldErrors.value[field]) {
-    delete fieldErrors.value[field]
-  }
-}
-
-// Phone number formatting and validation
-const formatPhoneNumber = (event) => {
-  clearFieldError('phone')
-  let value = event.target.value.replace(/\D/g, '') // Remove non-digits
-  
-  // Handle international format starting with country code
-  if (value.startsWith('91') && value.length > 2) {
-    value = '+91 ' + value.slice(2)
-  } else if (value.length === 10) {
-    value = '+91 ' + value
-  } else if (value.length > 0 && !value.startsWith('+')) {
-    // Add +91 prefix if not present
-    if (value.length <= 10) {
-      value = '+91 ' + value
-    }
-  }
-  
-  form.phone = value
-}
-
-// Pincode validation
-const validatePincode = (event) => {
-  clearFieldError('pincode')
-  let value = event.target.value.replace(/\D/g, '') // Remove non-digits
-  if (value.length > 6) {
-    value = value.slice(0, 6)
-  }
-  form.pincode = value
-}
-
-// Enhanced validation functions
+// Validation functions
 const validateEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
 }
 
 const validatePhone = (phone) => {
-  // Remove all non-digits to check length
   const digitsOnly = phone.replace(/\D/g, '')
-  
-  // Should have country code + 10 digits (total 12 digits for India)
-  if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
-    return true
-  }
-  
-  // Or just 10 digits (we'll add +91)
-  if (digitsOnly.length === 10) {
-    return true
-  }
-  
-  return false
+  return digitsOnly.length === 12 && digitsOnly.startsWith('91') || digitsOnly.length === 10
 }
 
 const validateUrl = (url) => {
@@ -658,44 +662,65 @@ const validateYear = (year) => {
   return yearNum >= 1800 && yearNum <= currentYear
 }
 
-// Enhanced step validation
+// Phone number formatting
+const formatPhoneNumber = (event) => {
+  let value = event.target.value.replace(/\D/g, '')
+  
+  if (value.startsWith('91') && value.length > 2) {
+    value = '+91 ' + value.slice(2)
+  } else if (value.length === 10) {
+    value = '+91 ' + value
+  } else if (value.length > 0 && !value.startsWith('+')) {
+    if (value.length <= 10) {
+      value = '+91 ' + value
+    }
+  }
+  
+  form.phone = value
+}
+
+// Pincode validation
+const validatePincode = (event) => {
+  let value = event.target.value.replace(/\D/g, '')
+  if (value.length > 6) {
+    value = value.slice(0, 6)
+  }
+  form.pincode = value
+}
+
+// Step validation
 const validateCurrentStep = () => {
   fieldErrors.value = {}
+  fileErrors.value = {}
   let isValid = true
 
   if (currentStep.value === 1) {
-    // Basic Information validation
     if (!form.name?.trim()) {
       fieldErrors.value.name = 'Temple name is required'
       isValid = false
     }
-
     if (!form.main_deity?.trim()) {
       fieldErrors.value.main_deity = 'Main deity is required'
       isValid = false
     }
-
     if (!form.temple_type) {
       fieldErrors.value.temple_type = 'Temple type is required'
       isValid = false
     }
-
     if (!form.established_year) {
       fieldErrors.value.established_year = 'Established year is required'
       isValid = false
     } else if (!validateYear(form.established_year)) {
-      fieldErrors.value.established_year = 'Please enter a valid year between 1800 and current year'
+      fieldErrors.value.established_year = 'Please enter a valid year'
       isValid = false
     }
-
     if (!form.phone?.trim()) {
       fieldErrors.value.phone = 'Phone number is required'
       isValid = false
     } else if (!validatePhone(form.phone)) {
-      fieldErrors.value.phone = 'Please enter a valid phone number with country code (e.g., +91 9876543210)'
+      fieldErrors.value.phone = 'Please enter a valid phone number'
       isValid = false
     }
-
     if (!form.email?.trim()) {
       fieldErrors.value.email = 'Email is required'
       isValid = false
@@ -703,62 +728,55 @@ const validateCurrentStep = () => {
       fieldErrors.value.email = 'Please enter a valid email address'
       isValid = false
     }
-
   } else if (currentStep.value === 2) {
-    // Address validation
     if (!form.street_address?.trim()) {
       fieldErrors.value.street_address = 'Street address is required'
       isValid = false
     }
-
     if (!form.city?.trim()) {
       fieldErrors.value.city = 'City is required'
       isValid = false
     }
-
     if (!form.state) {
       fieldErrors.value.state = 'State is required'
       isValid = false
     }
-
     if (!form.district?.trim()) {
       fieldErrors.value.district = 'District is required'
       isValid = false
     }
-
     if (!form.pincode?.trim()) {
       fieldErrors.value.pincode = 'PIN code is required'
       isValid = false
     } else if (!/^\d{6}$/.test(form.pincode)) {
-      fieldErrors.value.pincode = 'PIN code must be exactly 6 digits'
+      fieldErrors.value.pincode = 'PIN code must be 6 digits'
       isValid = false
     }
-
     if (form.map_link?.trim() && !validateUrl(form.map_link)) {
       fieldErrors.value.map_link = 'Please enter a valid URL'
       isValid = false
     }
-
   } else if (currentStep.value === 3) {
-    // Documents validation
     if (!form.documents.registration) {
       fileErrors.value.registration = 'Registration certificate is required'
       isValid = false
     }
-
     if (!form.documents.trustDeed) {
       fileErrors.value.trustDeed = 'Trust deed is required'
       isValid = false
     }
-
+    if (!form.media.logo) {
+      fileErrors.value.logo = 'Temple logo is required'
+      isValid = false
+    }
     if (!form.acceptTerms) {
-      fieldErrors.value.acceptTerms = 'You must accept the terms and conditions'
+      fieldErrors.value.acceptTerms = 'You must accept the terms'
       isValid = false
     }
   }
 
   if (!isValid) {
-    error.value = 'Please fix the errors above before proceeding'
+    error.value = 'Please fix the errors before proceeding'
   } else {
     error.value = null
   }
@@ -766,11 +784,10 @@ const validateCurrentStep = () => {
   return isValid
 }
 
-// Methods
+// Navigation
 const nextStep = () => {
   if (validateCurrentStep()) {
     currentStep.value++
-    // Scroll to top when changing steps
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
@@ -780,78 +797,88 @@ const previousStep = () => {
   error.value = null
   fieldErrors.value = {}
   fileErrors.value = {}
-  // Scroll to top when changing steps
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Enhanced file upload handling
+// File upload handlers
 const handleFileUpload = (event, type) => {
   const files = Array.from(event.target.files)
-  console.log(`📁 handleFileUpload called with type: ${type}`)
-  console.log(`📁 Number of files selected: ${files.length}`)
   
-  // Clear previous file errors for this type
   if (fileErrors.value[type]) {
     delete fileErrors.value[type]
   }
   
-  if (files.length === 0) {
-    console.log('📁 No files selected')
-    return
-  }
+  if (files.length === 0) return
   
-  // Validate file size (10MB max)
-  const maxSize = 10 * 1024 * 1024
+  const maxSize = 10 * 1024 * 1024 // 10MB
   const invalidFiles = files.filter(file => file.size > maxSize)
   
   if (invalidFiles.length > 0) {
-    fileErrors.value[type] = `File size too large. Maximum size allowed is 10MB. Large files: ${invalidFiles.map(f => f.name).join(', ')}`
-    console.error('📁 Files too large:', invalidFiles.map(f => f.name))
+    fileErrors.value[type] = 'File size too large (max 10MB)'
     return
   }
   
-  // Validate file types
   const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
   const invalidTypes = files.filter(file => !allowedTypes.includes(file.type))
   
   if (invalidTypes.length > 0) {
-    fileErrors.value[type] = `Invalid file type. Only PDF, JPG, JPEG, and PNG files are allowed. Invalid files: ${invalidTypes.map(f => f.name).join(', ')}`
-    console.error('📁 Invalid file types:', invalidTypes.map(f => f.name))
+    fileErrors.value[type] = 'Invalid file type (PDF, JPG, PNG only)'
     return
   }
   
-  // Handle different file types
   if (type === 'additional') {
-    // For additional files, append to existing array or create new array
     if (!form.documents.additional) {
       form.documents.additional = []
     }
     form.documents.additional = [...form.documents.additional, ...files]
-    console.log(`📁 Added ${files.length} additional files. Total: ${form.documents.additional.length}`)
   } else {
-    // For single files (registration, trustDeed, property)
     form.documents[type] = files[0]
-    console.log(`📁 Set ${type} file:`, files[0].name)
   }
   
-  // Log current documents state
-  console.log('📁 Current documents state:', {
-    registration: form.documents.registration?.name || 'Not set',
-    trustDeed: form.documents.trustDeed?.name || 'Not set',
-    property: form.documents.property?.name || 'Not set',
-    additional: form.documents.additional ? `${form.documents.additional.length} files` : 'Not set'
-  })
-  
-  // Clear any global errors
   error.value = null
-  
-  // Show success message
-  const fileCount = type === 'additional' ? files.length : 1
-  const message = fileCount === 1 ? `File uploaded successfully: ${files[0].name}` : `${fileCount} files uploaded successfully`
-  toast.success(message)
+  toast.success(`File(s) uploaded successfully`)
 }
 
-// Enhanced form submission
+// 🔥 FIXED: Media upload handler
+const handleMediaUpload = (event, type) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // Clear previous errors
+  if (fileErrors.value[type]) {
+    delete fileErrors.value[type]
+  }
+
+  // Size validation
+  const maxSize = type === 'video' ? 50 * 1024 * 1024 : 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    const sizeMB = type === 'video' ? '50MB' : '5MB'
+    fileErrors.value[type] = `File size exceeds ${sizeMB} limit`
+    toast.error(`${type.toUpperCase()} file too large`)
+    return
+  }
+
+  // Type validation
+  const allowedTypes = {
+    logo: ['image/jpeg', 'image/jpg', 'image/png'],
+    video: ['video/mp4', 'video/quicktime', 'video/x-msvideo']
+  }
+
+  if (!allowedTypes[type].includes(file.type)) {
+    fileErrors.value[type] = 'Invalid file type'
+    toast.error(`Invalid ${type} file type`)
+    return
+  }
+
+  // Store the file
+  form.media[type] = file
+  console.log(`✅ ${type.toUpperCase()} selected:`, file.name, file.type, file.size)
+  
+  error.value = null
+  toast.success(`${type.toUpperCase()} uploaded successfully`)
+}
+
+// Form submission
 const handleSubmit = async () => {
   if (!validateCurrentStep()) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -862,129 +889,101 @@ const handleSubmit = async () => {
     isSubmitting.value = true
     error.value = null
 
-    console.log('🔍 FORM DATA AT SUBMISSION:')
-    console.log('Form data:', form)
-    console.log('Documents object:', form.documents)
+    console.log('🔍 Starting form submission...')
+    console.log('📋 Form data:', form)
+    console.log('📁 Documents:', form.documents)
+    console.log('🎬 Media:', form.media)
 
-    // Prepare phone number (ensure it's in correct format)
-    let phoneNumber = form.phone.replace(/\D/g, '') // Remove non-digits
+    // Prepare phone number
+    let phoneNumber = form.phone.replace(/\D/g, '')
     if (phoneNumber.startsWith('91') && phoneNumber.length === 12) {
       phoneNumber = '+' + phoneNumber
     } else if (phoneNumber.length === 10) {
       phoneNumber = '+91' + phoneNumber
     }
 
-    // Check if we have any files
-    const hasFiles = form.documents && (
-      form.documents.registration || 
-      form.documents.trustDeed || 
-      form.documents.property || 
-      (form.documents.additional && form.documents.additional.length > 0)
-    )
+    // Create FormData
+    const formData = new FormData()
+    
+    // Add text fields
+    formData.append('name', form.name?.trim() || '')
+    formData.append('main_deity', form.main_deity?.trim() || '')
+    formData.append('temple_type', form.temple_type || '')
+    formData.append('established_year', form.established_year?.toString() || '')
+    formData.append('phone', phoneNumber)
+    formData.append('email', form.email?.trim() || '')
+    formData.append('description', form.description?.trim() || '')
+    formData.append('street_address', form.street_address?.trim() || '')
+    formData.append('city', form.city?.trim() || '')
+    formData.append('district', form.district?.trim() || '')
+    formData.append('state', form.state || '')
+    formData.append('pincode', form.pincode || '')
+    formData.append('landmark', form.landmark?.trim() || '')
+    formData.append('map_link', form.map_link?.trim() || '')
+    formData.append('status', 'pending')
 
-    console.log('📁 Has files:', hasFiles)
-
-    if (hasFiles) {
-      // Create FormData for multipart submission
-      const formData = new FormData()
-      
-      // Add all text fields with EXACT backend field names
-      formData.append('name', form.name?.trim() || '')
-      formData.append('main_deity', form.main_deity?.trim() || '')
-      formData.append('temple_type', form.temple_type || '')
-      formData.append('established_year', form.established_year ? form.established_year.toString() : '')
-      formData.append('phone', phoneNumber)
-      formData.append('email', form.email?.trim() || '')
-      formData.append('description', form.description?.trim() || '')
-      formData.append('street_address', form.street_address?.trim() || '')
-      formData.append('city', form.city?.trim() || '')
-      formData.append('district', form.district?.trim() || '')
-      formData.append('state', form.state || '')
-      formData.append('pincode', form.pincode || '')
-      formData.append('landmark', form.landmark?.trim() || '')
-      formData.append('map_link', form.map_link?.trim() || '')
-      formData.append('status', 'pending')
-
-      // Add files with EXACT backend field names
-      if (form.documents.registration) {
-        formData.append('registration_cert', form.documents.registration)
-        console.log('📎 Added registration_cert:', form.documents.registration.name)
-      }
-      
-      if (form.documents.trustDeed) {
-        formData.append('trust_deed', form.documents.trustDeed)
-        console.log('📎 Added trust_deed:', form.documents.trustDeed.name)
-      }
-      
-      if (form.documents.property) {
-        formData.append('property_docs', form.documents.property)
-        console.log('📎 Added property_docs:', form.documents.property.name)
-      }
-      
-      if (form.documents.additional && form.documents.additional.length > 0) {
-        form.documents.additional.forEach((file, index) => {
-          formData.append(`additional_docs_${index}`, file)
-          console.log(`📎 Added additional_docs_${index}:`, file.name)
-        })
-      }
-
-      // Log FormData contents
-      console.log('📋 FormData contents:')
-      for (let [key, value] of formData.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}: File - ${value.name} (${value.size} bytes)`)
-        } else {
-          console.log(`${key}: ${value}`)
-        }
-      }
-
-      // Make API call with FormData
-      const response = await api.post('/entities', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        },
-        timeout: 30000 // 30 second timeout
+    // Add document files
+    if (form.documents.registration) {
+      formData.append('registration_cert', form.documents.registration)
+      console.log('📎 Added registration_cert')
+    }
+    
+    if (form.documents.trustDeed) {
+      formData.append('trust_deed', form.documents.trustDeed)
+      console.log('📎 Added trust_deed')
+    }
+    
+    if (form.documents.property) {
+      formData.append('property_docs', form.documents.property)
+      console.log('📎 Added property_docs')
+    }
+    
+    if (form.documents.additional?.length > 0) {
+      form.documents.additional.forEach((file, index) => {
+        formData.append(`additional_docs_${index}`, file)
+        console.log(`📎 Added additional_docs_${index}`)
       })
-      
-      console.log('✅ Temple created successfully:', response.data)
-    } else {
-      // No files, send as JSON
-      const payload = {
-        name: form.name?.trim() || '',
-        main_deity: form.main_deity?.trim() || '',
-        temple_type: form.temple_type || '',
-        established_year: parseInt(form.established_year || 0),
-        phone: phoneNumber,
-        email: form.email?.trim() || '',
-        description: form.description?.trim() || '',
-        street_address: form.street_address?.trim() || '',
-        city: form.city?.trim() || '',
-        district: form.district?.trim() || '',
-        state: form.state || '',
-        pincode: form.pincode || '',
-        landmark: form.landmark?.trim() || '',
-        map_link: form.map_link?.trim() || '',
-        status: 'pending'
-      }
-
-      console.log('📦 JSON payload:', payload)
-
-      const response = await api.post('/entities', payload, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      })
-      
-      console.log('✅ Temple created successfully:', response.data)
     }
 
-    toast.success('Temple registration submitted successfully! You will receive a confirmation email shortly.')
+    // 🔥 Add media files with EXACT backend field names
+    if (form.media.logo) {
+      formData.append('temple_logo', form.media.logo)
+      console.log('🖼️ Added temple_logo:', form.media.logo.name, form.media.logo.type)
+    }
+
+    if (form.media.video) {
+      formData.append('temple_video', form.media.video)
+      console.log('🎥 Added temple_video:', form.media.video.name, form.media.video.type)
+    }
+
+    // Debug: Log all FormData entries
+    console.log('📋 FormData contents:')
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File - ${value.name} (${value.type}, ${value.size} bytes)`)
+      } else {
+        console.log(`  ${key}: ${value}`)
+      }
+    }
+
+    // Make API call
+    const response = await api.post('/entities', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      timeout: 60000 // 60 seconds for video uploads
+    })
     
-    // Clear form
+    console.log('✅ Temple created successfully:', response.data)
+
+    toast.success('Temple registration submitted successfully!')
+    
+    // Reset form
     Object.keys(form).forEach(key => {
       if (key === 'documents') {
         form[key] = { registration: null, trustDeed: null, property: null, additional: [] }
+      } else if (key === 'media') {
+        form[key] = { logo: null, video: null }
       } else if (key === 'acceptTerms') {
         form[key] = false
       } else {
@@ -992,36 +991,25 @@ const handleSubmit = async () => {
       }
     })
     
-    // Redirect to dashboard
+    // Redirect
     setTimeout(() => {
       router.push('/tenant/dashboard')
     }, 2000)
 
   } catch (err) {
-    console.error('Temple registration failed:', err)
+    console.error('❌ Temple registration failed:', err)
     
-    // Handle different types of errors
-    if (err.code === 'ECONNABORTED' || err.message.includes('timeout')) {
-      error.value = 'Request timed out. Please check your internet connection and try again.'
+    if (err.code === 'ECONNABORTED') {
+      error.value = 'Request timed out. Please try again.'
     } else if (err.response?.status === 413) {
-      error.value = 'Files are too large. Please reduce file sizes and try again.'
-    } else if (err.response?.status === 422) {
-      // Validation errors from backend
-      const backendErrors = err.response.data?.errors || {}
-      fieldErrors.value = { ...fieldErrors.value, ...backendErrors }
-      error.value = 'Please correct the validation errors and try again.'
+      error.value = 'Files too large. Please reduce file sizes.'
     } else if (err.response?.status === 400) {
-      error.value = err.response.data?.message || 'Invalid data submitted. Please check your inputs.'
-    } else if (err.response?.status >= 500) {
-      error.value = 'Temple email already exists. '
+      error.value = err.response.data?.error || 'Invalid data submitted'
     } else {
-      error.value = err.response?.data?.error || err.response?.data?.message || 'Failed to submit temple registration. Please try again.'
+      error.value = err.response?.data?.error || 'Failed to submit registration'
     }
     
     toast.error(error.value)
-    console.error('Error details:', err.response?.data || err.message)
-    
-    // Scroll to top to show error
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } finally {
     isSubmitting.value = false

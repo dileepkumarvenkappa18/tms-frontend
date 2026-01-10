@@ -6,9 +6,6 @@
       <p class="mt-1 text-sm text-gray-500">Review and manage tenant registration requests</p>
     </div>
 
-    <!-- Debug Info (remove in production) -->
-    
-
     <!-- Stats Cards -->
     <div class="flex flex-wrap gap-3">
       <div class="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-center min-w-[100px] flex-1">
@@ -39,9 +36,6 @@
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
         </select>
-        
-        <!-- Debug Mode Toggle -->
-        
       </div>
       
       <!-- Refresh Button -->
@@ -66,9 +60,6 @@
         class="bg-white rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200"
       >
         <div class="p-6">
-          <!-- Tenant ID Debug (remove in production) -->
-          
-          
           <!-- Header Row -->
           <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
             <div class="flex items-start gap-4">
@@ -79,7 +70,7 @@
                 </span>
               </div>
               
-              <!-- Basic Info - Only name and email -->
+              <!-- Basic Info -->
               <div class="flex-1 min-w-0">
                 <h3 class="text-lg font-semibold text-gray-900 font-roboto">
                   {{ getTenantName(tenant) }}
@@ -104,7 +95,7 @@
 
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row gap-3">
-            <!-- View Details Button (Always visible) -->
+            <!-- View Details Button -->
             <button
               @click="handleViewDetails(tenant)"
               class="flex-1 sm:flex-none px-6 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
@@ -116,7 +107,7 @@
               View Details
             </button>
             
-            <!-- Approval/Rejection Buttons (Only for pending tenants) -->
+            <!-- Approval/Rejection Buttons -->
             <div v-if="isStatusPending(tenant)" class="flex flex-col sm:flex-row gap-3 flex-1">
               <button
                 @click="handleApprove(tenant)"
@@ -139,9 +130,6 @@
                 </svg>
                 {{ isProcessing ? 'Processing...' : 'Reject' }}
               </button>
-              
-              <!-- Direct API call debug button (remove in production) -->
-              
             </div>
           </div>
         </div>
@@ -206,13 +194,6 @@
     <div v-if="showRejectModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
       <div class="bg-white rounded-xl p-6 w-full max-w-md mx-4">
         <h3 class="text-lg font-semibold mb-4">Reject Tenant</h3>
-        
-        <!-- Debug info -->
-        <div v-if="debugMode" class="bg-gray-100 p-2 mb-3 rounded text-xs">
-          <div><span class="font-bold">Selected Tenant ID:</span> {{ selectedTenant?.id || selectedTenant?.ID }}</div>
-          <div><span class="font-bold">Selected Tenant Name:</span> {{ getTenantName(selectedTenant) }}</div>
-        </div>
-        
         <p class="mb-4">Please provide a reason for rejecting <span class="font-medium">{{ selectedTenant ? getTenantName(selectedTenant) : '' }}</span>:</p>
         <textarea 
           v-model="rejectReason" 
@@ -238,14 +219,14 @@
       </div>
     </div>
 
-    <!-- Tenant Details Modal -->
-    <div v-if="showDetailsModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
-      <div class="bg-white rounded-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-auto">
+    <!-- Tenant Details Modal - ENHANCED WITH MEDIA -->
+    <div v-if="showDetailsModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl p-6 w-full max-w-5xl mx-auto max-h-[90vh] overflow-auto">
         <div class="flex justify-between items-center border-b border-gray-200 pb-4 mb-5">
           <h3 class="text-xl font-bold text-gray-900">Tenant Details</h3>
           <button 
             @click="showDetailsModal = false"
-            class="text-gray-400 hover:text-gray-600"
+            class="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -253,35 +234,42 @@
           </button>
         </div>
         
-        <div v-if="selectedTenant" class="space-y-5">
-          <!-- Basic Info -->
-          <div>
-            <div class="flex items-center gap-4 mb-4">
-              <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                <span class="text-indigo-600 font-semibold text-2xl">
-                  {{ getTenantInitial(selectedTenant) }}
+        <div v-if="selectedTenant" class="space-y-6">
+          <!-- Basic Info Header -->
+          <div class="flex items-center gap-4 pb-4 border-b border-gray-200">
+            <div class="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <span class="text-indigo-600 font-semibold text-2xl">
+                {{ getTenantInitial(selectedTenant) }}
+              </span>
+            </div>
+            <div class="flex-1">
+              <h4 class="text-xl font-semibold text-gray-900">
+                {{ getTenantName(selectedTenant) }}
+              </h4>
+              <p class="text-gray-600">{{ getTenantEmail(selectedTenant) }}</p>
+              <div class="mt-2">
+                <span :class="getStatusBadgeClass(selectedTenant.status || selectedTenant.Status)" 
+                      class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium">
+                  {{ selectedTenant.status || selectedTenant.Status || 'pending' }}
                 </span>
               </div>
-              <div>
-                <h4 class="text-xl font-semibold text-gray-900">
-                  {{ getTenantName(selectedTenant) }}
-                </h4>
-                <p class="text-gray-600">{{ getTenantEmail(selectedTenant) }}</p>
-              </div>
             </div>
+          </div>
+
+
+
+          <!-- Temple Details -->
+          <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Temple Information
+            </h4>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- First Column -->
               <div class="space-y-4">
-                <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">Status</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    <span :class="getStatusBadgeClass(selectedTenant.status || selectedTenant.Status)" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium">
-                      {{ selectedTenant.status || selectedTenant.Status || 'pending' }}
-                    </span>
-                  </div>
-                </div>
-                
                 <div class="border-b border-gray-100 pb-3">
                   <div class="text-sm font-medium text-gray-500">Application Date</div>
                   <div class="text-base text-gray-900 mt-1">
@@ -297,16 +285,6 @@
                 </div>
                 
                 <div class="border-b border-gray-100 pb-3">
-                  <div class="text-sm font-medium text-gray-500">User ID</div>
-                  <div class="text-base text-gray-900 mt-1">
-                    {{ selectedTenant.id || selectedTenant.ID || 'Not available' }}
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Second Column - FIXED TEMPLE DETAILS -->
-              <div class="space-y-4">
-                <div class="border-b border-gray-100 pb-3">
                   <div class="text-sm font-medium text-gray-500">Temple Name</div>
                   <div class="text-base text-gray-900 mt-1">
                     {{ getTempleDetail(selectedTenant, 'temple_name') }}
@@ -317,6 +295,16 @@
                   <div class="text-sm font-medium text-gray-500">Temple Location</div>
                   <div class="text-base text-gray-900 mt-1">
                     {{ getTempleDetail(selectedTenant, 'temple_place') }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Second Column -->
+              <div class="space-y-4">
+                <div class="border-b border-gray-100 pb-3">
+                  <div class="text-sm font-medium text-gray-500">User ID</div>
+                  <div class="text-base text-gray-900 mt-1">
+                    {{ selectedTenant.id || selectedTenant.ID || 'Not available' }}
                   </div>
                 </div>
                 
@@ -336,55 +324,131 @@
               </div>
             </div>
             
-            <!-- Description Section - FIXED -->
+            <!-- Description Section -->
             <div class="mt-5 border-t border-gray-100 pt-4">
               <div class="text-sm font-medium text-gray-500 mb-2">Temple Description</div>
               <div class="text-base text-gray-900 bg-gray-50 p-4 rounded-lg">
                 {{ getTempleDescription(selectedTenant) }}
               </div>
             </div>
-
-            <!-- Debug Section -->
-            
           </div>
         </div>
+        <!-- MEDIA SECTION - Logo and Video -->
+          <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Temple Media
+            </h4>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Temple Logo -->
+              <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                <div class="flex items-center gap-2 mb-3">
+                  <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="text-sm font-medium text-gray-700">Temple Logo</span>
+                </div>
+                
+                <div v-if="getLogoUrl(selectedTenant)" class="bg-gray-50 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+                  <img 
+                    :src="getFullMediaUrl(getLogoUrl(selectedTenant))" 
+                    :alt="`${getTempleDetail(selectedTenant, 'temple_name')} Logo`"
+                    class="max-w-full max-h-[250px] object-contain rounded-lg shadow-md"
+                    @error="handleImageError"
+                  />
+                </div>
+                
+                <div v-else class="bg-gray-100 rounded-lg p-8 flex flex-col items-center justify-center min-h-[200px] text-gray-400">
+                  <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p class="text-sm">No logo uploaded</p>
+                </div>
+                
+                <a 
+                  v-if="getLogoUrl(selectedTenant)" 
+                  :href="getFullMediaUrl(getLogoUrl(selectedTenant))" 
+                  target="_blank"
+                  class="mt-3 inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Open in new tab
+                </a>
+              </div>
+
+              <!-- Temple Intro Video -->
+              <div class="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                <div class="flex items-center gap-2 mb-3">
+                  <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span class="text-sm font-medium text-gray-700">Intro Video</span>
+                </div>
+                
+                <div v-if="getVideoUrl(selectedTenant)" class="bg-gray-50 rounded-lg overflow-hidden">
+                  <video 
+                    :src="getFullMediaUrl(getVideoUrl(selectedTenant))" 
+                    controls 
+                    class="w-full max-h-[250px] object-contain"
+                    @error="handleVideoError"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                
+                <div v-else class="bg-gray-100 rounded-lg p-8 flex flex-col items-center justify-center min-h-[200px] text-gray-400">
+                  <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <p class="text-sm">No video uploaded</p>
+                </div>
+                
+                <a 
+                  v-if="getVideoUrl(selectedTenant)" 
+                  :href="getFullMediaUrl(getVideoUrl(selectedTenant))" 
+                  target="_blank"
+                  download
+                  class="mt-3 inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download video
+                </a>
+              </div>
+            </div>
+          </div>
         
         <!-- Actions -->
         <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
           <button 
             @click="showDetailsModal = false"
-            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors"
           >
             Close
           </button>
           
-          <div v-if="isStatusPending(selectedTenant)">
+          <div v-if="isStatusPending(selectedTenant)" class="flex gap-3">
+            <button
+              @click="handleRejectFromDetails"
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50 transition-colors"
+              :disabled="isProcessing"
+            >
+              {{ isProcessing ? 'Processing...' : 'Reject' }}
+            </button>
             <button
               @click="handleApproveFromDetails"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors"
               :disabled="isProcessing"
             >
               {{ isProcessing ? 'Processing...' : 'Approve' }}
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- API Debug Modal -->
-    <div v-if="showApiDebugModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center">
-      <div class="bg-white rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-auto">
-        <h3 class="text-lg font-semibold mb-4">API Debug Information</h3>
-        <div class="bg-gray-100 p-4 rounded font-mono text-xs overflow-auto whitespace-pre">
-          {{ apiDebugInfo }}
-        </div>
-        <div class="mt-4 flex justify-end">
-          <button 
-            @click="showApiDebugModal = false"
-            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>
@@ -401,58 +465,103 @@ export default {
   name: 'TenantApprovals',
   emits: ['updated'],
   setup(props, { emit }) {
-    // Data - FIXED initialization
+    // Data
     const loading = ref(true)
     const tenants = ref([])
-    const allTenants = ref([]) // Store all tenants for "View All" functionality
+    const allTenants = ref([])
     const toast = useToast()
     const isProcessing = ref(false)
     const API_URL = '/api/v1'
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
     
     // Debug mode
-    const debugMode = ref(true) // Enable by default for debugging
-    const showApiDebugModal = ref(false)
-    const apiDebugInfo = ref('')
+    const debugMode = ref(false)
     
-    // Simple rejection modal
+    // Modals
     const showRejectModal = ref(false)
     const selectedTenant = ref(null)
     const rejectReason = ref('')
-    
-    // Details modal
     const showDetailsModal = ref(false)
     
     // Filters
-    const statusFilter = ref('') // Start with "View All"
+    const statusFilter = ref('')
     
     // Pagination
     const currentPage = ref(1)
     const itemsPerPage = ref(5)
     
-    // ==================== FIXED STATUS HELPERS ====================
+    // ==================== MEDIA HELPER FUNCTIONS ====================
     
-    // Improved status normalization
-    const normalizeStatus = (tenant) => {
-      if (!tenant) return 'pending';
+    const getLogoUrl = (tenant) => {
+      if (!tenant) return null
       
-      // Check multiple possible status fields
+      // Check temple_details first
+      if (tenant.temple_details?.logo_url) {
+        return tenant.temple_details.logo_url
+      }
+      
+      // Check direct properties
+      return tenant.logo_url || tenant.LogoURL || tenant.logoUrl || null
+    }
+    
+    const getVideoUrl = (tenant) => {
+      if (!tenant) return null
+      
+      // Check temple_details first
+      if (tenant.temple_details?.intro_video_url) {
+        return tenant.temple_details.intro_video_url
+      }
+      
+      // Check direct properties
+      return tenant.intro_video_url || tenant.IntroVideoURL || tenant.introVideoUrl || null
+    }
+    
+    const getFullMediaUrl = (path) => {
+      if (!path) return null
+      
+      // If already a full URL, return as is
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path
+      }
+      
+      // Remove leading slash if present to avoid double slashes
+      const cleanPath = path.startsWith('/') ? path : `/${path}`
+      
+      // Construct full URL - use API_BASE_URL which points to your Go backend
+      return `${API_BASE_URL}${cleanPath}`
+    }
+    
+    const handleImageError = (event) => {
+      console.error('Image failed to load:', event.target.src)
+      event.target.style.display = 'none'
+      toast.error('Failed to load temple logo')
+    }
+    
+    const handleVideoError = (event) => {
+      console.error('Video failed to load:', event.target.src)
+      event.target.style.display = 'none'
+      toast.error('Failed to load temple video')
+    }
+    
+    // ==================== STATUS HELPERS ====================
+    
+    const normalizeStatus = (tenant) => {
+      if (!tenant) return 'pending'
+      
       let status = tenant.status || 
                    tenant.Status || 
                    tenant.approval_status || 
                    tenant.approvalStatus || 
                    tenant.tenant_status ||
                    tenant.user_status ||
-                   '';
+                   ''
       
-      // Convert to string and normalize
-      status = String(status).toLowerCase().trim();
+      status = String(status).toLowerCase().trim()
       
-      // Handle empty/null/undefined
       if (!status || status === 'null' || status === 'undefined') {
-        return 'pending';
+        return 'pending'
       }
       
-      // Normalize variations
       const statusMappings = {
         'approved': 'approved',
         'active': 'approved', 
@@ -474,708 +583,409 @@ export default {
         'submitted': 'pending',
         'under_review': 'pending',
         'new': 'pending'
-      };
+      }
       
-      return statusMappings[status] || 'pending';
-    };
+      return statusMappings[status] || 'pending'
+    }
     
-    // Improved status check functions - FIXED LOGIC
     const isStatusPending = (tenant) => {
-      const status = normalizeStatus(tenant);
-      return status === 'pending';
-    };
+      const status = normalizeStatus(tenant)
+      return status === 'pending'
+    }
     
     const isStatusApproved = (tenant) => {
-      const status = normalizeStatus(tenant);
-      return status === 'approved';
-    };
+      const status = normalizeStatus(tenant)
+      return status === 'approved'
+    }
     
     const isStatusRejected = (tenant) => {
-      const status = normalizeStatus(tenant);
-      return status === 'rejected';
-    };
+      const status = normalizeStatus(tenant)
+      return status === 'rejected'
+    }
     
-    // ==================== COMPUTED PROPERTIES - FIXED ====================
+    // ==================== COMPUTED PROPERTIES ====================
     
-    // FIXED: Force reactivity and proper counting
     const pendingCount = computed(() => {
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      if (tenantsArray.length === 0) return 0;
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
+      if (tenantsArray.length === 0) return 0
       
-      const count = tenantsArray.filter(tenant => {
-        const isPending = isStatusPending(tenant);
-        if (debugMode.value) {
-          console.log(`Tenant ${tenant.id || 'unknown'}: status="${normalizeStatus(tenant)}", isPending=${isPending}`);
-        }
-        return isPending;
-      }).length;
-      
-      if (debugMode.value) {
-        console.log(`🟡 PENDING COUNT: ${count} out of ${tenantsArray.length} total tenants`);
-      }
-      
-      return count;
-    });
+      return tenantsArray.filter(tenant => isStatusPending(tenant)).length
+    })
     
     const approvedCount = computed(() => {
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      if (tenantsArray.length === 0) return 0;
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
+      if (tenantsArray.length === 0) return 0
       
-      const count = tenantsArray.filter(tenant => {
-        const isApproved = isStatusApproved(tenant);
-        if (debugMode.value) {
-          console.log(`Tenant ${tenant.id || 'unknown'}: status="${normalizeStatus(tenant)}", isApproved=${isApproved}`);
-        }
-        return isApproved;
-      }).length;
-      
-      if (debugMode.value) {
-        console.log(`🟢 APPROVED COUNT: ${count} out of ${tenantsArray.length} total tenants`);
-      }
-      
-      return count;
-    });
+      return tenantsArray.filter(tenant => isStatusApproved(tenant)).length
+    })
     
     const rejectedCount = computed(() => {
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      if (tenantsArray.length === 0) return 0;
+      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
+      if (tenantsArray.length === 0) return 0
       
-      const count = tenantsArray.filter(tenant => {
-        const isRejected = isStatusRejected(tenant);
-        if (debugMode.value) {
-          console.log(`Tenant ${tenant.id || 'unknown'}: status="${normalizeStatus(tenant)}", isRejected=${isRejected}`);
-        }
-        return isRejected;
-      }).length;
-      
-      if (debugMode.value) {
-        console.log(`🔴 REJECTED COUNT: ${count} out of ${tenantsArray.length} total tenants`);
-      }
-      
-      return count;
-    });
+      return tenantsArray.filter(tenant => isStatusRejected(tenant)).length
+    })
     
-    // FIXED: Filtered tenants based on status
     const filteredTenants = computed(() => {
-      const allTenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
+      const allTenantsArray = Array.isArray(allTenants.value) ? allTenants.value : []
       
       if (!statusFilter.value || statusFilter.value === '' || statusFilter.value === 'all') {
-        if (debugMode.value) {
-          console.log(`📋 SHOWING ALL TENANTS: ${allTenantsArray.length}`);
-        }
-        return allTenantsArray;
+        return allTenantsArray
       }
       
-      let filtered = [];
       switch (statusFilter.value.toLowerCase()) {
         case 'pending':
-          filtered = allTenantsArray.filter(tenant => isStatusPending(tenant));
-          break;
+          return allTenantsArray.filter(tenant => isStatusPending(tenant))
         case 'approved':
-          filtered = allTenantsArray.filter(tenant => isStatusApproved(tenant));
-          break;
+          return allTenantsArray.filter(tenant => isStatusApproved(tenant))
         case 'rejected':
-          filtered = allTenantsArray.filter(tenant => isStatusRejected(tenant));
-          break;
+          return allTenantsArray.filter(tenant => isStatusRejected(tenant))
         default:
-          filtered = allTenantsArray;
+          return allTenantsArray
       }
-      
-      if (debugMode.value) {
-        console.log(`📋 FILTERED TENANTS (${statusFilter.value}): ${filtered.length} out of ${allTenantsArray.length}`);
-      }
-      
-      return filtered;
-    });
+    })
     
     // ==================== TEMPLE DETAILS HELPERS ====================
     
     const getTempleDetail = (tenant, field, fallback = 'Not provided') => {
-      if (!tenant) return fallback;
+      if (!tenant) return fallback
       
-      // Check if temple_details exists and has the field
       if (tenant.temple_details && tenant.temple_details[field]) {
-        return tenant.temple_details[field];
+        return tenant.temple_details[field]
       }
       
-      // Fallback to direct property access (for backward compatibility)
       if (tenant[field]) {
-        return tenant[field];
+        return tenant[field]
       }
       
-      // Check different case variations
       const variations = [
         field,
         field.toLowerCase(),
         field.toUpperCase(),
-        // Convert snake_case to camelCase
         field.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase()),
-        // Convert camelCase to PascalCase
         field.charAt(0).toUpperCase() + field.slice(1)
-      ];
+      ]
       
       for (const variation of variations) {
         if (tenant[variation]) {
-          return tenant[variation];
+          return tenant[variation]
         }
       }
       
-      return fallback;
-    };
+      return fallback
+    }
 
     const getTempleDescription = (tenant) => {
-      if (!tenant) return 'No additional details provided.';
+      if (!tenant) return 'No additional details provided.'
       
-      // Check temple_details first
       if (tenant.temple_details) {
         if (tenant.temple_details.temple_description) {
-          return tenant.temple_details.temple_description;
+          return tenant.temple_details.temple_description
         }
       }
       
-      // Fallback checks
       const descriptionFields = [
         'temple_description', 'templeDescription', 'TempleDescription',
         'description', 'Description'
-      ];
+      ]
       
       for (const field of descriptionFields) {
         if (tenant[field]) {
-          return tenant[field];
+          return tenant[field]
         }
       }
       
-      return 'No additional details provided.';
-    };
-
-    const debugTenantDetails = (tenant) => {
-      if (!tenant) return;
-      
-      console.log('=== TENANT DEBUG ===');
-      console.log('Full tenant object:', tenant);
-      console.log('Temple details object:', tenant.temple_details);
-      
-      if (tenant.temple_details) {
-        console.log('Temple name:', tenant.temple_details.temple_name);
-        console.log('Temple place:', tenant.temple_details.temple_place);
-        console.log('Temple address:', tenant.temple_details.temple_address);
-        console.log('Temple phone:', tenant.temple_details.temple_phone_no);
-        console.log('Temple description:', tenant.temple_details.temple_description);
-      }
-      
-      // Show all available keys
-      console.log('Available keys on tenant:', Object.keys(tenant));
-      if (tenant.temple_details) {
-        console.log('Available keys on temple_details:', Object.keys(tenant.temple_details));
-      }
-      console.log('==================');
-    };
+      return 'No additional details provided.'
+    }
     
     // ==================== PAGINATION ====================
     
-    // Paginated tenants - FIXED with array checks
     const paginatedTenants = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      const start = (currentPage.value - 1) * itemsPerPage.value;
-      const end = start + itemsPerPage.value;
-      return filtered.slice(start, end);
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      const start = (currentPage.value - 1) * itemsPerPage.value
+      const end = start + itemsPerPage.value
+      return filtered.slice(start, end)
+    })
     
-    // Pagination helpers - FIXED with array checks
     const totalPages = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return Math.ceil(filtered.length / itemsPerPage.value) || 1;
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      return Math.ceil(filtered.length / itemsPerPage.value) || 1
+    })
     
     const paginationStart = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
       return filtered.length === 0 
         ? 0 
-        : (currentPage.value - 1) * itemsPerPage.value + 1;
-    });
+        : (currentPage.value - 1) * itemsPerPage.value + 1
+    })
     
     const paginationEnd = computed(() => {
-      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : [];
-      return Math.min(currentPage.value * itemsPerPage.value, filtered.length);
-    });
+      const filtered = Array.isArray(filteredTenants.value) ? filteredTenants.value : []
+      return Math.min(currentPage.value * itemsPerPage.value, filtered.length)
+    })
     
     const displayedPageNumbers = computed(() => {
-      const maxDisplayed = 5;
-      const pages = [];
+      const maxDisplayed = 5
+      const pages = []
       
       if (totalPages.value <= maxDisplayed) {
         for (let i = 1; i <= totalPages.value; i++) {
-          pages.push(i);
+          pages.push(i)
         }
       } else {
-        pages.push(1);
+        pages.push(1)
         
-        let startPage = Math.max(2, currentPage.value - 1);
-        let endPage = Math.min(totalPages.value - 1, currentPage.value + 1);
+        let startPage = Math.max(2, currentPage.value - 1)
+        let endPage = Math.min(totalPages.value - 1, currentPage.value + 1)
         
         if (currentPage.value <= 2) {
-          endPage = 3;
+          endPage = 3
         }
         
         if (currentPage.value >= totalPages.value - 1) {
-          startPage = totalPages.value - 2;
+          startPage = totalPages.value - 2
         }
         
         if (startPage > 2) {
-          pages.push('...');
+          pages.push('...')
         }
         
         for (let i = startPage; i <= endPage; i++) {
-          pages.push(i);
+          pages.push(i)
         }
         
         if (endPage < totalPages.value - 1) {
-          pages.push('...');
+          pages.push('...')
         }
         
         if (totalPages.value > 1) {
-          pages.push(totalPages.value);
+          pages.push(totalPages.value)
         }
       }
       
-      return pages;
-    });
+      return pages
+    })
     
     // ==================== HELPER METHODS ====================
     
-    // Helper methods for displaying tenant information
     const getTenantName = (tenant) => {
-      if (!tenant) return 'Unknown Tenant';
+      if (!tenant) return 'Unknown Tenant'
       
-      // Check both uppercase and lowercase properties
-      if (tenant.full_name) return tenant.full_name;
-      if (tenant.FullName) return tenant.FullName;
-      if (tenant.fullName) return tenant.fullName;
-      if (tenant.name) return tenant.name;
-      if (tenant.Name) return tenant.Name;
+      if (tenant.full_name) return tenant.full_name
+      if (tenant.FullName) return tenant.FullName
+      if (tenant.fullName) return tenant.fullName
+      if (tenant.name) return tenant.name
+      if (tenant.Name) return tenant.Name
       
-      // Check email as fallback
-      if (tenant.email) return tenant.email.split('@')[0];
-      if (tenant.Email) return tenant.Email.split('@')[0];
+      if (tenant.email) return tenant.email.split('@')[0]
+      if (tenant.Email) return tenant.Email.split('@')[0]
       
-      // Return ID if available
-      return (tenant.id || tenant.ID) ? `User ${tenant.id || tenant.ID}` : 'Unknown Tenant';
-    };
+      return (tenant.id || tenant.ID) ? `User ${tenant.id || tenant.ID}` : 'Unknown Tenant'
+    }
     
     const getTenantEmail = (tenant) => {
-      if (!tenant) return 'No email provided';
+      if (!tenant) return 'No email provided'
       
-      if (tenant.email) return tenant.email;
-      if (tenant.Email) return tenant.Email;
-      if (tenant.email_address) return tenant.email_address;
-      if (tenant.EmailAddress) return tenant.EmailAddress;
+      if (tenant.email) return tenant.email
+      if (tenant.Email) return tenant.Email
+      if (tenant.email_address) return tenant.email_address
+      if (tenant.EmailAddress) return tenant.EmailAddress
       
-      return 'No email provided';
-    };
+      return 'No email provided'
+    }
     
     const getTenantInitial = (tenant) => {
-      if (!tenant) return 'T';
+      if (!tenant) return 'T'
       
-      const name = getTenantName(tenant);
+      const name = getTenantName(tenant)
       if (name && name !== 'Unknown Tenant' && name.length > 0) {
-        return name.charAt(0).toUpperCase();
+        return name.charAt(0).toUpperCase()
       }
       
-      const email = getTenantEmail(tenant);
+      const email = getTenantEmail(tenant)
       if (email && email !== 'No email provided' && email.length > 0) {
-        return email.charAt(0).toUpperCase();
+        return email.charAt(0).toUpperCase()
       }
       
-      return 'T';
-    };
+      return 'T'
+    }
     
     const getStatusBadgeClass = (status) => {
-      const normalizedStatus = normalizeStatus({ status });
+      const normalizedStatus = normalizeStatus({ status })
       const classes = {
         'pending': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
         'approved': 'bg-green-100 text-green-800 border border-green-200',
         'rejected': 'bg-red-100 text-red-800 border border-red-200'
-      };
-      return classes[normalizedStatus] || 'bg-gray-100 text-gray-800 border border-gray-200';
-    };
+      }
+      return classes[normalizedStatus] || 'bg-gray-100 text-gray-800 border border-gray-200'
+    }
     
     const formatDate = (dateString) => {
-      if (!dateString) return 'N/A';
+      if (!dateString) return 'N/A'
       try {
-        const date = new Date(dateString);
+        const date = new Date(dateString)
         return date.toLocaleDateString('en-IN', {
           year: 'numeric',
           month: 'short',
           day: 'numeric'
-        });
+        })
       } catch {
-        return 'N/A';
+        return 'N/A'
       }
-    };
+    }
     
     const goToPage = (page) => {
       if (page !== '...') {
-        currentPage.value = page;
+        currentPage.value = page
       }
-    };
+    }
     
     // ==================== FILTER FUNCTIONS ====================
     
     const applyFilters = (newFilter = null) => {
       if (newFilter !== null) {
-        statusFilter.value = newFilter;
+        statusFilter.value = newFilter
       }
       
-      // Reset to first page when filter changes
-      currentPage.value = 1;
-      
-      console.log(`Applied filter: ${statusFilter.value}`);
-      console.log(`Filtered tenants count: ${filteredTenants.value.length}`);
-    };
+      currentPage.value = 1
+      console.log(`Applied filter: ${statusFilter.value}`)
+    }
     
     // ==================== MODAL HANDLERS ====================
     
-    
     const handleViewDetails = (tenant) => {
-      selectedTenant.value = tenant;
-      
-      // Add debug logging
-      console.log('Opening details for tenant:', tenant);
-      if (debugMode.value) {
-        debugTenantDetails(tenant);
-      }
-      
-      showDetailsModal.value = true;
-    };
+      selectedTenant.value = tenant
+      console.log('Opening details for tenant:', tenant)
+      console.log('Logo URL:', getLogoUrl(tenant))
+      console.log('Video URL:', getVideoUrl(tenant))
+      showDetailsModal.value = true
+    }
     
     const handleApproveFromDetails = () => {
-      handleApprove(selectedTenant.value);
-      showDetailsModal.value = false;
-    };
+      handleApprove(selectedTenant.value)
+      showDetailsModal.value = false
+    }
     
-    // ==================== DEBUG FUNCTIONS ====================
-    
-    const logAllTenantStatuses = () => {
-      console.log('=== ALL TENANT STATUSES ===');
-      const tenantsArray = Array.isArray(allTenants.value) ? allTenants.value : [];
-      
-      tenantsArray.forEach((tenant, index) => {
-        const rawStatus = tenant.status || tenant.Status || 'undefined';
-        const normalizedStatus = normalizeStatus(tenant);
-        const isPending = isStatusPending(tenant);
-        const isApproved = isStatusApproved(tenant);
-        const isRejected = isStatusRejected(tenant);
-        
-        console.log(`Tenant ${index + 1} (ID: ${tenant.id || tenant.ID || 'unknown'}):`, {
-          name: getTenantName(tenant),
-          rawStatus,
-          normalizedStatus,
-          isPending,
-          isApproved,
-          isRejected
-        });
-      });
-      
-      console.log(`\nSUMMARY:
-        Total: ${tenantsArray.length}
-        Pending: ${pendingCount.value}
-        Approved: ${approvedCount.value}
-        Rejected: ${rejectedCount.value}
-        Sum: ${pendingCount.value + approvedCount.value + rejectedCount.value}`);
-      console.log('==========================');
-    };
+    const handleRejectFromDetails = () => {
+      showDetailsModal.value = false
+      handleRejectClick(selectedTenant.value)
+    }
     
     // ==================== DATA LOADING ====================
     
-    // ENHANCED: Load all tenants with better error handling and data normalization
     const loadAllTenants = async () => {
-      loading.value = true;
+      loading.value = true
       
       try {
-        console.log('🔄 Loading ALL tenant data from multiple endpoints...');
+        console.log('🔄 Loading ALL tenant data...')
         
-        let allTenantsData = [];
+        let allTenantsData = []
         
-        // Try multiple approaches to get all tenants
         const endpoints = [
           '/superadmin/tenants',
           '/superadmin/tenants?status=pending',
           '/superadmin/tenants?status=approved', 
           '/superadmin/tenants?status=active',
           '/superadmin/tenants?status=rejected'
-        ];
+        ]
         
         for (const endpoint of endpoints) {
           try {
-            console.log(`🔗 Trying endpoint: ${endpoint}`);
-            
             const response = await fetch(API_URL + endpoint, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
               }
-            });
+            })
             
             if (response.ok) {
-              const data = await response.json();
-              let tenantData = [];
+              const data = await response.json()
+              let tenantData = []
               
-              // Handle different response structures
               if (data && data.data && Array.isArray(data.data)) {
-                tenantData = data.data;
+                tenantData = data.data
               } else if (Array.isArray(data)) {
-                tenantData = data;
+                tenantData = data
               } else if (data && Array.isArray(data.tenants)) {
-                tenantData = data.tenants;
+                tenantData = data.tenants
               }
               
               if (tenantData.length > 0) {
-                console.log(`✅ Got ${tenantData.length} tenants from ${endpoint}`);
+                console.log(`✅ Got ${tenantData.length} tenants from ${endpoint}`)
                 
-                // Merge with existing data, avoiding duplicates
                 tenantData.forEach(tenant => {
-                  const tenantId = tenant.id || tenant.ID;
+                  const tenantId = tenant.id || tenant.ID
                   if (tenantId && !allTenantsData.find(existing => (existing.id || existing.ID) === tenantId)) {
-                    allTenantsData.push(tenant);
+                    allTenantsData.push(tenant)
                   }
-                });
+                })
               }
-            } else {
-              console.log(`❌ Endpoint ${endpoint} returned ${response.status}`);
             }
           } catch (endpointError) {
-            console.error(`❌ Error with endpoint ${endpoint}:`, endpointError);
+            console.error(`❌ Error with endpoint ${endpoint}:`, endpointError)
           }
         }
         
-        // Fallback to service methods if direct API calls fail
         if (allTenantsData.length === 0) {
-          console.log('🔧 Trying service methods as fallback...');
+          console.log('🔧 Trying service methods as fallback...')
           
           try {
-            const serviceResponse = await superAdminService.getAllTenants();
+            const serviceResponse = await superAdminService.getAllTenants()
             
             if (serviceResponse && serviceResponse.success && serviceResponse.data) {
               if (Array.isArray(serviceResponse.data)) {
-                allTenantsData = serviceResponse.data;
-                console.log(`✅ Loaded ${allTenantsData.length} tenants from service`);
-              }
-            } else {
-              // Try pending tenants as last resort
-              const pendingResponse = await superAdminService.getPendingTenants();
-              if (pendingResponse && pendingResponse.success && pendingResponse.data) {
-                if (Array.isArray(pendingResponse.data)) {
-                  allTenantsData = pendingResponse.data;
-                  console.log(`⚠️ Loaded ${allTenantsData.length} pending tenants only`);
-                }
+                allTenantsData = serviceResponse.data
+                console.log(`✅ Loaded ${allTenantsData.length} tenants from service`)
               }
             }
           } catch (serviceError) {
-            console.error('❌ Error with service methods:', serviceError);
+            console.error('❌ Error with service methods:', serviceError)
           }
         }
         
-        // CRITICAL: Force reactive update
-        allTenants.value = [...allTenantsData]; // Create new array reference
-        tenants.value = [...allTenantsData]; // Create new array reference
+        allTenants.value = [...allTenantsData]
+        tenants.value = [...allTenantsData]
         
-        // Force computed property recalculation
-        await nextTick();
+        await nextTick()
         
-        console.log(`📊 FINAL RESULT: ${allTenantsData.length} total tenants loaded`);
-        console.log(`📊 STATUS BREAKDOWN:
-          - Pending: ${allTenantsData.filter(t => isStatusPending(t)).length}
-          - Approved: ${allTenantsData.filter(t => isStatusApproved(t)).length}
-          - Rejected: ${allTenantsData.filter(t => isStatusRejected(t)).length}`);
+        console.log(`📊 FINAL RESULT: ${allTenantsData.length} total tenants loaded`)
         
         if (allTenantsData.length > 0) {
-          toast.success(`Loaded ${allTenantsData.length} total tenants`);
+          toast.success(`Loaded ${allTenantsData.length} total tenants`)
         } else {
-          toast.warning('No tenant data found');
+          toast.warning('No tenant data found')
         }
         
       } catch (error) {
-        console.error('❌ Error in loadAllTenants:', error);
-        allTenants.value = [];
-        tenants.value = [];
-        toast.error('Error loading tenant data');
+        console.error('❌ Error in loadAllTenants:', error)
+        allTenants.value = []
+        tenants.value = []
+        toast.error('Error loading tenant data')
       } finally {
-        loading.value = false;
+        loading.value = false
       }
-    };
+    }
     
-    // Load tenants (for backward compatibility)
     const loadTenants = async () => {
-      await loadAllTenants();
-    };
-    
-    // ==================== DEBUG METHODS ====================
-    
-    const debugTenantData = async () => {
-      apiDebugInfo.value = 'Loading API debug information...';
-      showApiDebugModal.value = true;
-      
-      try {
-        const debugInfo = [];
-        debugInfo.push('==== TENANT DATA DEBUG ====\n');
-        
-        // Test multiple endpoints
-        const endpoints = [
-          '/superadmin/tenants',
-          '/superadmin/tenants?status=pending',
-          '/superadmin/tenants?status=approved',
-          '/superadmin/tenants?status=active',
-          '/superadmin/tenants?status=rejected'
-        ];
-        
-        for (const endpoint of endpoints) {
-          debugInfo.push(`\nTesting endpoint: ${endpoint}`);
-          try {
-            const response = await fetch(API_URL + endpoint, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              }
-            });
-            
-            debugInfo.push(`Response status: ${response.status} ${response.statusText}`);
-            
-            if (response.ok) {
-              const data = await response.json();
-              let count = 0;
-              
-              if (data && data.data && Array.isArray(data.data)) {
-                count = data.data.length;
-                debugInfo.push(`Data structure: { data: [${count} items] }`);
-                if (count > 0) {
-                  debugInfo.push(`Sample item keys: ${Object.keys(data.data[0]).join(', ')}`);
-                  debugInfo.push(`Sample status values: ${data.data.slice(0, 3).map(t => t.status || t.Status || 'undefined').join(', ')}`);
-                }
-              } else if (Array.isArray(data)) {
-                count = data.length;
-                debugInfo.push(`Data structure: [${count} items]`);
-                if (count > 0) {
-                  debugInfo.push(`Sample item keys: ${Object.keys(data[0]).join(', ')}`);
-                  debugInfo.push(`Sample status values: ${data.slice(0, 3).map(t => t.status || t.Status || 'undefined').join(', ')}`);
-                }
-              } else {
-                debugInfo.push(`Unexpected data structure keys: ${Object.keys(data).join(', ')}`);
-              }
-            } else {
-              const errorText = await response.text();
-              debugInfo.push(`Error: ${errorText}`);
-            }
-          } catch (error) {
-            debugInfo.push(`Error: ${error.message}`);
-          }
-        }
-        
-        // Current component state
-        debugInfo.push('\n==== COMPONENT STATE ====');
-        debugInfo.push(`Total tenants loaded: ${allTenants.value.length}`);
-        debugInfo.push(`Pending count: ${pendingCount.value}`);
-        debugInfo.push(`Approved count: ${approvedCount.value}`);
-        debugInfo.push(`Rejected count: ${rejectedCount.value}`);
-        debugInfo.push(`Current filter: ${statusFilter.value}`);
-        debugInfo.push(`Filtered tenants: ${filteredTenants.value.length}`);
-        
-        // Sample tenant status analysis
-        if (allTenants.value.length > 0) {
-          debugInfo.push('\n==== SAMPLE TENANT STATUS ANALYSIS ====');
-          allTenants.value.slice(0, 5).forEach((tenant, i) => {
-            const rawStatus = tenant.status || tenant.Status || 'undefined';
-            const normalized = normalizeStatus(tenant);
-            debugInfo.push(`Tenant ${i + 1}: raw="${rawStatus}" -> normalized="${normalized}"`);
-          });
-        }
-        
-        apiDebugInfo.value = debugInfo.join('\n');
-      } catch (error) {
-        apiDebugInfo.value = `Error running debug: ${error.message}`;
-      }
-    };
-    
-    // Direct API test for approval
-    const testApprovalApi = async (tenant) => {
-      if (!tenant) {
-        toast.error('No tenant selected for testing');
-        return;
-      }
-      
-      apiDebugInfo.value = `Testing API call for tenant ${tenant.id || tenant.ID || 'unknown'}...`;
-      showApiDebugModal.value = true;
-      
-      try {
-        const debugInfo = [];
-        debugInfo.push(`Testing API approval for tenant:\n${JSON.stringify(tenant, null, 2)}\n`);
-        
-        // Extract tenant ID with fallbacks
-        const tenantId = tenant.id || tenant.ID || tenant.user_id || tenant.userId;
-        
-        if (!tenantId) {
-          debugInfo.push('ERROR: No tenant ID found in tenant object!');
-          apiDebugInfo.value = debugInfo.join('\n');
-          return;
-        }
-        
-        debugInfo.push(`Using tenant ID: ${tenantId}`);
-        
-        // Test direct API call
-        debugInfo.push('\nTesting direct PATCH call to approve tenant...');
-        try {
-          const token = localStorage.getItem('auth_token');
-          debugInfo.push(`Auth token available: ${!!token}`);
-          
-          const response = await fetch(API_URL + `/superadmin/tenants/${tenantId}/approval`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              status: 'APPROVED'
-            })
-          });
-          
-          debugInfo.push(`API Response Status: ${response.status} ${response.statusText}`);
-          
-          if (response.ok) {
-            const responseData = await response.json();
-            debugInfo.push(`API Response Data: ${JSON.stringify(responseData, null, 2)}`);
-            debugInfo.push('\nSUCCESS: Direct API call worked! The backend endpoint is functional.');
-            toast.success('Test API call successful!');
-            
-            // Refresh the tenant list to show the updated status
-            await loadAllTenants();
-          } else {
-            const errorText = await response.text();
-            debugInfo.push(`Error response: ${errorText}`);
-          }
-        } catch (error) {
-          debugInfo.push(`API Error: ${error.message}`);
-        }
-        
-        apiDebugInfo.value = debugInfo.join('\n');
-      } catch (error) {
-        apiDebugInfo.value = `Error running API test: ${error.message}`;
-      }
-    };
+      await loadAllTenants()
+    }
     
     // ==================== APPROVAL/REJECTION HANDLERS ====================
     
     const handleApprove = async (tenant) => {
       if (!tenant) {
-        toast.error('Cannot approve: Missing tenant');
-        return;
+        toast.error('Cannot approve: Missing tenant')
+        return
       }
       
-      const tenantId = tenant.id || tenant.ID;
+      const tenantId = tenant.id || tenant.ID
       
       if (!tenantId) {
-        toast.error('Cannot approve: Missing tenant ID');
-        return;
+        toast.error('Cannot approve: Missing tenant ID')
+        return
       }
       
-      isProcessing.value = true;
-      console.log(`🔄 Attempting to approve tenant ${tenantId}`);
+      isProcessing.value = true
+      console.log(`🔄 Attempting to approve tenant ${tenantId}`)
       
       try {
         const response = await fetch(API_URL + `/superadmin/tenants/${tenantId}/approval`, {
@@ -1187,71 +997,70 @@ export default {
           body: JSON.stringify({
             status: "APPROVED"
           })
-        });
+        })
         
         if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Approval successful:', data);
-          toast.success(`Tenant ${getTenantName(tenant)} approved successfully`);
+          const data = await response.json()
+          console.log('✅ Approval successful:', data)
+          toast.success(`Tenant ${getTenantName(tenant)} approved successfully`)
           
-          // Refresh the tenant list
-          await loadAllTenants();
-          emit('updated');
+          await loadAllTenants()
+          emit('updated')
         } else {
-          console.error('❌ Approval failed with status:', response.status);
-          const errorData = await response.text();
-          console.error('Error response:', errorData);
-          toast.error(`Failed to approve tenant: ${response.statusText}`);
+          console.error('❌ Approval failed with status:', response.status)
+          const errorData = await response.text()
+          console.error('Error response:', errorData)
+          toast.error(`Failed to approve tenant: ${response.statusText}`)
         }
       } catch (error) {
-        console.error('❌ Error in approval process:', error);
-        toast.error('Error approving tenant: ' + (error.message || 'Unknown error'));
+        console.error('❌ Error in approval process:', error)
+        toast.error('Error approving tenant: ' + (error.message || 'Unknown error'))
       } finally {
-        isProcessing.value = false;
+        isProcessing.value = false
       }
-    };
+    }
     
     const handleRejectClick = (tenant) => {
       if (!tenant) {
-        toast.error('Cannot reject: Missing tenant');
-        return;
+        toast.error('Cannot reject: Missing tenant')
+        return
       }
       
-      const tenantId = tenant.id || tenant.ID;
+      const tenantId = tenant.id || tenant.ID
       
       if (!tenantId) {
-        toast.error('Cannot reject: Missing tenant ID');
-        return;
+        toast.error('Cannot reject: Missing tenant ID')
+        return
       }
       
-      selectedTenant.value = tenant;
-      rejectReason.value = '';
-      showRejectModal.value = true;
-    };
+      selectedTenant.value = tenant
+      rejectReason.value = ''
+      showRejectModal.value = true
+    }
     
     const confirmReject = async () => {
-      const tenant = selectedTenant.value;
+      const tenant = selectedTenant.value
       
       if (!tenant) {
-        toast.error('Cannot reject: Missing tenant');
-        showRejectModal.value = false;
-        return;
+        toast.error('Cannot reject: Missing tenant')
+        showRejectModal.value = false
+        return
       }
       
-      const tenantId = tenant.id || tenant.ID;
+      const tenantId = tenant.id || tenant.ID
       
       if (!tenantId) {
-        toast.error('Cannot reject: Missing tenant ID');
-        showRejectModal.value = false;
-        return;
+        toast.error('Cannot reject: Missing tenant ID')
+        showRejectModal.value = false
+        return
       }
       
       if (!rejectReason.value.trim()) {
-        toast.warning('Please provide a rejection reason');
-        return;
+        toast.warning('Please provide a rejection reason')
+        return
       }
       
-      isProcessing.value = true;
+      isProcessing.value = true
       
       try {
         const response = await fetch(API_URL + `/superadmin/tenants/${tenantId}/approval`, {
@@ -1264,58 +1073,44 @@ export default {
             status: "REJECTED",
             reason: rejectReason.value
           })
-        });
+        })
         
         if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Rejection successful:', data);
-          toast.success(`Tenant ${getTenantName(tenant)} rejected successfully`);
-          showRejectModal.value = false;
+          const data = await response.json()
+          console.log('✅ Rejection successful:', data)
+          toast.success(`Tenant ${getTenantName(tenant)} rejected successfully`)
+          showRejectModal.value = false
           
-          // Refresh the tenant list
-          await loadAllTenants();
-          emit('updated');
+          await loadAllTenants()
+          emit('updated')
         } else {
-          console.error('❌ Rejection failed with status:', response.status);
-          const errorData = await response.text();
-          console.error('Error response:', errorData);
-          toast.error(`Failed to reject tenant: ${response.statusText}`);
+          console.error('❌ Rejection failed with status:', response.status)
+          const errorData = await response.text()
+          console.error('Error response:', errorData)
+          toast.error(`Failed to reject tenant: ${response.statusText}`)
         }
       } catch (error) {
-        console.error('❌ Error in rejection process:', error);
-        toast.error('Error rejecting tenant: ' + (error.message || 'Unknown error'));
+        console.error('❌ Error in rejection process:', error)
+        toast.error('Error rejecting tenant: ' + (error.message || 'Unknown error'))
       } finally {
-        isProcessing.value = false;
+        isProcessing.value = false
       }
-    };
+    }
     
     // ==================== WATCHERS ====================
     
-    // Watch for status filter changes
     watch(statusFilter, (newValue, oldValue) => {
       if (newValue !== oldValue) {
-        console.log(`Status filter changed from ${oldValue} to ${newValue}`);
-        currentPage.value = 1; // Reset pagination
+        currentPage.value = 1
       }
-    });
-    
-    // Watch allTenants for changes and log
-    watch(allTenants, (newTenants) => {
-      console.log(`🔄 allTenants changed: ${newTenants.length} tenants`);
-      if (debugMode.value && newTenants.length > 0) {
-        nextTick(() => {
-          logAllTenantStatuses();
-        });
-      }
-    }, { deep: true });
+    })
     
     // ==================== LIFECYCLE ====================
     
-    // Load data on mount
     onMounted(() => {
-      console.log('🚀 Component mounted, loading tenants...');
-      loadAllTenants();
-    });
+      console.log('🚀 Component mounted, loading tenants...')
+      loadAllTenants()
+    })
     
     return {
       loading,
@@ -1352,23 +1147,21 @@ export default {
       selectedTenant,
       rejectReason,
       confirmReject,
-      // Details modal
       showDetailsModal,
       handleViewDetails,
       handleApproveFromDetails,
-      // Temple details helpers
+      handleRejectFromDetails,
       getTempleDetail,
       getTempleDescription,
-      debugTenantDetails,
-      // Debug & Status helpers
+      // Media helpers
+      getLogoUrl,
+      getVideoUrl,
+      getFullMediaUrl,
+      handleImageError,
+      handleVideoError,
       debugMode,
-      debugTenantData,
-      logAllTenantStatuses,
-      normalizeStatus,
-      testApprovalApi,
-      showApiDebugModal,
-      apiDebugInfo
-    };
+      normalizeStatus
+    }
   }
-};
+}
 </script>
