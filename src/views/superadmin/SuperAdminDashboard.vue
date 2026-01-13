@@ -1,3 +1,4 @@
+
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Header Section -->
@@ -16,7 +17,6 @@
             <div class="bg-indigo-50 text-indigo-800 px-3 py-1 rounded-full text-sm font-medium">
               System Administrator
             </div>
-            <!-- Loading indicator for stats -->
             <div v-if="isLoadingStats" class="flex items-center text-sm text-gray-500">
               <div class="animate-spin rounded-full h-4 w-4 border-2 border-indigo-600 border-t-transparent mr-2"></div>
               Loading stats...
@@ -30,18 +30,6 @@
     <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
       <!-- Quick Access Links -->
        <div class="flex flex-wrap gap-2 sm:gap-4 mb-6 sm:mb-8">
-        <!-- Debug button for API testing -->
-        <button
-          v-if="debugMode"
-          @click="testTempleCountsApi"
-          class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors duration-200"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-          </svg>
-          Test Counts API
-        </button>
-
         <router-link
           to="/superadmin/reports"
           class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors duration-200"
@@ -266,7 +254,6 @@
         </div>
       </div>
 
-      <!-- Modals -->
       <!-- Application Details Modal -->
       <div v-if="showDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -280,6 +267,44 @@
           </div>
           <div class="p-6">
             <div v-if="selectedApplication" class="space-y-6">
+              <!-- Temple Logo & Video Media Gallery -->
+              <div v-if="templeLogo || templeVideo" class="mb-6">
+                <h4 class="text-md font-semibold text-gray-900 mb-3">Temple Media</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Logo Display -->
+                  <div v-if="templeLogo" class="border rounded-lg overflow-hidden bg-gray-50">
+                    <div class="p-3 bg-gray-100 border-b">
+                      <span class="text-xs font-medium text-gray-600">Temple Logo</span>
+                    </div>
+                    <div class="p-4 flex items-center justify-center">
+                      <img 
+                        :src="getMediaUrl(templeLogo)" 
+                        :alt="selectedApplication.templeName + ' Logo'"
+                        class="max-h-48 w-auto rounded-lg shadow-md object-contain"
+                        @error="handleImageError"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Video Display -->
+                  <div v-if="templeVideo" class="border rounded-lg overflow-hidden bg-gray-50">
+                    <div class="p-3 bg-gray-100 border-b">
+                      <span class="text-xs font-medium text-gray-600">Temple Video</span>
+                    </div>
+                    <div class="p-4">
+                      <video 
+                        :src="getMediaUrl(templeVideo)" 
+                        controls
+                        class="w-full rounded-lg shadow-md"
+                        @error="handleVideoError"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Temple Details -->
               <div>
                 <h4 class="text-md font-semibold text-gray-900 mb-3">Temple Information</h4>
@@ -317,6 +342,7 @@
                   </div>
                 </div>
               </div>
+
 
               <!-- Documents -->
               <div>
@@ -554,6 +580,38 @@ const inferMimeFromUrlOrName = (url, name) => {
   if (s.endsWith('.jpg') || s.endsWith('.jpeg')) return 'image/jpeg'
   return ''
 }
+// -----------------------------
+// Temple Media (Logo & Video)
+// -----------------------------
+const templeLogo = computed(() => {
+  if (!selectedApplication.value) return null
+  return selectedApplication.value.media?.logo || null
+})
+
+const templeVideo = computed(() => {
+  if (!selectedApplication.value) return null
+  return selectedApplication.value.media?.video || null
+})
+
+// Media URL helper (backend already serves /files)
+const getMediaUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return path
+}
+
+// Error handlers
+const handleImageError = (e) => {
+  console.error('❌ Logo load failed:', e.target.src)
+  e.target.style.display = 'none'
+}
+
+const handleVideoError = (e) => {
+  console.error('❌ Video load failed:', e.target.src)
+  e.target.outerHTML =
+    '<p class="text-sm text-red-600">Failed to load video</p>'
+}
+
 
 // FIXED: Replace your normalizeTempleDocuments function with this version
 const normalizeTempleDocuments = (temple) => {
@@ -1158,22 +1216,39 @@ const loadPendingEntities = async () => {
         console.log(`📄 Temple "${temple.Name || temple.name}" - Normalized ${normalizedDocs.length} documents`)
 
         return {
-          id: temple.ID || temple.id,
-          templeName: temple.Name || temple.name,
-          adminName: temple.CreatedBy || temple.createdBy || 'Unknown',
-          adminEmail: temple.Email || temple.email || 'unknown@example.com',
-          phone: temple.Phone || temple.phone,
-          city: temple.City || temple.city,
-          state: temple.State || temple.state,
-          address: fullAddress || 'Address not provided',
-          status,
-          submittedAt: submittedDate,
-          approvedAt: temple.ApprovedAt || temple.approvedAt,
-          rejectedAt: temple.RejectedAt || temple.rejectedAt,
-          notes: temple.Notes || temple.notes,
-          registrationType: temple.TempleType || temple.templeType,
-          documents: normalizedDocs // Use normalized documents
-        }
+  id: temple.ID || temple.id,
+  templeName: temple.Name || temple.name,
+  adminName: temple.CreatedBy || temple.createdBy || 'Unknown',
+  adminEmail: temple.Email || temple.email || 'unknown@example.com',
+  phone: temple.Phone || temple.phone,
+  city: temple.City || temple.city,
+  state: temple.State || temple.state,
+  address: fullAddress || 'Address not provided',
+  status,
+  submittedAt: submittedDate,
+  approvedAt: temple.ApprovedAt || temple.approvedAt,
+  rejectedAt: temple.RejectedAt || temple.rejectedAt,
+  notes: temple.Notes || temple.notes,
+  registrationType: temple.TempleType || temple.templeType,
+
+  // ✅ ADD THIS (VERY IMPORTANT)
+  media: (() => {
+    try {
+      // backend may send media as JSON string or object
+      if (typeof temple.media === 'string') {
+        return JSON.parse(temple.media)
+      }
+      return temple.media || {}
+    } catch (e) {
+      console.warn('Failed to parse media field:', e)
+      return {}
+    }
+  })(),
+
+  // existing documents logic
+  documents: normalizedDocs
+}
+
       })
       
       console.log('✅ Total temples loaded:', templeApplications.value.length)

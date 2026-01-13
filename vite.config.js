@@ -46,18 +46,39 @@ export default defineConfig(({ mode }) => {
     },
   },
   
-  server: {    
-    proxy: {
-      '/api/v1': {        
-        target: env.VITE_DEBUG_API_URL,
-        changeOrigin: true,
-        rewrite: path => path // Simply pass through the path as is        
+ server: {    
+  proxy: {
+    '/api/v1': {        
+      target: env.VITE_DEBUG_API_URL,
+      changeOrigin: true,
+      rewrite: path => path
+    },
+    '/uploads': {
+      target: env.VITE_DEBUG_API_URL,
+      changeOrigin: true,
+      rewrite: path => path
+    },
+  // 🆕 ADD THIS - Proxy /files requests to backend
+        '/files': {
+          target: env.VITE_DEBUG_API_URL,
+          changeOrigin: true,
+          rewrite: path => path,
+          configure: (proxy, options) => {
+            proxy.on('error', (err, req, res) => {
+              console.error('❌ File proxy error:', err.message)
+            })
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              console.log('📁 File proxy request:', req.method, req.url)
+            })
+            proxy.on('proxyRes', (proxyRes, req, res) => {
+              console.log('📁 File proxy response:', proxyRes.statusCode, req.url)
+            })
+          }
+        }
       }
     }
   }
-  }
 });
-
 /*
 export default defineConfig(({}) => {
   const config = {

@@ -554,10 +554,11 @@ async function fetchTenantsForReports() {
         // Refresh user list after successful creation
         await fetchUsers()
         
-        return {
-          success: true,
-          message: 'User created successfully'
-        }
+       return {
+  success: true,
+  message: response.message || 'User created successfully'
+}
+
       } else {
         userActionError.value = response.message
         return {
@@ -578,47 +579,45 @@ async function fetchTenantsForReports() {
   }
 
   // Update user
-  async function updateUser(userId, userData) {
-    loadingUserAction.value = true
-    userActionError.value = null
-    
-    try {
-      console.log('Store: Updating user:', userId, userData)
-      const response = await superAdminService.updateUser(userId, userData)
-      
-      if (response.success) {
-        // Update local state
-        const userIndex = users.value.findIndex(u => u.id === userId)
-        if (userIndex !== -1) {
-          // Refetch user data to ensure we have latest data
-          const userResponse = await superAdminService.getUserById(userId)
-          if (userResponse.success) {
-            users.value[userIndex] = userResponse.data
-          }
-        }
-        
-        return {
-          success: true,
-          message: 'User updated successfully'
-        }
-      } else {
-        userActionError.value = response.message
-        return {
-          success: false,
-          error: response.message
-        }
+async function updateUser(userId, userData) {
+  loadingUserAction.value = true
+  userActionError.value = null
+
+  try {
+    // ✅ USE userData DIRECTLY (DO NOT REBUILD)
+    const payload = { ...userData }
+
+    // ✅ REMOVE empty strings, null, undefined
+    Object.keys(payload).forEach(key => {
+      if (
+        payload[key] === '' ||
+        payload[key] === null ||
+        payload[key] === undefined
+      ) {
+        delete payload[key]
       }
-    } catch (error) {
-      console.error('Store: Error updating user:', error)
-      userActionError.value = error.message
-      return {
-        success: false,
-        error: error.message
-      }
-    } finally {
-      loadingUserAction.value = false
+    })
+
+    console.log('📦 Final payload sent to backend:', payload)
+
+    await superAdminService.updateUser(userId, payload)
+
+    return {
+      success: true,
+      message: 'User updated successfully'
     }
+  } catch (error) {
+    console.error('❌ Update user failed:', error)
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message
+    }
+  } finally {
+    loadingUserAction.value = false
   }
+}
+
+
 
   // Update user status
   async function updateUserStatus(userId, status) {

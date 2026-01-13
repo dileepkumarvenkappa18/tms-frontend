@@ -47,14 +47,13 @@
           {{ filter.label }}
           
           <span 
-  class="ml-2 px-2 py-0.5 text-xs rounded-full"
-  :class="activeFilter === filter.value 
-    ? 'bg-indigo-100 text-indigo-600' 
-    : 'bg-gray-100 text-gray-600'"
->
-  {{ getUserCountByFilter(filter.value) }}
-</span>
-
+            class="ml-2 px-2 py-0.5 text-xs rounded-full"
+            :class="activeFilter === filter.value 
+              ? 'bg-indigo-100 text-indigo-600' 
+              : 'bg-gray-100 text-gray-600'"
+          >
+            {{ getUserCountByFilter(filter.value) }}
+          </span>
         </button>
       </div>
     </div>
@@ -80,7 +79,6 @@
               </td>
             </tr>
 
-            <!-- Use filteredUsers but exclude "all" filter -->
             <tr v-else-if="filteredUsers.length === 0">
               <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
                 No users found in this category. Create your first user by clicking the 'Create User' button or upload users in bulk via CSV.
@@ -89,7 +87,23 @@
 
             <tr v-for="user in filteredUsers" :key="user.id" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ user.full_name }}</div>
+                <div class="flex items-center">
+                  <!-- User Avatar/Logo -->
+                  <div class="flex-shrink-0 h-10 w-10">
+                    <img 
+                      v-if="user.temple_details?.logo_url" 
+                      :src="user.temple_details.logo_url" 
+                      alt="Logo" 
+                      class="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                    />
+                    <div v-else class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <span class="text-indigo-600 font-medium text-sm">{{ getUserInitials(user.full_name) }}</span>
+                    </div>
+                  </div>
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900">{{ user.full_name }}</div>
+                  </div>
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-500">{{ user.email }}</div>
@@ -126,7 +140,6 @@
                   Edit
                 </button>
 
-                <!-- Disable Tenant Assigned when inactive standard/monitoring user -->
                 <div :class="{'opacity-50 pointer-events-none select-none': isAssignDisabled(user)}">
                   <user-assign-button :user="user" :disabled="isAssignDisabled(user)" />
                 </div>
@@ -177,7 +190,6 @@
                   </p>
                   <p v-else>{{ bulkUploadResult.message }}</p>
 
-                  <!-- Show errors if any -->
                   <ul v-if="bulkUploadResult.data?.errors && bulkUploadResult.data.errors.length > 0" class="mt-2 list-disc list-inside">
                     <li v-for="(err, index) in bulkUploadResult.data.errors" :key="index" class="text-xs">
                       {{ err }}
@@ -213,8 +225,7 @@
                       <li class="ml-4"><strong>Temple Address</strong> - Complete address</li>
                       <li class="ml-4"><strong>Temple Phone</strong> - Temple contact number</li>
                       <li class="ml-4"><strong>Temple Description</strong> - Brief temple description</li>
-                      <li><strong style="color:red;">CSV Warning:</strong> Commas (,) are not allowed in field values like Address , Description and Place.</li>
-
+                      <li><strong style="color:red;">CSV Warning:</strong> Commas (,) are not allowed in field values like Address, Description and Place.</li>
                     </ul>
                     <p class="mt-2 text-xs text-blue-600">Note: Temple fields are required only for users with templeadmin role.</p>
                   </div>
@@ -267,7 +278,6 @@
                 </div>
               </div>
 
-              <!-- File validation errors -->
               <div v-if="fileError" class="mt-2 text-sm text-red-600">
                 {{ fileError }}
               </div>
@@ -276,7 +286,6 @@
 
           <!-- CSV Data Preview -->
           <div v-if="csvData.length > 0" class="space-y-6">
-            <!-- Preview Header -->
             <div class="flex items-center justify-between">
               <div>
                 <h4 class="text-lg font-medium text-gray-900">CSV Data Preview</h4>
@@ -290,7 +299,6 @@
               </button>
             </div>
 
-            <!-- Data Table -->
             <div class="overflow-x-auto border border-gray-200 rounded-lg">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
@@ -342,7 +350,6 @@
               Showing first 10 rows. {{ csvData.length - 10 }} more rows will be processed.
             </p>
 
-            <!-- Upload Button -->
             <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
               <button
                 @click="clearCsvData"
@@ -393,9 +400,7 @@
               <div class="ml-3">
                 <h3 class="text-sm font-medium text-green-800">User {{ isEditing ? 'Updated' : 'Created' }} Successfully!</h3>
                 <div class="mt-1 text-sm text-green-700">
-                  <p>
-                    User account has been {{ isEditing ? 'updated' : 'created' }} successfully.
-                  </p>
+                  <p>User account has been {{ isEditing ? 'updated' : 'created' }} successfully.</p>
                 </div>
               </div>
             </div>
@@ -519,6 +524,108 @@
             <div v-if="form.role === 'templeadmin'" class="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <h4 class="font-medium text-gray-900">Temple Details</h4>
 
+              <!-- Logo Upload Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Temple Logo
+                </label>
+                
+                <!-- Current Logo Preview -->
+                <div v-if="form.templeDetails.logoUrl || logoPreview" class="mb-3">
+                  <div class="relative inline-block">
+                    <img 
+                      :src="logoPreview || form.templeDetails.logoUrl" 
+                      alt="Logo Preview" 
+                      class="h-24 w-24 object-cover rounded-lg border-2 border-gray-300"
+                    />
+                    <button
+                      type="button"
+                      @click="removeLogo"
+                      class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Upload Button -->
+                <div class="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    @click="$refs.logoInput.click()"
+                    class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {{ form.templeDetails.logoUrl || logoPreview ? 'Change Logo' : 'Upload Logo' }}
+                  </button>
+                  <span class="text-xs text-gray-500">JPG, PNG, GIF, WebP (Max 5MB)</span>
+                </div>
+                
+                <input
+                  ref="logoInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  @change="handleLogoUpload"
+                  class="hidden"
+                />
+                
+                <div v-if="logoUploadError" class="mt-2 text-sm text-red-600">
+                  {{ logoUploadError }}
+                </div>
+              </div>
+
+              <!-- Video Upload Section -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Temple Intro Video
+                </label>
+                
+                <!-- Current Video Preview -->
+                <div v-if="form.templeDetails.introVideoUrl || videoPreview" class="mb-3">
+                  <div class="relative inline-block">
+                    <video 
+                      :src="videoPreview || form.templeDetails.introVideoUrl" 
+                      class="h-32 w-56 object-cover rounded-lg border-2 border-gray-300"
+                      controls
+                    ></video>
+                    <button
+                      type="button"
+                      @click="removeVideo"
+                      class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Upload Button -->
+                <div class="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    @click="$refs.videoInput.click()"
+                    class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {{ form.templeDetails.introVideoUrl || videoPreview ? 'Change Video' : 'Upload Video' }}
+                  </button>
+                  <span class="text-xs text-gray-500">MP4, AVI, MOV, WMV, WebM (Max 50MB)</span>
+                </div>
+                
+                <input
+                  ref="videoInput"
+                  type="file"
+                  accept="video/mp4,video/avi,video/mov,video/wmv,video/webm"
+                  @change="handleVideoUpload"
+                  class="hidden"
+                />
+                
+                <div v-if="videoUploadError" class="mt-2 text-sm text-red-600">
+                  {{ videoUploadError }}
+                </div>
+              </div>
+
               <!-- Temple Name -->
               <div>
                 <label for="templeName" class="block text-sm font-medium text-gray-700 mb-2">
@@ -614,25 +721,6 @@
               </div>
             </div>
 
-            <!-- 
-            Status (only for editing) 
-            <div v-if="isEditing" class="flex items-center space-x-2">
-              <label for="status" class="text-sm font-medium text-gray-700">User Status:</label>
-              <div class="relative inline-block w-10 mr-2 align-middle select-none">
-                <input
-                  type="checkbox"
-                  id="status"
-                  v-model="form.isActive"
-                  class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
-                />
-                <label
-                  for="status"
-                  class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
-                ></label>
-              </div>
-              <span class="text-sm text-gray-500">{{ form.isActive ? 'Active' : 'Inactive' }}</span>
-            </div>
-          -->
             <!-- Form Actions -->
             <div class="flex justify-end space-x-3 pt-3">
               <button
@@ -645,13 +733,13 @@
               <button
                 type="submit"
                 class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
-                :disabled="isLoading"
+                :disabled="isLoading || isUploadingFile"
               >
-                <svg v-if="isLoading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg v-if="isLoading || isUploadingFile" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                {{ isEditing ? 'Update User' : 'Create User' }}
+                {{ isUploadingFile ? 'Uploading Files...' : (isEditing ? 'Update User' : 'Create User') }}
               </button>
             </div>
           </form>
@@ -667,11 +755,12 @@ import { useToast } from '@/composables/useToast'
 import { useSuperAdminStore } from '@/stores/superadmin'
 import UserAssignButton from '@/components/superadmin/UserAssignButton.vue'
 import PasswordStrengthMeter from '@/components/auth/PasswordStrengthMeter.vue'
+import api from '@/services/api'
 
 const { success, error } = useToast()
 const superAdminStore = useSuperAdminStore()
 
-// State variables - using store reactive state
+// State variables
 const isLoading = computed(() => superAdminStore.loadingUserAction)
 const isRolesLoading = computed(() => superAdminStore.loadingUserRoles)
 const isUsersLoading = computed(() => superAdminStore.loadingUsers)
@@ -680,10 +769,17 @@ const showCreateModal = ref(false)
 const isEditing = ref(false)
 const editingUserId = ref(null)
 
-// Filter state - default to 'internal' instead of 'all'
+// File upload state
+const isUploadingFile = ref(false)
+const logoPreview = ref(null)
+const videoPreview = ref(null)
+const logoUploadError = ref('')
+const videoUploadError = ref('')
+
+// Filter state
 const activeFilter = ref('internal')
 
-// Bulk upload state variables
+// Bulk upload state
 const showBulkUploadModal = ref(false)
 const csvData = ref([])
 const fileError = ref('')
@@ -691,28 +787,26 @@ const isDragOver = ref(false)
 const isBulkUploading = ref(false)
 const bulkUploadResult = ref(null)
 
-// Reactive data from store
+// Reactive data
 const roles = computed(() => superAdminStore.userRoles || [])
 const users = computed(() => superAdminStore.users || [])
-
-// Available roles for validation
 const availableRoles = computed(() => roles.value.map(role => role.role_name))
 
-// Filter configuration - removed 'all' filter
+// Filter configuration
 const userFilters = [
   { value: 'internal', label: 'Internal Admins' },
   { value: 'volunteers', label: 'Volunteers' },
   { value: 'devotees', label: 'Devotees' }
 ]
 
-// Role categorization - using role IDs and names
+// Role categorization
 const roleCategories = {
   internal: ['superadmin', 'templeadmin', 'standarduser', 'monitoringuser'],
-  volunteers: ['volunteer', '4'], // role_id 4 for volunteers
-  devotees: ['devotee', 'user', '3'] // role_id 3 for devotees
+  volunteers: ['volunteer', '4'],
+  devotees: ['devotee', 'user', '3']
 }
 
-// Helpers: role normalization and approval resolution
+// Helper functions
 const normalizeRoleName = (role) => {
   let name = ''
   if (typeof role === 'object' && role) {
@@ -742,10 +836,8 @@ const resolveTempleApproval = (u) => {
     b(u?.is_approved),
   ].filter((v) => v !== null)
 
-  // Explicit boolean true => approved
   if (boolCandidates.includes(true)) return { known: true, approved: true }
 
-  // Approved strings
   const hasApproved =
     statusCandidates.some((x) =>
       x === 'approved' ||
@@ -754,21 +846,17 @@ const resolveTempleApproval = (u) => {
     )
   if (hasApproved) return { known: true, approved: true }
 
-  // Pending/rejected/not approved => hide
   const negativeSet = ['pending', 'under_review', 'underreview', 'awaiting_approval', 'awaitingapproval', 'not_approved', 'notapproved', 'rejected', 'declined']
   const isPendingOrRejected = statusCandidates.some((x) => negativeSet.includes(x))
   if (isPendingOrRejected) return { known: true, approved: false }
 
-  // Unknown => visible
   return { known: false, approved: false }
 }
 
-// Get user category based on role (handles both role names and role IDs)
 const getUserCategory = (user) => {
   const roleName = normalizeRoleName(user?.role)
   const roleId = String(user?.role_id || user?.role?.id || '')
   
-  // Check by role name or role ID
   if (roleCategories.internal.includes(roleName)) {
     return 'internal'
   } else if (roleCategories.volunteers.includes(roleName) || roleCategories.volunteers.includes(roleId)) {
@@ -780,15 +868,21 @@ const getUserCategory = (user) => {
   return 'other'
 }
 
-// Get user count by filter
 const getUserCountByFilter = (filterValue) => {
   const list = baseFilteredUsers.value ?? []
   const count = list.filter(user => getUserCategory(user) === filterValue).length
   return count || 0
 }
 
+const getUserInitials = (fullName) => {
+  if (!fullName) return '??'
+  const names = fullName.split(' ')
+  if (names.length >= 2) {
+    return (names[0][0] + names[1][0]).toUpperCase()
+  }
+  return fullName.substring(0, 2).toUpperCase()
+}
 
-// Base filtered users (handles temple admin approval)
 const baseFilteredUsers = computed(() => {
   return (users.value || []).filter((u) => {
     if (!isTempleAdminRole(u)) return true
@@ -798,7 +892,6 @@ const baseFilteredUsers = computed(() => {
   })
 })
 
-// Final filtered users (base + category filter) - always filtered by category
 const filteredUsers = computed(() => {
   return baseFilteredUsers.value.filter(user => getUserCategory(user) === activeFilter.value)
 })
@@ -816,34 +909,237 @@ const form = ref({
     place: '',
     address: '',
     phoneNumber: '',
-    description: ''
+    description: '',
+    logoUrl: '',
+    introVideoUrl: ''
   }
 })
 
 const errors = ref({})
 
-// Explicitly defined function to open the modal
+// File upload handlers
+// Add these fixed upload handlers to your UserManagement.vue <script setup> section
+// Replace your existing handleLogoUpload and handleVideoUpload functions with these:
+
+const handleLogoUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  logoUploadError.value = ''
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  if (!validTypes.includes(file.type)) {
+    logoUploadError.value = 'Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.'
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    logoUploadError.value = 'File size must be less than 5MB.'
+    return
+  }
+
+  try {
+    isUploadingFile.value = true
+
+    // Preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      logoPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+
+    const formData = new FormData()
+    formData.append('logo', file)
+
+    console.log('📤 Uploading logo:', file.name, file.size, file.type)
+
+    const response = await api.post('/superadmin/upload/logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    console.log('✅ Logo upload full response:', response)
+    console.log('✅ Response.data:', response.data)
+    console.log('✅ Response structure:', JSON.stringify(response.data, null, 2))
+
+    // Try multiple possible response structures
+    let logoUrl = null
+    
+    // Option 1: response.data.data.url (new structure)
+    if (response.data?.data?.url) {
+      logoUrl = response.data.data.url
+      console.log('✅ Found URL in response.data.data.url')
+    }
+    // Option 2: response.data.url (direct)
+    else if (response.data?.url) {
+      logoUrl = response.data.url
+      console.log('✅ Found URL in response.data.url')
+    }
+    // Option 3: response.url (very direct)
+    else if (response.url) {
+      logoUrl = response.url
+      console.log('✅ Found URL in response.url')
+    }
+
+    if (logoUrl) {
+      form.value.templeDetails.logoUrl = logoUrl
+      logoUploadError.value = ''
+      success('Logo uploaded successfully!')
+      console.log('✅ Logo URL set to:', logoUrl)
+    } else {
+      console.error('❌ Could not find URL in response:', response)
+      throw new Error('No URL in logo upload response')
+    }
+  } catch (err) {
+    console.error('❌ Logo upload error:', err)
+    console.error('❌ Full error object:', JSON.stringify(err, null, 2))
+    logoUploadError.value =
+      err.response?.data?.error || err.message || 'Failed to upload logo'
+    error(logoUploadError.value)
+
+    logoPreview.value = null
+    form.value.templeDetails.logoUrl = ''
+  } finally {
+    isUploadingFile.value = false
+  }
+}
+
+const handleVideoUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  videoUploadError.value = ''
+  
+  const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/webm']
+  if (!validTypes.includes(file.type)) {
+    videoUploadError.value = 'Invalid file type. Only MP4, AVI, MOV, WMV, and WebM are allowed.'
+    return
+  }
+
+  if (file.size > 50 * 1024 * 1024) {
+    videoUploadError.value = 'File size must be less than 50MB.'
+    return
+  }
+
+  try {
+    isUploadingFile.value = true
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      videoPreview.value = e.target.result
+    }
+    reader.readAsDataURL(file)
+
+    // Upload to server
+    const formData = new FormData()
+    formData.append('video', file)
+
+    console.log('📤 Uploading video:', file.name, 'Size:', file.size, 'Type:', file.type)
+
+    const response = await api.post('/superadmin/upload/video', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
+    console.log('✅ Video upload full response:', response)
+    console.log('✅ Response.data:', response.data)
+    console.log('✅ Response structure:', JSON.stringify(response.data, null, 2))
+
+    // Try multiple possible response structures
+    let videoUrl = null
+    
+    // Option 1: response.data.data.url (new structure)
+    if (response.data?.data?.url) {
+      videoUrl = response.data.data.url
+      console.log('✅ Found URL in response.data.data.url')
+    }
+    // Option 2: response.data.url (direct)
+    else if (response.data?.url) {
+      videoUrl = response.data.url
+      console.log('✅ Found URL in response.data.url')
+    }
+    // Option 3: response.url (very direct)
+    else if (response.url) {
+      videoUrl = response.url
+      console.log('✅ Found URL in response.url')
+    }
+
+    if (videoUrl) {
+      form.value.templeDetails.introVideoUrl = videoUrl
+      videoUploadError.value = ''
+      success('Video uploaded successfully!')
+      console.log('✅ Video URL set to:', videoUrl)
+    } else {
+      console.error('❌ Could not find URL in response:', response)
+      throw new Error('No URL in video upload response')
+    }
+  } catch (err) {
+    console.error('❌ Video upload error:', err)
+    console.error('❌ Full error object:', JSON.stringify(err, null, 2))
+    
+    const errorMessage = err.response?.data?.error || err.message || 'Failed to upload video'
+    videoUploadError.value = errorMessage
+    error(errorMessage)
+    
+    videoPreview.value = null
+    form.value.templeDetails.introVideoUrl = ''
+  } finally {
+    isUploadingFile.value = false
+  }
+}
+
+const removeLogo = async () => {
+  if (form.value.templeDetails.logoUrl) {
+    try {
+      await api.delete('/superadmin/upload/file', {
+        data: { fileUrl: form.value.templeDetails.logoUrl }
+      })
+    } catch (err) {
+      console.error('Failed to delete logo from server:', err)
+    }
+  }
+  
+  form.value.templeDetails.logoUrl = ''
+  logoPreview.value = null
+  logoUploadError.value = ''
+}
+
+const removeVideo = async () => {
+  if (form.value.templeDetails.introVideoUrl) {
+    try {
+      await api.delete('/superadmin/upload/file', {
+        data: { fileUrl: form.value.templeDetails.introVideoUrl }
+      })
+    } catch (err) {
+      console.error('Failed to delete video from server:', err)
+    }
+  }
+  
+  form.value.templeDetails.introVideoUrl = ''
+  videoPreview.value = null
+  videoUploadError.value = ''
+}
+// Modal functions
 const openCreateModal = () => {
   showCreateModal.value = true
 }
 
-// Bulk upload modal functions
 const openBulkUploadModal = () => {
   showBulkUploadModal.value = true
   bulkUploadResult.value = null
 }
+
 const closeBulkUploadModal = () => {
   showBulkUploadModal.value = false
   clearCsvData()
   bulkUploadResult.value = null
 }
 
-// Fetch all data when component mounts
+// Fetch data on mount
 onMounted(async () => {
   await superAdminStore.refreshUserData()
 })
 
-// Helper function to get role display name
+// Helper functions
 const getRoleDisplay = (role) => {
   if (typeof role === 'object' && role?.description) return role.description
   if (typeof role === 'object' && role?.role_name) return role.role_name
@@ -851,7 +1147,6 @@ const getRoleDisplay = (role) => {
   return roleObj ? (roleObj.description || roleObj.role_name) : role
 }
 
-// Disable Tenant Assigned when user is inactive AND role is standard/monitoring
 const isAssignDisabled = (user) => {
   const rn = normalizeRoleName(user?.role)
   const isStdOrMon = rn === 'standarduser' || rn === 'monitoringuser'
@@ -859,11 +1154,11 @@ const isAssignDisabled = (user) => {
   return isStdOrMon && inactive
 }
 
-// CSV validation functions
+// CSV validation
 const isValidRole = (role) => availableRoles.value.includes(role)
 const isValidStatus = (status) => ['active', 'inactive'].includes(status?.toLowerCase())
 
-// Download sample CSV template
+// Download sample CSV
 const downloadSampleCSV = () => {
   const csvContent = [
     ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description'],
@@ -883,18 +1178,18 @@ const downloadSampleCSV = () => {
   document.body.removeChild(link)
 }
 
-// File upload handlers
+// File upload handlers for CSV
 const handleFileSelect = (event) => {
   const file = event.target.files[0]
   if (file) processFile(file)
 }
+
 const handleFileDrop = (event) => {
   isDragOver.value = false
   const files = event.dataTransfer.files
   if (files.length > 0) processFile(files[0])
 }
 
-// Process uploaded CSV file
 const processFile = (file) => {
   fileError.value = ''
   if (!file.name.toLowerCase().endsWith('.csv')) {
@@ -920,7 +1215,7 @@ const processFile = (file) => {
   reader.readAsText(file)
 }
 
-// Parse CSV content
+
 const parseCsvData = (csvText) => {
   try {
     const lines = csvText.split('\n').filter(line => line.trim())
@@ -929,10 +1224,8 @@ const parseCsvData = (csvText) => {
       return
     }
     const headers = lines[0].split(',').map(h => h.replace(/\"/g, '').trim())
-    const expectedHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description']
     const requiredHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
     
-    // Check if all required headers are present
     const missingHeaders = requiredHeaders.filter(expected => !headers.includes(expected))
     if (missingHeaders.length > 0) {
       fileError.value = `Missing required CSV headers: ${missingHeaders.join(', ')}`
@@ -941,14 +1234,12 @@ const parseCsvData = (csvText) => {
     
     const data = []
     for (let i = 1; i < lines.length; i++) {
-      console.log("Coming here--->1:")
       const values = lines[i].split(',').map(v => v.replace(/\"/g, '').trim())
       if (values.length < requiredHeaders.length) {
         fileError.value = `Row ${i + 1} has ${values.length} columns but expected at least ${requiredHeaders.length}`
         return
       }
       
-      console.log("Coming here--->2:")
       const rowData = {
         full_name: values[headers.indexOf('Full Name')],
         email: values[headers.indexOf('Email')],
@@ -958,8 +1249,6 @@ const parseCsvData = (csvText) => {
         status: values[headers.indexOf('Status')]
       }
       
-      console.log("Coming here--->3:")
-      // Add temple details if columns exist
       if (headers.includes('Temple Name')) {
         rowData.temple_name = values[headers.indexOf('Temple Name')] || ''
       }
@@ -976,33 +1265,26 @@ const parseCsvData = (csvText) => {
         rowData.temple_description = values[headers.indexOf('Temple Description')] || ''
       }
       
-      console.log("Coming here--->4:")
-      // Validate required fields
       if (!rowData.full_name || !rowData.email || !rowData.phone || !rowData.password || !rowData.role) {
-        fileError.value = `Row ${i + 1} is missing required fields (Full Name, Email, Phone, Password, or Role)`
+        fileError.value = `Row ${i + 1} is missing required fields`
         return
       }
       
-      console.log("Coming here--->5:",rowData.role.toLowerCase())
-      // Validate temple admin has temple details
-      if (rowData.role.toLowerCase() === 'templeadmin') {        
+      if (rowData.role.toLowerCase() === 'templeadmin') {
         if (!rowData.temple_name || !rowData.temple_place || !rowData.temple_address || !rowData.temple_phone || !rowData.temple_description) {
-          fileError.value = `Row ${i + 1}: Temple Admin role requires all temple details (Temple Name, Temple Place, Temple Address, Temple Phone, Temple Description)`
+          fileError.value = `Row ${i + 1}: Temple Admin role requires all temple details`
           return
         }
       }
       
-      console.log("rowData--->:", rowData)
-      data.push(rowData)      
+      data.push(rowData)
     }
     csvData.value = data
-    console.log("csvData--->:", csvData.value)
   } catch (err) {
     fileError.value = 'Error parsing CSV file. Please check the format and try again.'
   }
 }
 
-// Clear CSV data
 const clearCsvData = () => {
   csvData.value = []
   fileError.value = ''
@@ -1011,13 +1293,11 @@ const clearCsvData = () => {
   }
 }
 
-// Upload bulk users
 const uploadBulkUsers = async () => {
   if (!csvData.value.length) {
     error('No CSV data to upload')
     return
   }
-  console.log("csvData:", csvData.value)
   isBulkUploading.value = true
   bulkUploadResult.value = null
   try {
@@ -1039,7 +1319,7 @@ const uploadBulkUsers = async () => {
   }
 }
 
-// Validation
+// Form validation
 const isFormValid = computed(() => {
   if (!form.value.fullName || !form.value.email || (!isEditing.value && !form.value.password) || !form.value.phone || !form.value.role) return false
   if (form.value.role === 'templeadmin') {
@@ -1077,47 +1357,88 @@ const validateForm = () => {
   return Object.keys(errors.value).length === 0
 }
 
-// Submit
+const cleanPayload = (payload) => {
+  const cleaned = {}
+  Object.keys(payload).forEach((key) => {
+    if (
+      payload[key] !== '' &&
+      payload[key] !== undefined &&
+      payload[key] !== null
+    ) {
+      cleaned[key] = payload[key]
+    }
+  })
+  return cleaned
+}
+
 const handleSubmitUser = async () => {
   if (!validateForm()) return
+
   try {
-    const userData = {
+    let userData = {
       fullName: form.value.fullName,
       email: form.value.email,
       phone: form.value.phone,
       role: form.value.role
     }
-    if (!isEditing.value) userData.password = form.value.password
-    if (form.value.role === 'templeadmin') {
-      userData.templeName = form.value.templeDetails.name
-      userData.templePlace = form.value.templeDetails.place
-      userData.templeAddress = form.value.templeDetails.address
-      userData.templePhoneNo = form.value.templeDetails.phoneNumber
-      userData.templeDescription = form.value.templeDetails.description
+
+    // Password only on create
+    if (!isEditing.value) {
+      userData.password = form.value.password
     }
+
+    // Temple admin validation + fields
+    if (form.value.role === 'templeadmin') {
+      const temple = form.value.templeDetails
+
+      if (!temple.name || !temple.place) {
+        error('Temple name and place are required')
+        return
+      }
+
+      userData = {
+        ...userData,
+        ...cleanPayload({
+          templeName: temple.name,
+          templePlace: temple.place,
+          templeAddress: temple.address,
+          templePhoneNo: temple.phoneNumber,
+          templeDescription: temple.description,
+          logoUrl: temple.logoUrl || undefined,
+          introVideoUrl: temple.introVideoUrl || undefined
+        })
+      }
+    }
+
     let result
     if (isEditing.value) {
       result = await superAdminStore.updateUser(editingUserId.value, userData)
     } else {
       result = await superAdminStore.createUser(userData)
     }
-    if (result.success) {
+
+    // ✅ FIXED SUCCESS CHECK
+    if (result?.message) {
       registrationSuccess.value = true
-      success(result.message || `User ${isEditing.value ? 'updated' : 'created'} successfully!`)
+      success(result.message)
+
       setTimeout(() => {
         resetForm()
         showCreateModal.value = false
         registrationSuccess.value = false
       }, 2000)
     } else {
-      error(result.error || `Failed to ${isEditing.value ? 'update' : 'create'} user`)
+      error(`Failed to ${isEditing.value ? 'update' : 'create'} user`)
     }
-  } catch (apiError) {
+  } catch (err) {
+    console.error('❌ User submit error:', err)
     error(`Failed to ${isEditing.value ? 'update' : 'create'} user. Please try again.`)
   }
 }
 
-// Toggle user active status
+
+
+// Toggle user status
 const toggleUserStatus = async (user) => {
   try {
     const newStatus = (user.status || '').toLowerCase() === 'active' ? 'inactive' : 'active'
@@ -1147,7 +1468,9 @@ const editUser = (user) => {
       place: user.temple_details?.temple_place || '',
       address: user.temple_details?.temple_address || '',
       phoneNumber: user.temple_details?.temple_phone_no || '',
-      description: user.temple_details?.temple_description || ''
+      description: user.temple_details?.temple_description || '',
+      logoUrl: user.temple_details?.logo_url || '',
+      introVideoUrl: user.temple_details?.intro_video_url || ''
     }
   }
   showCreateModal.value = true
@@ -1178,10 +1501,16 @@ const resetForm = () => {
       place: '',
       address: '',
       phoneNumber: '',
-      description: ''
+      description: '',
+      logoUrl: '',
+      introVideoUrl: ''
     }
   }
   errors.value = {}
+  logoPreview.value = null
+  videoPreview.value = null
+  logoUploadError.value = ''
+  videoUploadError.value = ''
 }
 </script>
 
@@ -1189,7 +1518,6 @@ const resetForm = () => {
 .toggle-checkbox:checked { right: 0; border-color: #4f46e5; }
 .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
 
-/* Modal styles */
 .fixed { position: fixed; }
 .inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
 .z-50 { z-index: 50; }

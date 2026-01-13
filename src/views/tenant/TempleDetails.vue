@@ -23,14 +23,63 @@
         <!-- Temple Found -->
         <div v-else-if="temple" class="space-y-8">
           <div class="bg-white shadow rounded-lg overflow-hidden">
-            <!-- Header -->
+            <!-- Header with Logo -->
             <div class="px-6 py-5 border-b border-gray-200 flex justify-between items-center">
-              <h1 class="text-2xl font-bold text-gray-900">{{ temple.name || 'Unnamed Temple' }}</h1>
+              <div class="flex items-center space-x-4">
+                <!-- Temple Logo -->
+                <div v-if="templeLogo" class="flex-shrink-0">
+                  <img 
+                    :src="getMediaUrl(templeLogo)" 
+                    :alt="temple.name"
+                    class="h-16 w-16 rounded-lg object-cover border-2 border-gray-200"
+                    @error="handleImageError"
+                  />
+                </div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ temple.name || 'Unnamed Temple' }}</h1>
+              </div>
               <TempleApprovalStatus :status="temple.status" />
             </div>
 
             <!-- Details -->
             <div class="p-6">
+              <!-- Media Gallery -->
+              <div v-if="templeLogo || templeVideo" class="mb-6">
+                <h3 class="text-sm font-medium text-gray-500 mb-3">Media Gallery</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Logo Display -->
+                  <div v-if="templeLogo" class="border rounded-lg overflow-hidden bg-gray-50">
+                    <div class="p-3 bg-gray-100 border-b">
+                      <span class="text-xs font-medium text-gray-600">Temple Logo</span>
+                    </div>
+                    <div class="p-4 flex items-center justify-center">
+                      <img 
+                        :src="getMediaUrl(templeLogo)" 
+                        :alt="temple.name + ' Logo'"
+                        class="max-h-48 w-auto rounded-lg shadow-md object-contain"
+                        @error="handleImageError"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Video Display -->
+                  <div v-if="templeVideo" class="border rounded-lg overflow-hidden bg-gray-50">
+                    <div class="p-3 bg-gray-100 border-b">
+                      <span class="text-xs font-medium text-gray-600">Temple Video</span>
+                    </div>
+                    <div class="p-4">
+                      <video 
+                        :src="getMediaUrl(templeVideo)" 
+                        controls
+                        class="w-full rounded-lg shadow-md"
+                        @error="handleVideoError"
+                      >
+                        Your browser does not support the video tag.
+                      </video>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <!-- Temple Info -->
                 <div>
@@ -57,7 +106,7 @@
                     <div>
                       <span class="text-sm text-gray-500">Temple Type:</span>
                       <span class="ml-2 text-sm text-gray-900">
-                        {{ temple.templetype || temple.templeType || 'Not mentioned' }}
+                        {{ temple.templetype || temple.templeType || temple.temple_type || 'Not mentioned' }}
                       </span>
                     </div>
                   </div>
@@ -133,6 +182,7 @@
                       </span>
                     </div>
                   </div>
+                  
 
                   <!-- Edit Button -->
                   <div class="mt-4">
@@ -264,6 +314,97 @@ const loading = ref(true)
 const error = ref(null)
 const temple = ref(null)
 
+// Media computed properties
+const templeLogo = computed(() => {
+  console.log('🔍 Checking temple.value:', temple.value)
+  console.log('🔍 Checking temple.value.media:', temple.value?.media)
+  
+  if (!temple.value) return null
+  
+  // Priority 1: Check media object
+  if (temple.value.media && temple.value.media.logo) {
+    console.log('✅ Found logo in media:', temple.value.media.logo)
+    return temple.value.media.logo
+  }
+  
+  if (temple.value.media && temple.value.media.Logo) {
+    console.log('✅ Found Logo in media:', temple.value.media.Logo)
+    return temple.value.media.Logo
+  }
+  
+  // Priority 2: Check direct fields
+  if (temple.value.logo) {
+    console.log('✅ Found logo field:', temple.value.logo)
+    return temple.value.logo
+  }
+  
+  if (temple.value.image) {
+    console.log('✅ Found image field:', temple.value.image)
+    return temple.value.image
+  }
+  
+  if (temple.value.logoUrl) {
+    console.log('✅ Found logoUrl field:', temple.value.logoUrl)
+    return temple.value.logoUrl
+  }
+  
+  if (temple.value.imageUrl) {
+    console.log('✅ Found imageUrl field:', temple.value.imageUrl)
+    return temple.value.imageUrl
+  }
+  
+  console.log('❌ No logo found in any field')
+  return null
+})
+
+const templeVideo = computed(() => {
+  if (!temple.value) return null
+  
+  // Priority 1: Check media object
+  if (temple.value.media && temple.value.media.video) {
+    console.log('✅ Found video in media:', temple.value.media.video)
+    return temple.value.media.video
+  }
+  
+  if (temple.value.media && temple.value.media.Video) {
+    console.log('✅ Found Video in media:', temple.value.media.Video)
+    return temple.value.media.Video
+  }
+  
+  // Priority 2: Check direct fields
+  if (temple.value.video) {
+    console.log('✅ Found video field:', temple.value.video)
+    return temple.value.video
+  }
+  
+  if (temple.value.videoUrl) {
+    console.log('✅ Found videoUrl field:', temple.value.videoUrl)
+    return temple.value.videoUrl
+  }
+  
+  console.log('❌ No video found in any field')
+  return null
+})
+
+// Function to get full media URL
+const getMediaUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  
+  console.log('🖼️ Using proxied path:', path)
+  return path // Vite will proxy /files to backend
+}
+// Error handlers for media
+const handleImageError = (event) => {
+  console.error('Failed to load image:', event.target.src)
+  event.target.style.display = 'none'
+}
+
+const handleVideoError = (event) => {
+  console.error('Failed to load video:', event.target.src)
+  event.target.parentElement.innerHTML = '<p class="text-sm text-red-600">Failed to load video</p>'
+}
+
 // Breadcrumb navigation
 const breadcrumbItems = computed(() => [
   { name: 'My Temples', to: '/tenant/entities' },
@@ -285,7 +426,8 @@ const safeGet = (obj, keys) => {
 const mainDeity = computed(() => {
   return safeGet(temple.value, [
     'mainDeity',
-    'maindeity', 
+    'maindeity',
+    'main_deity',
     'MainDeity',
     'deity',
     'Deity'
@@ -297,7 +439,7 @@ const fullAddress = computed(() => {
   if (!temple.value) return ''
   
   const parts = [
-    safeGet(temple.value, ['streetaddress', 'streetAddress', 'street']),
+    safeGet(temple.value, ['streetaddress', 'streetAddress', 'street_address', 'street']),
     safeGet(temple.value, ['landmark', 'Landmark']),
     safeGet(temple.value, ['city', 'City']),
     safeGet(temple.value, ['district', 'District']),
@@ -443,7 +585,13 @@ const fetchTempleData = async () => {
       // Handle both response.data and direct response
       temple.value = response.data || response
       console.log('✅ Fetched temple:', temple.value)
+      console.log('📋 Full Response:', JSON.stringify(temple.value, null, 2))
+      console.log('🎨 Media Object:', temple.value?.media)
+      console.log('🖼️ Logo Path:', temple.value?.media?.logo)
+      console.log('🎥 Video Path:', temple.value?.media?.video)
       console.log('📋 Status:', temple.value?.status)
+      console.log('🖼️ Computed Logo:', templeLogo.value)
+      console.log('🎥 Computed Video:', templeVideo.value)
       console.log('❌ Rejection Reason:', rejectionReason.value)
       console.log('📝 Admin Notes:', adminNotes.value)
       console.log('🔍 All Temple Fields:', Object.keys(temple.value))
@@ -466,5 +614,17 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Add any scoped styling here if needed */
+/* Optional: Add smooth transitions for media */
+img, video {
+  transition: opacity 0.3s ease-in-out;
+}
+
+img:hover {
+  opacity: 0.9;
+}
+
+/* Optional: Add a subtle shadow effect on hover */
+.shadow-md:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
 </style>

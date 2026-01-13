@@ -250,7 +250,7 @@
                     </button>
                   </div>
 
-                  <div v-else-if="existingFiles.registration" class="flex items-center space-x-2 mt-2">
+                  <div v-else-if="documentUrls.registration" class="flex items-center space-x-2 mt-2">
                     <p class="text-sm text-gray-600">Current: {{ existingFiles.registration }}</p>
                     <button type="button"
                             v-if="documentUrls.registration"
@@ -302,7 +302,7 @@
                     </button>
                   </div>
 
-                  <div v-else-if="existingFiles.trustDeed" class="flex items-center space-x-2 mt-2">
+                  <div v-else-if="documentUrls.trustDeed" class="flex items-center space-x-2 mt-2">
                     <p class="text-sm text-gray-600">Current: {{ existingFiles.trustDeed }}</p>
                     <button type="button"
                             v-if="documentUrls.trustDeed"
@@ -356,7 +356,7 @@
                     </button>
                   </div>
 
-                  <div v-else-if="existingFiles.property" class="flex items-center space-x-2 mt-2">
+                  <div v-else-if="documentUrls.property" class="flex items-center space-x-2 mt-2">
                     <p class="text-sm text-gray-600">Current: {{ existingFiles.property }}</p>
                     <button type="button"
                             v-if="documentUrls.property"
@@ -1406,11 +1406,12 @@ const safeGet = (obj, keys) => {
 const fetchTempleData = async () => {
   isLoading.value = true
   loadError.value = null
-  
+
   try {
     const response = await templeService.getTempleById(templeId.value)
     const d = response?.data || response || {}
 
+    // -------- BASIC INFO --------
     form.name = d.name || d.Name || ''
     form.mainDeity = d.maindeity || d.mainDeity || d.MainDeity || d.main_deity || ''
     form.templeType = d.templetype || d.templeType || d.TempleType || d.temple_type || ''
@@ -1419,156 +1420,125 @@ const fetchTempleData = async () => {
     form.email = d.email || d.Email || ''
     form.description = d.description || d.Description || ''
 
-    form.streetAddress = d.streetaddress || d.streetAddress || d.street_address || 
-                        d.StreetAddress || d.Address || d.addressLine1 || ''
+    // -------- ADDRESS --------
+    form.streetAddress =
+      d.streetaddress || d.streetAddress || d.street_address ||
+      d.StreetAddress || d.Address || d.addressLine1 || ''
     form.city = d.city || d.City || ''
     form.state = d.state || d.State || ''
     form.district = d.district || d.District || ''
     form.pincode = d.pincode || d.Pincode || ''
     form.landmark = d.landmark || d.Landmark || ''
     form.mapLink = d.maplink || d.mapLink || d.map_link || d.MapLink || ''
-    
+
+    // -------- STATUS --------
     form.status = (d.status || d.Status || 'PENDING').toString().toUpperCase()
     form.rejectionReason = d.rejectionReason || d.rejection_reason || d.RejectionReason || ''
     form.adminNotes = d.adminNotes || d.admin_notes || d.AdminNotes || ''
 
-    existingFiles.registration = 
+    // -------- DOCUMENT FILE NAMES --------
+    existingFiles.registration =
       d.registrationCertName ||
       d.registration_cert_name ||
       d.registration_certificate_name ||
       ''
-    
+
     existingFiles.trustDeed =
       d.trustDeedName ||
       d.trust_deed_name ||
       ''
-    
+
     existingFiles.property =
       d.propertyDocsName ||
       d.property_docs_name ||
       ''
 
-    const additionalNames = 
-      d.additionalDocsNames || 
-      d.additional_docs_names || 
+    const additionalNames =
+      d.additionalDocsNames ||
+      d.additional_docs_names ||
       d.additionalDocumentsNames ||
       d.additional_documents_names ||
       []
-    
+
     existingFiles.additional = Array.isArray(additionalNames) ? additionalNames : []
 
-    existingFiles.logo = 
-      d.templeLogoName ||
-      d.temple_logo_name ||
-      d.logoName ||
-      d.logo_name ||
-      ''
-    
-    existingFiles.video = 
-      d.templeVideoName ||
-      d.temple_video_name ||
-      d.videoName ||
-      d.video_name ||
-      ''
+    // ================= MEDIA FIX (IMPORTANT PART) =================
+    let media = {}
 
-    console.log('🎬 Media files found - Logo:', existingFiles.logo, 'Video:', existingFiles.video)
+    if (d.media) {
+      try {
+        media = typeof d.media === 'string'
+          ? JSON.parse(d.media)
+          : d.media
+      } catch (e) {
+        console.error('❌ Failed to parse media JSON:', d.media)
+        media = {}
+      }
+    }
 
+    // ✅ SET MEDIA URLS (ONLY HERE)
+    mediaUrls.logo = media.logo ? fixToAbsoluteUrl(media.logo) : ''
+    mediaUrls.video = media.video ? fixToAbsoluteUrl(media.video) : ''
+
+    // ✅ SET MEDIA FILE NAMES
+    existingFiles.logo = media.logo ? getFilenameFromUrl(media.logo) : ''
+    existingFiles.video = media.video ? getFilenameFromUrl(media.video) : ''
+
+    console.log('✅ FINAL MEDIA:', media)
+    console.log('🎬 Media URLs:', mediaUrls)
+
+    // -------- DOCUMENT URLS --------
     const getFirstUrl = (obj, keys) => {
       const raw = safeGet(obj, keys)
       return fixToAbsoluteUrl(raw)
     }
 
     documentUrls.registration = getFirstUrl(d, [
-      'registrationCertUrl', 'registration_cert_url', 'registrationUrl', 
-      'registration_url', 'registrationCert', 'registration_cert'
+      'registrationCertUrl', 'registration_cert_url',
+      'registrationUrl', 'registration_url',
+      'registrationCert', 'registration_cert'
     ])
-    
+
     documentUrls.trustDeed = getFirstUrl(d, [
-      'trustDeedUrl', 'trust_deed_url', 'trustDeed', 'trust_deed'
+      'trustDeedUrl', 'trust_deed_url',
+      'trustDeed', 'trust_deed'
     ])
-    
+
     documentUrls.property = getFirstUrl(d, [
-      'propertyDocsUrl', 'property_docs_url', 'propertyUrl', 
-      'property_url', 'propertyDocs', 'property_docs'
+      'propertyDocsUrl', 'property_docs_url',
+      'propertyUrl', 'property_url',
+      'propertyDocs', 'property_docs'
     ])
 
-    mediaUrls.logo = getFirstUrl(d, [
-      'templeLogoUrl', 'temple_logo_url', 'logoUrl', 'logo_url',
-      'templeLogo', 'temple_logo'
-    ])
-    
-    mediaUrls.video = getFirstUrl(d, [
-      'templeVideoUrl', 'temple_video_url', 'videoUrl', 'video_url',
-      'templeVideo', 'temple_video'
-    ])
-
-    console.log('🎬 Media URLs:', { logo: mediaUrls.logo, video: mediaUrls.video })
-
-    const additionalDocsData = 
-      d.additionalDocuments || 
-      d.additional_documents || 
-      d.additionalDocs || 
+    // -------- ADDITIONAL DOCUMENT URLS --------
+    const additionalDocsData =
+      d.additionalDocuments ||
+      d.additional_documents ||
+      d.additionalDocs ||
       d.additional_docs ||
       d.additionalDocsUrls ||
       d.additional_docs_urls ||
       []
 
     if (Array.isArray(additionalDocsData)) {
-      documentUrls.additional = additionalDocsData.map(item => {
-        if (typeof item === 'string') {
-          return fixToAbsoluteUrl(item)
-        }
-        if (item && typeof item === 'object') {
-          const raw = item.url || item.fileUrl || item.downloadUrl || 
-                     item.path || item.file_url || item.download_url || ''
-          return fixToAbsoluteUrl(raw)
-        }
-        return ''
-      }).filter(Boolean)
-    } else if (typeof additionalDocsData === 'string') {
-      try {
-        const parsed = JSON.parse(additionalDocsData)
-        if (Array.isArray(parsed)) {
-          documentUrls.additional = parsed.map(u => fixToAbsoluteUrl(u))
-        } else {
-          documentUrls.additional = [fixToAbsoluteUrl(parsed)]
-        }
-      } catch (e) {
-        console.warn("Failed to parse additionalDocsData:", additionalDocsData)
-        documentUrls.additional = []
-      }
+      documentUrls.additional = additionalDocsData
+        .map(u => typeof u === 'string' ? fixToAbsoluteUrl(u) : '')
+        .filter(Boolean)
     } else {
       documentUrls.additional = []
     }
 
-    if (!existingFiles.registration && documentUrls.registration) {
-      existingFiles.registration = getFilenameFromUrl(documentUrls.registration)
-    }
-    if (!existingFiles.trustDeed && documentUrls.trustDeed) {
-      existingFiles.trustDeed = getFilenameFromUrl(documentUrls.trustDeed)
-    }
-    if (!existingFiles.property && documentUrls.property) {
-      existingFiles.property = getFilenameFromUrl(documentUrls.property)
-    }
-    if (!existingFiles.logo && mediaUrls.logo) {
-      existingFiles.logo = getFilenameFromUrl(mediaUrls.logo)
-    }
-    if (!existingFiles.video && mediaUrls.video) {
-      existingFiles.video = getFilenameFromUrl(mediaUrls.video)
-    }
-    
-    if (existingFiles.additional.length === 0 && documentUrls.additional.length > 0) {
+    if (!existingFiles.additional.length && documentUrls.additional.length) {
       existingFiles.additional = documentUrls.additional.map(u => getFilenameFromUrl(u))
     }
 
     console.log('✅ Final existingFiles:', existingFiles)
     console.log('✅ Final documentUrls:', documentUrls)
-    console.log('✅ Final mediaUrls:', mediaUrls)
 
     isLoading.value = false
   } catch (err) {
     console.error('Failed to load temple data', err)
-    loadError.value = (err && err.message) ? err.message : 'Unable to load details'
+    loadError.value = err?.message || 'Unable to load details'
     isLoading.value = false
   }
 }

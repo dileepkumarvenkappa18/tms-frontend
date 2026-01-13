@@ -184,6 +184,18 @@
                 />
               </div>
 
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Temple Description
+                </label>
+                <textarea
+                  v-model="formData.temple_description"
+                  rows="4"
+                  :disabled="!isEditing"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:text-gray-600"
+                ></textarea>
+              </div>
+
               <!-- Temple Logo Upload -->
               <div class="md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -191,11 +203,12 @@
                 </label>
 
                 <!-- Current Logo Display -->
-                <div v-if="logoPreview || formData.logo_url" class="mb-3">
+                <div v-if="logoPreview || currentLogoUrl" class="mb-3">
                   <img
-                    :src="logoPreview || formData.logo_url"
+                    :src="logoPreview || currentLogoUrl"
                     alt="Temple Logo"
                     class="h-32 w-auto rounded-lg border shadow-sm"
+                    @error="handleImageError"
                   />
                 </div>
 
@@ -225,7 +238,7 @@
                   </BaseButton>
 
                   <BaseButton
-                    v-if="logoPreview || formData.logo_url"
+                    v-if="logoPreview || currentLogoUrl"
                     type="button"
                     @click="removeLogo"
                     variant="secondary"
@@ -253,11 +266,12 @@
                 </label>
 
                 <!-- Current Video Display -->
-                <div v-if="videoPreview || formData.intro_video_url" class="mb-3">
+                <div v-if="videoPreview || currentVideoUrl" class="mb-3">
                   <video
-                    :src="videoPreview || formData.intro_video_url"
+                    :src="videoPreview || currentVideoUrl"
                     controls
                     class="w-full max-w-md rounded-lg border shadow-sm"
+                    @error="handleVideoError"
                   ></video>
                 </div>
 
@@ -287,7 +301,7 @@
                   </BaseButton>
 
                   <BaseButton
-                    v-if="videoPreview || formData.intro_video_url"
+                    v-if="videoPreview || currentVideoUrl"
                     type="button"
                     @click="removeVideo"
                     variant="secondary"
@@ -308,17 +322,7 @@
                 </p>
               </div>
 
-              <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Temple Description
-                </label>
-                <textarea
-                  v-model="formData.temple_description"
-                  rows="4"
-                  :disabled="!isEditing"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:text-gray-600"
-                ></textarea>
-              </div>
+              
             </div>
           </div>
         </BaseCard>
@@ -359,7 +363,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import api from '@/plugins/axios'
 import { useToast } from '@/composables/useToast'
 import BaseCard from '@/components/common/BaseCard.vue'
@@ -367,6 +371,21 @@ import BaseInput from '@/components/common/BaseInput.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 
 const { success, error: showError } = useToast()
+
+// Helper function to convert relative URLs to proper URLs
+// Since baseURL is '/api/v1', we need to handle media files differently
+const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
+
+const getMediaUrl = (path) => {
+  if (!path) return ''
+
+  // If already absolute
+  if (path.startsWith('http')) return path
+
+  // ✅ Backend already serves /uploads/*
+  return `${BACKEND_URL}${path}`
+}
 
 // State
 const profile = ref(null)
@@ -396,6 +415,26 @@ const formData = ref({
   logo_url: '',
   intro_video_url: ''
 })
+
+const currentLogoUrl = computed(() =>
+  getMediaUrl(formData.value.logo_url)
+)
+
+const currentVideoUrl = computed(() =>
+  getMediaUrl(formData.value.intro_video_url)
+)
+
+
+// Error handlers
+const handleImageError = (event) => {
+  console.error('❌ Error loading logo:', event.target.src)
+  showError('Failed to load temple logo')
+}
+
+const handleVideoError = (event) => {
+  console.error('❌ Error loading video:', event.target.src)
+  showError('Failed to load temple video')
+}
 
 // File Upload Methods
 const handleLogoChange = (event) => {
@@ -470,12 +509,12 @@ const removeVideo = () => {
 
 // Upload file to server
 const uploadFile = async (file, type) => {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('type', type)
+  const uploadFormData = new FormData()
+  uploadFormData.append('file', file)
+  uploadFormData.append('type', type)
 
   try {
-    const response = await api.post('/tenant/upload', formData, {
+    const response = await api.post('/tenant/upload', uploadFormData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -515,6 +554,8 @@ const fetchProfile = async () => {
     }
 
     console.log('✅ Form data populated:', formData.value)
+    console.log('🖼️ Logo URL:', currentLogoUrl.value)
+    console.log('🎥 Video URL:', currentVideoUrl.value)
   } catch (err) {
     console.error('❌ Error fetching profile:', err)
     console.error('❌ Error response:', err.response?.data)

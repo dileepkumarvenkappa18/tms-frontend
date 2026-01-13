@@ -954,8 +954,8 @@ normalizeTempleData(temple) {
     state: getField(temple, 'state', 'State'),
     district: getField(temple, 'district', 'District'),
     pincode: getField(temple, 'pincode', 'Pincode'),
-    landmark: getField(temple, 'landmark', 'Landmark'),  // ADDED landmark
-    mapLink: getField(temple, 'map_link', 'mapLink', 'maplink', 'MapLink'),  // ADDED mapLink
+    landmark: getField(temple, 'landmark', 'Landmark'),
+    mapLink: getField(temple, 'map_link', 'mapLink', 'maplink', 'MapLink'),
     country: 'India',
 
     // Contact
@@ -964,6 +964,10 @@ normalizeTempleData(temple) {
 
     // Status
     status: getField(temple, 'status', 'Status') || 'pending',
+    
+    // 🆕 CRITICAL FIX: Extract media object
+    //media: temple.media || null,
+    media: temple.media || temple.Media || null,
     
     // Rejection/approval data
     rejectionReason: getField(temple, 'rejection_reason', 'rejectionReason', 'admin_notes', 'adminNotes'),
@@ -974,8 +978,8 @@ normalizeTempleData(temple) {
     devoteeCount: temple.devotee_count || temple.DevoteeCount || 0,
     volunteersCount: temple.volunteers_count || temple.VolunteersCount || 0,
 
-    // Image
-    image: getField(temple, 'image_url', 'ImageUrl'),
+    // Image - also check media.logo
+    image: temple.media?.logo || getField(temple, 'image_url', 'ImageUrl'),
 
     // Main deity
     mainDeity: getField(temple, 'main_deity', 'mainDeity', 'maindeity', 'MainDeity'),
@@ -991,7 +995,7 @@ normalizeTempleData(temple) {
     createdBy: getField(temple, 'created_by', 'CreatedBy'),
     tenantId: getField(temple, 'tenant_id', 'TenantId', 'created_by', 'CreatedBy'),
 
-    // Document URLs - ADDED additional documents support
+    // Document URLs
     registrationCertUrl: getField(temple, 'registration_cert_url', 'RegistrationCertUrl'),
     trustDeedUrl: getField(temple, 'trust_deed_url', 'TrustDeedUrl'),
     propertyDocsUrl: getField(temple, 'property_docs_url', 'PropertyDocsUrl'),

@@ -72,10 +72,7 @@
           </div>
         </div>
           <div class="flex items-center space-x-4">
-            <div class="bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
-              <span class="text-indigo-800 font-medium">{{ userStore.user?.name || userStore.user?.fullName }}</span>
-              <span class="text-indigo-600 text-sm ml-2">({{ userRoleDisplay }})</span>
-            </div>
+            
           </div>
         </div>
       </div>
