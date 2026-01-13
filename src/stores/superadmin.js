@@ -584,10 +584,14 @@ async function updateUser(userId, userData) {
   userActionError.value = null
 
   try {
-    // ✅ USE userData DIRECTLY (DO NOT REBUILD)
+    // ✅ Start with incoming data
     const payload = { ...userData }
 
-    // ✅ REMOVE empty strings, null, undefined
+    // ❌ NEVER allow these fields during update
+    delete payload.role
+    delete payload.password
+
+    // ✅ Remove empty, null, undefined values
     Object.keys(payload).forEach(key => {
       if (
         payload[key] === '' ||
@@ -600,22 +604,29 @@ async function updateUser(userId, userData) {
 
     console.log('📦 Final payload sent to backend:', payload)
 
+    // ✅ Call API
     await superAdminService.updateUser(userId, payload)
 
+    // ✅ Success response for UI
     return {
       success: true,
       message: 'User updated successfully'
     }
   } catch (error) {
     console.error('❌ Update user failed:', error)
+
     return {
       success: false,
-      error: error.response?.data?.message || error.message
+      error:
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to update user'
     }
   } finally {
     loadingUserAction.value = false
   }
 }
+
 
 
 

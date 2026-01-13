@@ -917,10 +917,8 @@ const form = ref({
 
 const errors = ref({})
 
-// File upload handlers
-// Add these fixed upload handlers to your UserManagement.vue <script setup> section
-// Replace your existing handleLogoUpload and handleVideoUpload functions with these:
 
+// ✅ FIXED: Logo upload handler
 const handleLogoUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -950,6 +948,12 @@ const handleLogoUpload = async (event) => {
 
     const formData = new FormData()
     formData.append('logo', file)
+    
+    // ✅ Send targetUserId when editing
+    if (isEditing.value && editingUserId.value) {
+      formData.append('targetUserId', editingUserId.value.toString())
+      console.log('📤 Uploading logo for user ID:', editingUserId.value)
+    }
 
     console.log('📤 Uploading logo:', file.name, file.size, file.type)
 
@@ -957,28 +961,11 @@ const handleLogoUpload = async (event) => {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    console.log('✅ Logo upload full response:', response)
-    console.log('✅ Response.data:', response.data)
-    console.log('✅ Response structure:', JSON.stringify(response.data, null, 2))
-
-    // Try multiple possible response structures
-    let logoUrl = null
+    // ✅ FIX: response itself contains the data, not response.data
+    console.log('✅ Full response object:', response)
     
-    // Option 1: response.data.data.url (new structure)
-    if (response.data?.data?.url) {
-      logoUrl = response.data.data.url
-      console.log('✅ Found URL in response.data.data.url')
-    }
-    // Option 2: response.data.url (direct)
-    else if (response.data?.url) {
-      logoUrl = response.data.url
-      console.log('✅ Found URL in response.data.url')
-    }
-    // Option 3: response.url (very direct)
-    else if (response.url) {
-      logoUrl = response.url
-      console.log('✅ Found URL in response.url')
-    }
+    // The URL is directly in response.url, not response.data.url
+    const logoUrl = response.url || response.data?.url
 
     if (logoUrl) {
       form.value.templeDetails.logoUrl = logoUrl
@@ -986,14 +973,12 @@ const handleLogoUpload = async (event) => {
       success('Logo uploaded successfully!')
       console.log('✅ Logo URL set to:', logoUrl)
     } else {
-      console.error('❌ Could not find URL in response:', response)
+      console.error('❌ No URL found. Response:', response)
       throw new Error('No URL in logo upload response')
     }
   } catch (err) {
     console.error('❌ Logo upload error:', err)
-    console.error('❌ Full error object:', JSON.stringify(err, null, 2))
-    logoUploadError.value =
-      err.response?.data?.error || err.message || 'Failed to upload logo'
+    logoUploadError.value = err.response?.data?.error || err.message || 'Failed to upload logo'
     error(logoUploadError.value)
 
     logoPreview.value = null
@@ -1003,6 +988,7 @@ const handleLogoUpload = async (event) => {
   }
 }
 
+// ✅ FIXED: Video upload handler
 const handleVideoUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -1030,9 +1016,14 @@ const handleVideoUpload = async (event) => {
     }
     reader.readAsDataURL(file)
 
-    // Upload to server
     const formData = new FormData()
     formData.append('video', file)
+    
+    // ✅ Send targetUserId when editing
+    if (isEditing.value && editingUserId.value) {
+      formData.append('targetUserId', editingUserId.value.toString())
+      console.log('📤 Uploading video for user ID:', editingUserId.value)
+    }
 
     console.log('📤 Uploading video:', file.name, 'Size:', file.size, 'Type:', file.type)
 
@@ -1040,28 +1031,11 @@ const handleVideoUpload = async (event) => {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    console.log('✅ Video upload full response:', response)
-    console.log('✅ Response.data:', response.data)
-    console.log('✅ Response structure:', JSON.stringify(response.data, null, 2))
-
-    // Try multiple possible response structures
-    let videoUrl = null
+    // ✅ FIX: response itself contains the data, not response.data
+    console.log('✅ Full response object:', response)
     
-    // Option 1: response.data.data.url (new structure)
-    if (response.data?.data?.url) {
-      videoUrl = response.data.data.url
-      console.log('✅ Found URL in response.data.data.url')
-    }
-    // Option 2: response.data.url (direct)
-    else if (response.data?.url) {
-      videoUrl = response.data.url
-      console.log('✅ Found URL in response.data.url')
-    }
-    // Option 3: response.url (very direct)
-    else if (response.url) {
-      videoUrl = response.url
-      console.log('✅ Found URL in response.url')
-    }
+    // The URL is directly in response.url, not response.data.url
+    const videoUrl = response.url || response.data?.url
 
     if (videoUrl) {
       form.value.templeDetails.introVideoUrl = videoUrl
@@ -1069,12 +1043,11 @@ const handleVideoUpload = async (event) => {
       success('Video uploaded successfully!')
       console.log('✅ Video URL set to:', videoUrl)
     } else {
-      console.error('❌ Could not find URL in response:', response)
+      console.error('❌ No URL found. Response:', response)
       throw new Error('No URL in video upload response')
     }
   } catch (err) {
     console.error('❌ Video upload error:', err)
-    console.error('❌ Full error object:', JSON.stringify(err, null, 2))
     
     const errorMessage = err.response?.data?.error || err.message || 'Failed to upload video'
     videoUploadError.value = errorMessage
@@ -1378,12 +1351,12 @@ const handleSubmitUser = async () => {
     let userData = {
       fullName: form.value.fullName,
       email: form.value.email,
-      phone: form.value.phone,
-      role: form.value.role
+      phone: form.value.phone
     }
 
-    // Password only on create
+    // ✅ role + password ONLY on create
     if (!isEditing.value) {
+      userData.role = form.value.role
       userData.password = form.value.password
     }
 
@@ -1417,7 +1390,6 @@ const handleSubmitUser = async () => {
       result = await superAdminStore.createUser(userData)
     }
 
-    // ✅ FIXED SUCCESS CHECK
     if (result?.message) {
       registrationSuccess.value = true
       success(result.message)
