@@ -208,16 +208,49 @@ const fetchUpcomingEvents = async (entityId) => {
   /**
    * Get entity details
    */
-  const fetchEntityDetails = async (entityId) => {
-    try {
-      //const response = await axios.get(`${API_URL}/entities/${entityId}`, createAuthHeader())
-      const response = await axios.get(`/entities/${entityId}`, createAuthHeader())
-      return response.data
-    } catch (err) {
-      console.error('Error fetching entity details:', err)
-      throw handleError(err)
+  /**
+ * Get entity details with proper error handling and fallback
+ */
+const fetchEntityDetails = async (entityId) => {
+  console.log('🎯 NEW FUNCTION: Fetching entity details for:', entityId)
+  
+  try {
+    // Get the dashboard response which we know returns 200
+    const dashResponse = await axios.get(`/entity/${entityId}/devotee/dashboard`)
+    
+    console.log('🎯 Dashboard response received!')
+    console.log('🎯 Full response data:', dashResponse.data)
+    console.log('🎯 Response keys:', Object.keys(dashResponse.data))
+    
+    // Try to find entity/temple data
+    let entityData = null
+    
+    if (dashResponse.data.entityDetails) {
+      entityData = dashResponse.data.entityDetails
+      console.log('✅ Found in: entityDetails')
+    } else if (dashResponse.data.entity) {
+      entityData = dashResponse.data.entity
+      console.log('✅ Found in: entity')
+    } else if (dashResponse.data.temple) {
+      entityData = dashResponse.data.temple
+      console.log('✅ Found in: temple')
+    } else {
+      console.warn('⚠️ No entity data in dashboard response')
     }
+    
+    if (entityData) {
+      console.log('🎯 Entity data found:', entityData)
+      console.log('🎯 Media field:', entityData.media || entityData.Media || 'NONE')
+      entityDetails.value = entityData
+      return entityData
+    }
+    
+    return null
+  } catch (err) {
+    console.error('❌ Error in fetchEntityDetailsNew:', err)
+    return null
   }
+};
 
   /**
    * Get user profile and memberships

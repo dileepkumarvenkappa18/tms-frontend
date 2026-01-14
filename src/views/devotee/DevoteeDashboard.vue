@@ -1,440 +1,474 @@
 <template>
   <div>
-  <!-- Temple Header Bar -->
-<!-- Temple Header Bar -->
-<div class="bg-white shadow-lg">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center space-x-4">
-        <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-          <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-          </svg>
-        </div>
-        <div v-if="currentTemple?.name">
-          <h1 class="text-lg font-semibold text-gray-900">
-            {{ currentTemple.name }}
-          </h1>
-          <p class="text-sm text-gray-500" v-if="currentTemple.city && currentTemple.state">
-            {{ currentTemple.city }}, {{ currentTemple.state }}
-          </p>
+    <!-- Temple Header Bar with Logo and Video -->
+    <div class="bg-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <!-- Temple Logo Icon -->
+            <div 
+              class="h-14 w-14 rounded-full overflow-hidden bg-indigo-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+              @click="openTempleVideo"
+            >
+              <img
+                v-if="getTempleMedia().logo"
+                :src="getTempleMedia().logo"
+                @error="handleLogoError"
+                class="h-full w-full object-cover"
+                alt="Temple Logo"
+              />
+              <svg 
+                v-else
+                class="h-8 w-8 text-indigo-600" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            
+            <div v-if="currentTemple?.name">
+              <!-- Temple Name - Clickable to open video -->
+              <h1 
+                class="text-lg font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-2"
+                @click="openTempleVideo"
+              >
+                {{ currentTemple.name }}
+                <!-- Video indicator icon -->
+                <svg 
+                  v-if="getTempleMedia().video"
+                  class="h-5 w-5 text-indigo-500 animate-pulse" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </h1>
+              <p class="text-sm text-gray-500" v-if="currentTemple.city && currentTemple.state">
+                {{ currentTemple.city }}, {{ currentTemple.state }}
+              </p>
+            </div>
+          </div>
+          
+          <!-- User Info -->
+          <div class="flex items-center space-x-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-gray-900 font-medium text-sm">{{ currentUser?.name || 'Devotee' }}</p>
+              <p class="text-gray-500 text-xs">{{ currentUser?.email || '' }}</p>
+            </div>
+            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
-      
-      <!-- User Info -->
-      <div class="flex items-center space-x-3">
-        <div class="text-right hidden sm:block">
-          <p class="text-gray-900 font-medium text-sm">{{ currentUser?.name || 'Devotee' }}</p>
-          <p class="text-gray-500 text-xs">{{ currentUser?.email || '' }}</p>
-        </div>
-        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-          <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+    </div>
+
+    <!-- Video Modal -->
+    <div
+      v-if="showVideoModal"
+      class="fixed inset-0 bg-black bg-opacity-98 flex items-center justify-center p-4 z-50 overflow-hidden"
+      @click="closeVideoModal"
+    >
+      <div class="relative w-full h-full max-w-7xl mx-auto flex flex-col" @click.stop>
+        <!-- Close Button -->
+        <button
+          @click="closeVideoModal"
+          class="absolute top-6 right-6 z-50 text-white hover:text-gray-200 transition-all duration-300 flex items-center gap-2 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20 hover:bg-black/80 hover:scale-105"
+        >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
+          <span class="text-sm font-semibold">Close Video</span>
+        </button>
+        
+        <!-- Temple Name Title -->
+        <div class="absolute top-6 left-6 z-50 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20">
+          <h2 class="text-white text-lg font-semibold">{{ currentTemple?.name }}</h2>
+        </div>
+        
+        <!-- Video Player -->
+        <div class="flex-1 w-full flex items-center justify-center relative">
+          <video
+            v-if="currentVideoUrl"
+            ref="videoPlayer"
+            :src="currentVideoUrl"
+            controls
+            autoplay
+            playsinline
+            class="w-full h-full max-w-6xl max-h-[85vh] object-contain rounded-3xl shadow-2xl"
+          >
+            Your browser does not support the video tag.
+          </video>
+          
+          <!-- No Video Message -->
+          <div v-else class="text-center text-white">
+            <svg class="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            <p class="text-lg">Temple video not available</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Welcome Banner -->
+      <WelcomeBanner 
+        :user="currentUser" 
+        :temple="currentTemple"
+        role="devotee"
+        class="mb-8"
+        v-if="currentUser && currentTemple"
+      />
+
+      <!-- Profile Completion Alert -->
+      <div v-if="profileCompletionPercentage < 100" class="mb-6">
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+            <div class="ml-3 flex-1">
+              <h3 class="text-sm font-medium text-amber-800">Complete Your Profile</h3>
+              <p class="text-sm text-amber-700 mt-1">
+                Your profile is {{ profileCompletionPercentage }}% complete. 
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/profile/create`" 
+                  class="font-medium text-amber-800 hover:text-amber-900 underline"
+                >
+                  Complete now
+                </router-link>
+              </p>
+            </div>
+            <div class="ml-4">
+              <div class="w-16 h-2 bg-amber-200 rounded-full">
+                <div 
+                  class="h-2 bg-amber-500 rounded-full transition-all duration-300"
+                  :style="{ width: `${profileCompletionPercentage}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="flex items-center justify-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <span class="ml-3 text-gray-600">Loading dashboard...</span>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="bg-white rounded-xl shadow-md p-8 text-center">
+        <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h3 class="mt-2 text-lg font-medium text-gray-900">Unable to load dashboard</h3>
+        <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+        <button 
+          @click="loadDashboardData"
+          class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Try Again
+        </button>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div v-else>
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <!-- Seva Bookings Card -->
+          <router-link 
+            :to="{ name: 'DevoteeMySevaBookings', params: { id: $route.params.id } }"
+            class="block"
+          >
+            <DashboardWidget 
+              title="Seva Bookings"
+              :value="sevaCount"
+              icon="calendar"
+              color="indigo"
+              :subtitle="`${upcomingSevaCount} Sevas Booked`"
+            />
+          </router-link>
+
+          <!-- Total Events Card -->
+          <router-link 
+            :to="{ name: 'DevoteeMyEvents', params: { id: $route.params.id } }"
+            class="block"
+          >
+            <DashboardWidget 
+              title="Total Events"
+              :value="eventCount"
+              icon="calendar-days"
+              color="emerald"
+              :subtitle="`${upcomingEventCount} upcoming`"
+            />
+          </router-link>
+
+          <!-- Birthday Card -->
+          <DashboardWidget 
+            title="My Birthday"
+            :value="formatBirthday()"
+            icon="cake"
+            color="purple"
+            :subtitle="getBirthdaySubtitle()"
+          />
+          
+          <!-- Temple Profile Card -->
+          <router-link 
+            :to="{ name: 'DevoteeTempleSelection' }"
+            class="block transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 rounded-lg"
+          >
+            <DashboardWidget 
+              title="Temple Profile"
+              :value="currentTemple ? 'Active' : 'Select Temple'"
+              icon="building-library"
+              color="rose"
+              :subtitle="currentTemple ? currentTemple.name : 'Join a temple'"
+              class="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            />
+          </router-link>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Left Column - Activities Feed -->
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Recent Donations -->
+            <BaseCard class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Recent Donations</h3>
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/donations`"
+                  class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  View All
+                </router-link>
+              </div>
+              
+              <div v-if="recentDonations && recentDonations.length > 0" class="space-y-3">
+                <div 
+                  v-for="donation in recentDonations" 
+                  :key="donation.id"
+                  class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                      <div class="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">₹{{ donation.amount || 0 }}</p>
+                      <p class="text-xs text-gray-500">
+                        {{ formatDate(donation.created_at || donation.date) }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-else class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No recent donations</h3>
+                <p class="mt-1 text-sm text-gray-500">Make your first donation to support the temple.</p>
+                <div class="mt-6">
+                  <router-link 
+                    :to="`/entity/${route.params.id}/devotee/donations`"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Donate Now
+                  </router-link>
+                </div>
+              </div>
+            </BaseCard>
+
+            <!-- My Seva Bookings -->
+            <BaseCard class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">My Seva Bookings</h3>
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/my-seva-bookings`"
+                  class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  View All
+                </router-link>
+              </div>
+              
+              <div v-if="loadingRecentSevas" class="text-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                <span class="mt-2 text-sm text-gray-500 block">Loading seva bookings...</span>
+              </div>
+              
+              <div v-else-if="recentSevaBookings && recentSevaBookings.length > 0" class="space-y-3">
+                <div 
+                  v-for="booking in recentSevaBookings.slice(0, 3)" 
+                  :key="getId(booking)"
+                  class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                >
+                  <div class="flex items-center space-x-4">
+                    <div class="flex-shrink-0">
+                      <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-900">{{ getSevaName(booking) }}</p>
+                      <p class="text-xs text-gray-500">
+                        {{ formatBookingDate(booking) }}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <span 
+                      :class="getStatusClass(getStatus(booking))" 
+                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    >
+                      {{ (getStatus(booking)).charAt(0).toUpperCase() + (getStatus(booking)).slice(1) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No upcoming sevas</h3>
+                <p class="mt-1 text-sm text-gray-500">Book your first seva to get started.</p>
+                <div class="mt-6">
+                  <router-link 
+                    :to="`/entity/${route.params.id}/devotee/seva-booking`"
+                    class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Book Seva
+                  </router-link>
+                </div>
+              </div>
+            </BaseCard>
+          </div>
+
+          <!-- Right Column - Events & Notifications -->
+          <div class="space-y-6">
+            <!-- Upcoming Events -->
+            <BaseCard class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Upcoming Events</h3>
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/events`"
+                  class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                >
+                  View All
+                </router-link>
+              </div>
+              
+              <div v-if="upcomingEvents && upcomingEvents.length > 0" class="space-y-4">
+                <div 
+                  v-for="event in upcomingEvents" 
+                  :key="event.id"
+                  class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors"
+                >
+                  <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                      <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-semibold">{{ formatEventDate(event.event_date || event.date) }}</span>
+                      </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-900 truncate">{{ event.title || event.name }}</p>
+                      <p class="text-xs text-gray-500 mt-1">{{ formatDate(event.event_date || event.date) }}</p>
+                      <div class="mt-2 flex items-center space-x-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                          {{ event.status || 'Upcoming' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-else class="text-center py-6">
+                <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">No upcoming events</p>
+              </div>
+            </BaseCard>
+
+            <!-- Notifications -->
+            <BaseCard class="p-6" v-if="notifications && notifications.length > 0">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
+              
+              <div class="space-y-3">
+                <div 
+                  v-for="notification in notifications" 
+                  :key="notification.id"
+                  class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
+                >
+                  <div class="flex-shrink-0">
+                    <div class="w-2 h-2 bg-indigo-500 rounded-full mt-2"></div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-900">{{ notification.message }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ formatDate(notification.date) }}</p>
+                  </div>
+                </div>
+              </div>
+            </BaseCard>
+
+            <!-- Quick Actions -->
+            <BaseCard class="p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div class="space-y-3">
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/donations`"
+                  class="inline-flex items-center justify-center w-full px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  Donate Now
+                </router-link>
+                
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/seva-booking`"
+                  class="inline-flex items-center justify-center w-full px-4 py-2 border border-indigo-300 shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  Book Seva
+                </router-link>
+                
+                <router-link 
+                  :to="`/entity/${route.params.id}/devotee/profile/edit`"
+                  class="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  Edit Profile
+                </router-link>
+              </div>
+            </BaseCard>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
-
-<!-- Main Content Container -->
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Welcome Banner -->
-    <WelcomeBanner 
-      :user="currentUser" 
-      :temple="currentTemple"
-      role="devotee"
-      class="mb-8"
-      v-if="currentUser && currentTemple"
-    />
-
-    <!-- Profile Completion Alert -->
-    <div v-if="profileCompletionPercentage < 100" class="mb-6">
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <div class="flex items-center">
-          <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
-          </div>
-          <div class="ml-3 flex-1">
-            <h3 class="text-sm font-medium text-amber-800">Complete Your Profile</h3>
-            <p class="text-sm text-amber-700 mt-1">
-              Your profile is {{ profileCompletionPercentage }}% complete. 
-                <router-link 
-                :to="`/entity/${route.params.id}/devotee/profile/create`" 
-                class="font-medium text-amber-800 hover:text-amber-900 underline"
-              >
-                Complete now
-              </router-link>
-            </p>
-          </div>
-          <div class="ml-4">
-            <div class="w-16 h-2 bg-amber-200 rounded-full">
-              <div 
-                class="h-2 bg-amber-500 rounded-full transition-all duration-300"
-                :style="{ width: `${profileCompletionPercentage}%` }"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      <span class="ml-3 text-gray-600">Loading dashboard...</span>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="bg-white rounded-xl shadow-md p-8 text-center">
-      <svg class="mx-auto h-12 w-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-      <h3 class="mt-2 text-lg font-medium text-gray-900">Unable to load dashboard</h3>
-      <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-      <button 
-        @click="loadDashboardData"
-        class="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-      >
-        Try Again
-      </button>
-    </div>
-
-    <!-- Dashboard Content -->
-    <div v-else>
-      <!-- Dashboard Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <!-- Seva Bookings Card -->
-        <router-link 
-          :to="{ name: 'DevoteeMySevaBookings', params: { id: $route.params.id } }"
-          class="block"
-        >
-         <DashboardWidget 
-  title="Seva Bookings"
-  :value="sevaCount"
-  icon="calendar"
-  color="indigo"
-  :subtitle="`${upcomingSevaCount} Sevas Booked`"
-/>
-        </router-link>
-
-        <!-- Total Events Card -->
-        <router-link 
-          :to="{ name: 'DevoteeMyEvents', params: { id: $route.params.id } }"
-          class="block"
-        >
-          <DashboardWidget 
-            title="Total Events"
-            :value="eventCount"
-            icon="calendar-days"
-            color="emerald"
-            :subtitle="`${upcomingEventCount} upcoming`"
-          />
-        </router-link>
-
-        <!-- NEW: Birthday Card -->
-        <DashboardWidget 
-          title="My Birthday"
-          :value="formatBirthday()"
-          icon="cake"
-          color="purple"
-          :subtitle="getBirthdaySubtitle()"
-        />
-        <router-link 
-          :to="{ name: 'DevoteeTempleSelection' }"
-          class="block transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 rounded-lg"
-        >
-          <DashboardWidget 
-            title="Temple Profile"
-            :value="currentTemple ? 'Active' : 'Select Temple'"
-            icon="building-library"
-            color="rose"
-            :subtitle="currentTemple ? currentTemple.name : 'Join a temple'"
-            class="cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          />
-        </router-link>
-      </div>
-
-      <!-- Main Content Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Left Column - Activities Feed -->
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Recent Donations -->
-          <BaseCard class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Recent Donations</h3>
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/donations`"
-                class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-              >
-                View All
-              </router-link>
-            </div>
-            
-            <div v-if="recentDonations && recentDonations.length > 0" class="space-y-3">
-              <div 
-                v-for="donation in recentDonations" 
-                :key="donation.id"
-                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
-                <div class="flex items-center space-x-4">
-                  <div class="flex-shrink-0">
-                    <div class="w-10 h-10 bg-rose-100 rounded-full flex items-center justify-center">
-                      <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900">₹{{ donation.amount || 0 }}</p>
-                    <p class="text-xs text-gray-500">
-                      {{ formatDate(donation.created_at || donation.date) }}
-                    </p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <!-- <span 
-                    :class="getDonationStatusClass(donation.status || 'completed')" 
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  >
-                    {{ donation.status || 'Completed' }}
-                  </span> -->
-                </div>
-              </div>
-            </div>
-            
-            <div v-else class="text-center py-8">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900">No recent donations</h3>
-              <p class="mt-1 text-sm text-gray-500">Make your first donation to support the temple.</p>
-              <div class="mt-6">
-                <router-link 
-                  :to="`/entity/${route.params.id}/devotee/donations`"
-                  class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Donate Now
-                </router-link>
-              </div>
-            </div>
-          </BaseCard>
-
-          <!-- My Seva Bookings -->
-          <BaseCard class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">My Seva Bookings</h3>
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/my-seva-bookings`"
-                class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-              >
-                View All
-              </router-link>
-            </div>
-            
-            <div v-if="loadingRecentSevas" class="text-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-              <span class="mt-2 text-sm text-gray-500 block">Loading seva bookings...</span>
-            </div>
-            
-            <div v-else-if="recentSevaBookings && recentSevaBookings.length > 0" class="space-y-3">
-              <div 
-                v-for="booking in recentSevaBookings.slice(0, 3)" 
-                :key="getId(booking)"
-                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
-                <div class="flex items-center space-x-4">
-                  <div class="flex-shrink-0">
-                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900">{{ getSevaName(booking) }}</p>
-                    <p class="text-xs text-gray-500">
-                      {{ formatBookingDate(booking) }}
-                    </p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <span 
-                    :class="getStatusClass(getStatus(booking))" 
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  >
-                    {{ (getStatus(booking)).charAt(0).toUpperCase() + (getStatus(booking)).slice(1) }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div v-else-if="mySevaBookings && mySevaBookings.length > 0" class="space-y-3">
-              <div 
-                v-for="booking in mySevaBookings.slice(0, 3)" 
-                :key="booking.id"
-                class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
-                <div class="flex items-center space-x-4">
-                  <div class="flex-shrink-0">
-                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900">{{ booking.seva?.name || booking.name }}</p>
-                    <p class="text-xs text-gray-500">
-                      {{ formatDate(booking.booking_date) }} at {{ formatTime(booking.booking_time) }}
-                    </p>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <span 
-                    :class="getStatusClass(booking.status || 'pending')" 
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  >
-                    {{ booking.status || 'Pending' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <div v-else class="text-center py-8">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <h3 class="mt-2 text-sm font-medium text-gray-900">No upcoming sevas</h3>
-              <p class="mt-1 text-sm text-gray-500">Book your first seva to get started.</p>
-              <div class="mt-6">
-                <router-link 
-                  :to="`/entity/${route.params.id}/devotee/seva-booking`"
-                  class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Book Seva
-                </router-link>
-              </div>
-            </div>
-          </BaseCard>
-
-          <!-- Temple Info -->
-          
-        </div>
-
-        <!-- Right Column - Events & Notifications -->
-        <div class="space-y-6">
-          <!-- Upcoming Events -->
-          <BaseCard class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">Upcoming Events</h3>
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/events`"
-                class="text-sm font-medium text-indigo-600 hover:text-indigo-700"
-              >
-                View All
-              </router-link>
-            </div>
-            
-            <div v-if="upcomingEvents && upcomingEvents.length > 0" class="space-y-4">
-              <div 
-                v-for="event in upcomingEvents" 
-                :key="event.id"
-                class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors"
-              >
-                <div class="flex items-start space-x-3">
-                  <div class="flex-shrink-0">
-                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <span class="text-white font-semibold">{{ formatEventDate(event.event_date || event.date) }}</span>
-                    </div>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ event.title || event.name }}</p>
-                    <p class="text-xs text-gray-500 mt-1">{{ formatDate(event.event_date || event.date) }}</p>
-                    <div class="mt-2 flex items-center space-x-2">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        {{ event.status || 'Upcoming' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div v-else class="text-center py-6">
-              <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <p class="mt-2 text-sm text-gray-500">No upcoming events</p>
-            </div>
-          </BaseCard>
-
-          <!-- Notifications -->
-          <BaseCard class="p-6" v-if="notifications && notifications.length > 0">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Notifications</h3>
-            
-            <div class="space-y-3">
-              <div 
-                v-for="notification in notifications" 
-                :key="notification.id"
-                class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
-              >
-                <div class="flex-shrink-0">
-                  <div class="w-2 h-2 bg-indigo-500 rounded-full mt-2"></div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm text-gray-900">{{ notification.message }}</p>
-                  <p class="text-xs text-gray-500 mt-1">{{ formatDate(notification.date) }}</p>
-                </div>
-              </div>
-            </div>
-          </BaseCard>
-
-          <!-- Quick Actions -->
-          <BaseCard class="p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div class="space-y-3">
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/donations`"
-                class="inline-flex items-center justify-center w-full px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                Donate Now
-              </router-link>
-              
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/seva-booking`"
-                class="inline-flex items-center justify-center w-full px-4 py-2 border border-indigo-300 shadow-sm text-sm font-medium rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                Book Seva
-              </router-link>
-              
-              <router-link 
-                :to="`/entity/${route.params.id}/devotee/profile/edit`"
-                class="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-                Edit Profile
-              </router-link>
-            </div>
-          </BaseCard>
-
-          <!-- Temple Information -->
-         
-        </div>
-      </div>
-    </div>
-</div>
-</div>
 </template>
 
 <script setup>
@@ -458,6 +492,114 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 
 // Define props to handle the 'id' attribute that's being passed
+// Add these refs at the top with your other refs
+const showVideoModal = ref(false)
+const currentVideoUrl = ref(null)
+const videoPlayer = ref(null)
+
+const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+const getFullMediaUrl = (path) => {
+  if (!path) {
+    console.log('No path provided to getFullMediaUrl');
+    return null;
+  }
+  
+  console.log('Converting path to full URL:', path);
+  
+  // Already a full URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    console.log('Path is already full URL:', path);
+    return path;
+  }
+  
+  // Remove leading slash if present, we'll add it
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // Construct full URL
+  const fullUrl = `${BACKEND_ORIGIN}${cleanPath}`;
+  console.log('Constructed full URL:', fullUrl);
+  
+  return fullUrl;
+};
+// Get temple media (logo and video) - add with your other methods
+const getTempleMedia = () => {
+  try {
+    if (!currentTemple.value) {
+      console.log('❌ No current temple');
+      return { logo: null, video: null };
+    }
+
+    const temple = currentTemple.value;
+    console.log('🔍 Getting media for temple:', temple.name || temple.Name);
+
+    let logo = null;
+    let video = null;
+
+    // Strategy 1: Check for media object
+    if (temple.media) {
+      const media = typeof temple.media === 'string' ? JSON.parse(temple.media) : temple.media;
+      logo = media.logo || media.Logo || media.logo_url || media.logoUrl;
+      video = media.video || media.Video || media.video_url || media.videoUrl || media.intro_video_url;
+    }
+
+    // Strategy 2: Check for direct fields
+    if (!logo) {
+      logo = temple.logo_url || temple.logoUrl || temple.logo || temple.Logo;
+    }
+    if (!video) {
+      video = temple.intro_video_url || temple.videoUrl || temple.video || temple.Video;
+    }
+
+    const result = {
+      logo: logo ? getFullMediaUrl(logo) : null,
+      video: video ? getFullMediaUrl(video) : null
+    };
+
+    console.log('✅ Final media result:', result);
+    return result;
+
+  } catch (e) {
+    console.error('❌ Error getting temple media:', e);
+    return { logo: null, video: null };
+  }
+};
+// Open temple video modal
+const openTempleVideo = () => {
+  if (!currentTemple.value?.media) {
+  console.warn('⚠️ Temple has no media yet, waiting for entityDetails');
+  return { logo: null, video: null };
+}
+if (!currentTemple.value?.media) {
+  console.warn('⚠️ Temple has no media yet, waiting for entityDetails');
+  return { logo: null, video: null };
+}
+
+  const { video } = getTempleMedia()
+  if (video) {
+    currentVideoUrl.value = video
+    showVideoModal.value = true
+  } else {
+    console.log('Temple video not available')
+    // You can add a toast notification here if you want
+  }
+}
+
+// Close video modal
+const closeVideoModal = () => {
+  showVideoModal.value = false
+  if (videoPlayer.value) {
+    videoPlayer.value.pause()
+    videoPlayer.value.currentTime = 0
+  }
+  currentVideoUrl.value = null
+}
+
+// Handle logo error
+const handleLogoError = (event) => {
+  console.error('Temple logo failed to load:', event.target.src)
+  event.target.style.display = 'none'
+}
 const props = defineProps({
   id: {
     type: [String, Number],
@@ -652,31 +794,39 @@ const lockCounters = () => {
 // Computed properties
 const currentUser = computed(() => authStore.user)
 const currentTemple = computed(() => {
-  // First check if we have entityDetails loaded from API
+  // Priority 1: entityDetails from API (has media)
   if (entityDetails.value) {
-    return entityDetails.value
+    console.log('Using entityDetails:', entityDetails.value);
+    return entityDetails.value;
   }
   
-  // Then check temple store
-  const storeTemple = templeStore.temples?.find(t => t.id === parseInt(route.params.id)) || templeStore.currentTemple
+  // Priority 2: Temple store (might have media)
+  const storeTemple = templeStore.temples?.find(t => 
+    t.id === parseInt(route.params.id)
+  ) || templeStore.currentTemple;
+  
   if (storeTemple) {
-    return storeTemple
+    console.log('Using store temple:', storeTemple);
+    return storeTemple;
   }
   
-  // Fallback: Create a basic temple object from localStorage
-  const templeName = localStorage.getItem('selectedTempleName')
-  const entityId = route.params.id || localStorage.getItem('selectedEntityId')
+  // Priority 3: Fallback object (no media, but functional)
+  const templeName = localStorage.getItem('selectedTempleName');
+  const entityId = route.params.id || localStorage.getItem('selectedEntityId');
   
   if (templeName && entityId) {
+    console.warn('Using fallback temple object - no media available');
     return {
-      id: entityId,
-      name: templeName,
-      status: 'Active'
-    }
+  id: entityId,
+  name: templeName,
+  status: 'Active',
+  media: entityDetails.value?.media || null
+};
+
   }
   
-  return null
-})
+  return null;
+});
 
 const profileCompletionPercentage = computed(() => {
   return devoteeStore.completionPercentage || 0
@@ -815,7 +965,84 @@ const restoreSavedData = () => {
     console.warn('Error restoring saved data:', e)
   }
 }
-
+// Add this function around line 1107 (before loadDashboardData)
+const loadEntityDetails = async (entityId) => {
+  try {
+    console.log('🔍 Fetching entity details for entity:', entityId);
+    
+    // Get the auth token
+    const token = localStorage.getItem('auth_token');
+    console.log('🔑 Using auth token:', token ? 'Found' : 'Missing');
+    
+    // Strategy 1: Try the dedicated details endpoint
+    try {
+      console.log('📡 Calling GET /entities/' + entityId + '/details');
+      
+      const response = await axios.get(`/entities/${entityId}/details`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Entity-ID': entityId
+        }
+      });
+      
+      console.log('✅ API Response status:', response.status);
+      console.log('✅ API Response data:', response.data);
+      
+      if (response.data) {
+        console.log('📹 Media in response:', response.data.media || response.data.Media);
+        entityDetails.value = response.data;
+        return response.data;
+      }
+    } catch (detailsErr) {
+      console.error('❌ /entities/:id/details failed');
+      console.error('Status:', detailsErr.response?.status);
+      console.error('Message:', detailsErr.message);
+      console.error('Response data:', detailsErr.response?.data);
+      
+      // If it's a 401/403, check RBAC middleware
+      if (detailsErr.response?.status === 401) {
+        console.error('🚫 Authentication failed - check if token is valid');
+      } else if (detailsErr.response?.status === 403) {
+        console.error('🚫 Authorization failed - check if devotee role has access');
+      }
+    }
+    
+    // Strategy 2: Fallback to dashboard API
+    try {
+      console.log('🔄 Trying fallback: GET /entity/' + entityId + '/devotee/dashboard');
+      
+      const dashResponse = await axios.get(`/entity/${entityId}/devotee/dashboard`);
+      
+      console.log('✅ Dashboard response:', dashResponse.data);
+      
+      if (dashResponse.data) {
+        // Try to extract entity from various possible locations
+        const entityData = dashResponse.data.entity || 
+                          dashResponse.data.entityDetails || 
+                          dashResponse.data.temple;
+        
+        if (entityData) {
+          console.log('✅ Extracted entity from dashboard');
+          console.log('📹 Media field:', entityData.media || entityData.Media);
+          entityDetails.value = entityData;
+          return entityData;
+        } else {
+          console.warn('⚠️ Dashboard response has no entity data');
+          console.log('Available keys:', Object.keys(dashResponse.data));
+        }
+      }
+    } catch (dashErr) {
+      console.error('❌ Dashboard fallback failed:', dashErr.message);
+    }
+    
+    console.error('❌ All entity loading strategies failed');
+    return null;
+    
+  } catch (err) {
+    console.error('❌ Unexpected error in loadEntityDetails:', err);
+    return null;
+  }
+};
 //Dileep
 // why we use this and remove it
 // Helper function to force tenant ID 2 for event fetching
@@ -1451,30 +1678,37 @@ const loadDashboardData = async () => {
     loadingPromises.push(profilePromise)
     
     // Load entity details
-    console.log('🔄 Loading entity details...')
-    const entityPromise = (async () => {
-      try {
-        const entityData = await fetchEntityDetails(entityId)
-        if (entityData) {
-          entityDetails.value = entityData
-        }
-        dataLoadingStatus.entity = true
-      } catch (err) {
-        console.warn('⚠️ Could not load entity details:', err)
-        // Try loading from temple store as fallback
-        try {
-          if (templeStore.fetchTemples) {
-            await templeStore.fetchTemples()
-          }
-        } catch (e) {
-          console.warn('⚠️ Could not load temples as fallback:', e)
-        }
-        dataLoadingStatus.entity = true
-      }
-    })()
+// Load entity details - FIXED VERSION
+console.log('🔄 Loading entity details...');
+const entityPromise = (async () => {
+  try {
+    console.log('🎯 Starting entity details fetch for ID:', entityId);
     
-    loadingPromises.push(entityPromise)
+    // Call the loadEntityDetails function
+    const entityData = await loadEntityDetails(entityId);
     
+    if (entityData) {
+      entityDetails.value = entityData;
+      console.log('✅ Entity details set successfully:', entityData);
+      console.log('✅ Entity has media?', !!(entityData.media || entityData.Media));
+      
+      // Verify media extraction works
+      await nextTick(); // Wait for reactive update
+      const testMedia = getTempleMedia();
+      console.log('🎬 Media extraction result:', testMedia);
+    } else {
+      console.error('❌ loadEntityDetails returned null');
+    }
+    
+    dataLoadingStatus.entity = true;
+  } catch (err) {
+    console.error('❌ Entity loading failed with error:', err);
+    console.error('Error stack:', err.stack);
+    dataLoadingStatus.entity = true;
+  }
+})();
+
+loadingPromises.push(entityPromise);
     // If we already have counters, we can exit loading state
     if (dashboardCounts.countsInitialized) {
       loading.value = false
@@ -1854,6 +2088,25 @@ const checkAndReloadMissingData = () => {
     }
   }
 }
+
+// Add in DevoteeDashboard after onMounted
+const debugTempleData = () => {
+  console.log('=== TEMPLE DATA DEBUG ===');
+  console.log('Route params ID:', route.params.id);
+  console.log('entityDetails.value:', entityDetails.value);
+  console.log('templeStore.temples:', templeStore.temples);
+  console.log('templeStore.currentTemple:', templeStore.currentTemple);
+  console.log('currentTemple computed:', currentTemple.value);
+  console.log('localStorage selectedTempleName:', localStorage.getItem('selectedTempleName'));
+  console.log('localStorage selectedEntityId:', localStorage.getItem('selectedEntityId'));
+  console.log('=========================');
+};
+
+// Call it after mount
+onMounted(async () => {
+  await loadDashboardData();
+  setTimeout(debugTempleData, 3000);
+});
 
 // Lifecycle
 onMounted(async () => {

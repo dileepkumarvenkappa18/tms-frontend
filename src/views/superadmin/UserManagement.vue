@@ -1369,18 +1369,19 @@ const handleSubmitUser = async () => {
         return
       }
 
+      // ✅ CRITICAL FIX: Always include logoUrl and introVideoUrl, even if empty strings
       userData = {
         ...userData,
-        ...cleanPayload({
-          templeName: temple.name,
-          templePlace: temple.place,
-          templeAddress: temple.address,
-          templePhoneNo: temple.phoneNumber,
-          templeDescription: temple.description,
-          logoUrl: temple.logoUrl || undefined,
-          introVideoUrl: temple.introVideoUrl || undefined
-        })
+        templeName: temple.name,
+        templePlace: temple.place,
+        templeAddress: temple.address || '',
+        templePhoneNo: temple.phoneNumber || '',
+        templeDescription: temple.description || '',
+        logoUrl: temple.logoUrl || '',  // Always send, even if empty
+        introVideoUrl: temple.introVideoUrl || ''  // Always send, even if empty
       }
+      
+      console.log('📤 Sending user data with temple details:', userData)
     }
 
     let result
@@ -1407,8 +1408,6 @@ const handleSubmitUser = async () => {
     error(`Failed to ${isEditing.value ? 'update' : 'create'} user. Please try again.`)
   }
 }
-
-
 
 // Toggle user status
 const toggleUserStatus = async (user) => {

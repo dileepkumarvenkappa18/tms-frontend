@@ -116,6 +116,37 @@ export const useSuperAdminStore = defineStore('superadmin', () => {
   })
   
   // Actions
+  // ✅ NEW: Update temple details
+async function updateTemple(templeId, templeData) {
+  try {
+    console.log('🏛️ Updating temple:', templeId, templeData)
+
+    const response = await superAdminService.updateTemple(templeId, templeData)
+
+    if (response?.success) {
+      return {
+        success: true,
+        message: response.message || 'Temple updated successfully'
+      }
+    }
+
+    return {
+      success: false,
+      error: response?.message || 'Failed to update temple'
+    }
+  } catch (error) {
+    console.error('❌ Update temple failed:', error)
+
+    return {
+      success: false,
+      error:
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to update temple'
+    }
+  }
+}
+
 
   // NEW: Fetch tenant counts from API
   async function fetchTenantCounts() {
@@ -817,7 +848,7 @@ async function updateUser(userId, userData) {
     updateUserStatus,
     createBulkUsers, // NEW: Bulk upload method
     refreshUserData,
-    
+     updateTemple,
     initialize // UPDATED to include user management
   }
 })

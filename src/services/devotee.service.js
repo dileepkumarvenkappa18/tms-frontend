@@ -54,7 +54,47 @@ export default {
       throw this.handleError(error);
     }
   },
-
+/**
+ * Get temple by ID for devotee dashboard
+ * This uses the devotee-accessible endpoint
+ */
+async getTempleForDevotee(entityId) {
+  try {
+    console.log(`📡 Fetching temple for devotee, entity ID: ${entityId}`);
+    
+    const tenantId = localStorage.getItem('current_tenant_id') || '2';
+    const timestamp = Date.now();
+    
+    // Try devotee-specific endpoint first
+    try {
+      const response = await api.get(`/temples/${entityId}?_=${timestamp}`, {
+        headers: {
+          'X-Entity-ID': entityId,
+          'X-Tenant-ID': tenantId
+        }
+      });
+      
+      console.log('✅ Temple fetched via /temples endpoint');
+      return this.normalizeTempleData(response.data);
+    } catch (err) {
+      console.log('⚠️ /temples endpoint failed, trying /entities...');
+      
+      // Fallback to entities endpoint
+      const response = await api.get(`/entities/${entityId}?_=${timestamp}`, {
+        headers: {
+          'X-Entity-ID': entityId,
+          'X-Tenant-ID': tenantId
+        }
+      });
+      
+      console.log('✅ Temple fetched via /entities endpoint');
+      return this.normalizeTempleData(response.data);
+    }
+  } catch (error) {
+    console.error(`❌ Error fetching temple for devotee ID ${entityId}:`, error);
+    throw error;
+  }
+},
   /**
    * Get devotee by ID (for admin purposes)
    */
