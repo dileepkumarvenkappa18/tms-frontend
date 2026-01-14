@@ -711,98 +711,209 @@ const closeLogoModal = () => {
 }
 
 // Fetch logo from API
+// Fetch logo from API - Using both endpoints
 const fetchLogoFromAPI = async () => {
   try {
-    const response = await api.get('/tenantsInfo?status=active')
+    // Get the correct tenant ID based on user role
+    let targetTenantId = tenantId.value
     
-    // Handle different response structures
-    let tenants = []
-    if (Array.isArray(response)) {
-      tenants = response
-    } else if (response && Array.isArray(response.data)) {
-      tenants = response.data
-    } else if (response && response.tenants && Array.isArray(response.tenants)) {
-      tenants = response.tenants
+    console.log('=== FETCH LOGO DEBUG ===')
+    console.log('📍 Target Tenant ID:', targetTenantId)
+    console.log('👤 User Role:', userStore.userRole)
+    console.log('👤 User ID:', userStore.user?.id)
+    console.log('👤 Is Monitoring/Standard User:', isMonitoringUser.value || isStandardUser.value)
+    console.log('👤 Assigned Tenant ID:', userStore.assignedTenantId)
+    
+    // For monitoring/standard users, use their assigned tenant ID
+    if ((isMonitoringUser.value || isStandardUser.value) && userStore.assignedTenantId) {
+      targetTenantId = userStore.assignedTenantId
+      console.log('✅ Using assigned tenant ID:', targetTenantId)
     }
     
-    // Get current user ID to match with tenant
-    const currentUserId = userStore.user?.id || tenantId.value
+    if (!targetTenantId) {
+      console.warn('⚠️ No tenant ID available')
+      return
+    }
     
-    // Find the tenant that matches the current user ID
-    if (tenants.length > 0 && currentUserId) {
-      const matchingTenant = tenants.find(tenant => {
-        const tenantId = tenant.id || 
-                        tenant.user_id || 
-                        tenant.userId || 
-                        tenant.ID ||
-                        null
-        return tenantId && String(tenantId) === String(currentUserId)
-      })
+    // Try Method 1: Fetch from /superadmin/tenant-details/:id
+    console.log('🔄 Method 1: Fetching from /superadmin/tenant-details/' + targetTenantId)
+    try {
+      const response1 = await api.get(`/superadmin/tenant-details/${targetTenantId}`)
+      console.log('📦 Response 1 (tenant-details):', response1)
       
-      if (matchingTenant) {
+      const tenantData = response1?.data?.data || response1?.data || response1
+      console.log('📦 Extracted tenant data:', tenantData)
+      
+      if (tenantData) {
         // Extract tenant name
-        const name = matchingTenant.full_name || 
-                    matchingTenant.fullName || 
-                    matchingTenant.name || 
-                    matchingTenant.FullName ||
-                    null
+        tenantName.value = tenantData.full_name || 
+                          tenantData.fullName || 
+                          tenantData.temple_name ||
+                          tenantData.name || 
+                          ''
         
-        if (name) {
-          tenantName.value = name
-        }
+        console.log('👤 Tenant Name:', tenantName.value)
         
-        // Extract logo_url from temple_details (nested structure)
-        const logoUrl = matchingTenant.temple_details?.logo_url || 
-                       matchingTenant.logo_url || 
+        // Extract logo URL from multiple possible locations
+        const logoUrl = tenantData.temple_details?.logo_url || 
+                       tenantData.logo_url || 
                        null
         
-        // Extract intro_video_url from temple_details
-        const videoUrl = matchingTenant.temple_details?.intro_video_url || 
-                        matchingTenant.intro_video_url || 
+        // Extract video URL
+        const videoUrl = tenantData.temple_details?.intro_video_url || 
+                        tenantData.intro_video_url || 
                         null
         
-        // Check if logoUrl exists and is not empty
+        console.log('🖼️ Raw Logo URL:', logoUrl)
+        console.log('🎥 Raw Video URL:', videoUrl)
+        
+        // Process logo URL
         if (logoUrl && logoUrl.trim() !== '') {
-          // Construct full URL if it's a relative path
           let finalLogoUrl = logoUrl
           
           if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
-            // It's a relative path, construct full URL
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
             const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
             finalLogoUrl = `${API_BASE_URL}${cleanPath}`
           }
           
-          // Set the logo URL
           dashboardLogo.value = finalLogoUrl
-          
-          // Use nextTick to ensure DOM updates
+          console.log('✅ Final Logo URL set:', finalLogoUrl)
           await nextTick()
+        } else {
+          console.log('⚠️ No logo URL found in tenant-details endpoint')
         }
         
-        // Check if videoUrl exists and is not empty
+        // Process video URL
         if (videoUrl && videoUrl.trim() !== '') {
-          // Construct full URL if it's a relative path
           let finalVideoUrl = videoUrl
           
           if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
-            // It's a relative path, construct full URL
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
             const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
             finalVideoUrl = `${API_BASE_URL}${cleanPath}`
           }
           
-          // Set the video URL
           introVideoUrl.value = finalVideoUrl
+          console.log('✅ Final Video URL set:', finalVideoUrl)
+        }
+        
+        // If we got the data successfully, return early
+        if (tenantName.value || dashboardLogo.value) {
+          console.log('✅ Successfully fetched data from tenant-details endpoint')
+          return
         }
       }
+    } catch (error1) {
+      console.warn('⚠️ Method 1 failed, trying Method 2:', error1.message)
     }
     
+    // Try Method 2: Fetch from /tenantsInfo?status=active (fallback)
+    console.log('🔄 Method 2: Fetching from /tenantsInfo?status=active')
+    try {
+      const response2 = await api.get('/tenantsInfo?status=active')
+      console.log('📦 Response 2 (tenantsInfo):', response2)
+      
+      // Handle different response structures
+      let tenants = []
+      if (Array.isArray(response2)) {
+        tenants = response2
+      } else if (response2 && Array.isArray(response2.data)) {
+        tenants = response2.data
+      } else if (response2 && response2.tenants && Array.isArray(response2.tenants)) {
+        tenants = response2.tenants
+      }
+      
+      console.log('📊 Found tenants:', tenants.length)
+      console.log('🔍 Looking for tenant with ID:', targetTenantId)
+      
+      // Find the tenant that matches the target tenant ID
+      if (tenants.length > 0) {
+        const matchingTenant = tenants.find(tenant => {
+          const tId = tenant.id || 
+                      tenant.user_id || 
+                      tenant.userId || 
+                      tenant.ID ||
+                      null
+          console.log('  Checking tenant:', tId, '=== ', targetTenantId, '?', String(tId) === String(targetTenantId))
+          return tId && String(tId) === String(targetTenantId)
+        })
+        
+        console.log('🎯 Matching tenant:', matchingTenant)
+        
+        if (matchingTenant) {
+          // Extract tenant name
+          const name = matchingTenant.full_name || 
+                      matchingTenant.fullName || 
+                      matchingTenant.name || 
+                      matchingTenant.FullName ||
+                      null
+          
+          if (name) {
+            tenantName.value = name
+            console.log('👤 Tenant Name from tenantsInfo:', tenantName.value)
+          }
+          
+          // Extract logo_url from temple_details (nested structure)
+          const logoUrl = matchingTenant.temple_details?.logo_url || 
+                         matchingTenant.logo_url || 
+                         null
+          
+          // Extract intro_video_url from temple_details
+          const videoUrl = matchingTenant.temple_details?.intro_video_url || 
+                          matchingTenant.intro_video_url || 
+                          null
+          
+          console.log('🖼️ Logo URL from tenantsInfo:', logoUrl)
+          console.log('🎥 Video URL from tenantsInfo:', videoUrl)
+          
+          // Check if logoUrl exists and is not empty
+          if (logoUrl && logoUrl.trim() !== '') {
+            let finalLogoUrl = logoUrl
+            
+            if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
+              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+              const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
+              finalLogoUrl = `${API_BASE_URL}${cleanPath}`
+            }
+            
+            dashboardLogo.value = finalLogoUrl
+            console.log('✅ Final Logo URL from tenantsInfo:', finalLogoUrl)
+            await nextTick()
+          }
+          
+          // Check if videoUrl exists and is not empty
+          if (videoUrl && videoUrl.trim() !== '') {
+            let finalVideoUrl = videoUrl
+            
+            if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
+              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+              const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
+              finalVideoUrl = `${API_BASE_URL}${cleanPath}`
+            }
+            
+            introVideoUrl.value = finalVideoUrl
+            console.log('✅ Final Video URL from tenantsInfo:', finalVideoUrl)
+          }
+        } else {
+          console.error('❌ No matching tenant found in tenantsInfo response')
+        }
+      }
+    } catch (error2) {
+      console.error('❌ Method 2 also failed:', error2.message)
+    }
+    
+    console.log('=== FINAL STATE ===')
+    console.log('Tenant Name:', tenantName.value)
+    console.log('Logo URL:', dashboardLogo.value)
+    console.log('Video URL:', introVideoUrl.value)
+    console.log('Has Valid Logo:', hasValidLogo.value)
+    
   } catch (error) {
-    // Silently handle error
+    console.error('❌ Fatal error in fetchLogoFromAPI:', error)
+    console.error('Error details:', error.response?.data)
   }
 }
-
 // Lifecycle
 onMounted(async () => {
   console.log('TenantDashboard mounted with tenantId:', tenantId.value)
