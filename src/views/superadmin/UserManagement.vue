@@ -501,7 +501,7 @@
                 v-model="form.role"
                 class="block w-full border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2.5"
                 required
-                :disabled="isRolesLoading"
+                :disabled="isRolesLoading || isEditing"
               >
                 <option value="" disabled>{{ isRolesLoading ? 'Loading roles...' : 'Select a role' }}</option>
                 <option
@@ -512,6 +512,9 @@
                   {{ role.role_name }}
                 </option>
               </select>
+              <div v-if="isEditing" class="mt-2 text-xs text-gray-500">
+                Role cannot be changed when editing
+              </div>
               <div v-if="roles.length === 0 && !isRolesLoading" class="mt-2 text-sm text-amber-600">
                 No roles available. Please check role configuration.
               </div>
@@ -786,6 +789,8 @@ const fileError = ref('')
 const isDragOver = ref(false)
 const isBulkUploading = ref(false)
 const bulkUploadResult = ref(null)
+const tenantsData = ref([])
+const isTenantsLoading = ref(false)
 
 // Reactive data
 const roles = computed(() => superAdminStore.userRoles || [])
@@ -917,7 +922,6 @@ const form = ref({
 
 const errors = ref({})
 
-
 // ✅ FIXED: Logo upload handler
 const handleLogoUpload = async (event) => {
   const file = event.target.files[0]
@@ -961,10 +965,9 @@ const handleLogoUpload = async (event) => {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // ✅ FIX: response itself contains the data, not response.data
+    // ✅ FIX: Get URL from response (could be response.url or response.data.url)
     console.log('✅ Full response object:', response)
     
-    // The URL is directly in response.url, not response.data.url
     const logoUrl = response.url || response.data?.url
 
     if (logoUrl) {
@@ -1031,10 +1034,9 @@ const handleVideoUpload = async (event) => {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // ✅ FIX: response itself contains the data, not response.data
+    // ✅ FIX: Get URL from response (could be response.url or response.data.url)
     console.log('✅ Full response object:', response)
     
-    // The URL is directly in response.url, not response.data.url
     const videoUrl = response.url || response.data?.url
 
     if (videoUrl) {
@@ -1091,6 +1093,7 @@ const removeVideo = async () => {
   videoPreview.value = null
   videoUploadError.value = ''
 }
+
 // Modal functions
 const openCreateModal = () => {
   showCreateModal.value = true
@@ -1107,10 +1110,36 @@ const closeBulkUploadModal = () => {
   bulkUploadResult.value = null
 }
 
+const fetchTenantsData = async () => {
+  try {
+    isTenantsLoading.value = true
+    console.log('Fetching tenants data...')
+
+    const response = await api.get('/tenantsInfo?status=active')
+
+    tenantsData.value = response.data?.data || []
+
+    console.log('Tenants loaded:', tenantsData.value.length)
+  } catch (error) {
+    console.error('Error fetching tenants:', error)
+    tenantsData.value = []
+  } finally {
+    isTenantsLoading.value = false
+  }
+}
+
 // Fetch data on mount
 onMounted(async () => {
   await superAdminStore.refreshUserData()
+  await fetchTenantsData()
 })
+
+const getTenantByUser = (user) => {
+  if (!user?.tenant_id) return null
+  return tenantsData.value.find(
+    tenant => tenant.id === user.tenant_id
+  )
+}
 
 // Helper functions
 const getRoleDisplay = (role) => {
@@ -1187,7 +1216,6 @@ const processFile = (file) => {
   }
   reader.readAsText(file)
 }
-
 
 const parseCsvData = (csvText) => {
   try {
@@ -1330,20 +1358,6 @@ const validateForm = () => {
   return Object.keys(errors.value).length === 0
 }
 
-const cleanPayload = (payload) => {
-  const cleaned = {}
-  Object.keys(payload).forEach((key) => {
-    if (
-      payload[key] !== '' &&
-      payload[key] !== undefined &&
-      payload[key] !== null
-    ) {
-      cleaned[key] = payload[key]
-    }
-  })
-  return cleaned
-}
-
 const handleSubmitUser = async () => {
   if (!validateForm()) return
 
@@ -1424,14 +1438,17 @@ const toggleUserStatus = async (user) => {
   }
 }
 
-// Edit user
+// ✅ FIXED: Edit user with proper media preview handling
 const editUser = (user) => {
   isEditing.value = true
   editingUserId.value = user.id
+  
+  console.log('📝 Editing user:', user)
+  
   form.value = {
-    fullName: user.full_name,
-    email: user.email,
-    phone: user.phone,
+    fullName: user.full_name || '',
+    email: user.email || '',
+    phone: user.phone || '',
     role: (typeof user.role === 'object' ? user.role?.role_name : user.role) || '',
     isActive: (user.status || '').toLowerCase() === 'active',
     templeDetails: {
@@ -1444,6 +1461,15 @@ const editUser = (user) => {
       introVideoUrl: user.temple_details?.intro_video_url || ''
     }
   }
+  
+  // ✅ Set media previews for existing files
+  if (user.temple_details?.logo_url) {
+    logoPreview.value = user.temple_details.logo_url
+  }
+  if (user.temple_details?.intro_video_url) {
+    videoPreview.value = user.temple_details.intro_video_url
+  }
+  
   showCreateModal.value = true
 }
 

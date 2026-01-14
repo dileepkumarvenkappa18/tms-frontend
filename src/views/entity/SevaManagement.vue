@@ -1440,7 +1440,6 @@ const rejectSeva = async (booking) => {
   }
 }
 
-// Seva management functions
 const editSeva = (seva) => {
   if (isMonitoringUser.value) {
     showPermissionAlert.value = true
@@ -1459,7 +1458,7 @@ const editSeva = (seva) => {
     date: seva.date || seva.Date || '', 
     startTime: seva.start_time || seva.StartTime || '',
     endTime: seva.end_time || seva.EndTime || '',
-    max_bookings_per_day: seva.max_bookings_per_day || seva.MaxBookingsPerDay || 10,
+    max_bookings_per_day: seva.max_bookings_per_day || seva.MaxBookingsPerDay || seva.available_slots || seva.AvailableSlots || 10,
     is_active: seva.is_active !== undefined ? seva.is_active : (seva.status === 'active' || true)
   }
   

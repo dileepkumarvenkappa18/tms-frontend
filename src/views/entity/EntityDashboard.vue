@@ -6,32 +6,40 @@
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center space-x-4">
             <!-- Temple Logo -->
-            <div v-if="templeLogo" class="h-12 w-12 rounded-full overflow-hidden border-2 border-indigo-200">
-              <img :src="templeLogo" :alt="temple?.name || 'Temple'" class="h-full w-full object-cover" />
+            <div 
+              v-if="templeLogo" 
+              class="h-12 w-12 rounded-full overflow-hidden border-2 border-indigo-200 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+              @click="openTempleVideo"
+            >
+              <img :src="templeLogo" :alt="temple?.name || 'Temple'" class="h-full w-full object-cover" @error="handleLogoError" />
             </div>
-            <div v-else class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+            <div v-else class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all" @click="openTempleVideo">
               <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
               </svg>
             </div>
             <div>
-              <h2 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
+              <h2 
+                class="text-xl font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-2"
+                @click="openTempleVideo"
+              >
+                {{ temple ? temple.name : 'Loading...' }}
+                <!-- Video indicator icon -->
+                <svg 
+                  v-if="templeVideo"
+                  class="h-5 w-5 text-indigo-500 animate-pulse" 
+                  fill="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </h2>
               <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
             </div>
           </div>
           <div class="flex items-center space-x-3">
             <!-- Temple Video Button -->
-            <button 
-              v-if="templeVideo"
-              @click="showVideoModal = true"
-              class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-            >
-              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Watch Temple Video
-            </button>
+            
             
             <button class="relative p-2 text-gray-400 hover:text-gray-500 transition-colors duration-200">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -46,44 +54,45 @@
 
     <!-- Video Modal -->
     <transition name="modal">
-      <div v-if="showVideoModal" class="fixed inset-0 z-50 overflow-y-auto" @click.self="showVideoModal = false">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <!-- Background overlay -->
-          <div class="fixed inset-0 transition-opacity bg-gray-900 bg-opacity-75" @click="showVideoModal = false"></div>
-
-          <!-- Modal panel -->
-          <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900">Temple Video</h3>
-                <button 
-                  @click="showVideoModal = false"
-                  class="text-gray-400 hover:text-gray-500 transition-colors duration-200"
-                >
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-              <div class="aspect-video bg-black rounded-lg overflow-hidden">
-                <video 
-                  v-if="templeVideo"
-                  :src="templeVideo" 
-                  controls 
-                  class="w-full h-full"
-                  @error="handleVideoError"
-                >
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-              <button 
-                @click="showVideoModal = false"
-                class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
-              >
-                Close
-              </button>
+      <div v-if="showVideoModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-98 flex items-center justify-center p-4" @click.self="closeVideoModal">
+        <div class="relative w-full h-full max-w-7xl mx-auto flex flex-col" @click.stop>
+          <!-- Close Button -->
+          <button
+            @click="closeVideoModal"
+            class="absolute top-6 right-6 z-50 text-white hover:text-gray-200 transition-all duration-300 flex items-center gap-2 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20 hover:bg-black/80 hover:scale-105"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span class="text-sm font-semibold">Close Video</span>
+          </button>
+          
+          <!-- Temple Name Title -->
+          <div class="absolute top-6 left-6 z-50 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20">
+            <h2 class="text-white text-lg font-semibold">{{ temple?.name }}</h2>
+          </div>
+          
+          <!-- Video Player -->
+          <div class="flex-1 w-full flex items-center justify-center relative">
+            <video
+              v-if="templeVideo"
+              ref="videoPlayer"
+              :src="templeVideo"
+              controls
+              autoplay
+              playsinline
+              class="w-full h-full max-w-6xl max-h-[85vh] object-contain rounded-3xl shadow-2xl"
+              @error="handleVideoError"
+            >
+              Your browser does not support the video tag.
+            </video>
+            
+            <!-- No Video Message -->
+            <div v-else class="text-center text-white">
+              <svg class="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-lg">Temple video not available</p>
             </div>
           </div>
         </div>
@@ -403,32 +412,168 @@ const notifications = ref([])
 const upcomingEvents = ref([])
 const topDonors = ref([])
 
-// Check if user is monitoring user - Same logic as Event page
+// Video modal state
+const showVideoModal = ref(false)
+const videoPlayer = ref(null)
+
+// Media URLs
+const templeLogo = ref(null)
+const templeVideo = ref(null)
+
+const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+
+// Check if user is monitoring user
 const isMonitoringUser = computed(() => {
   const role = (authStore.userRole || '').toLowerCase()
   const roleId = authStore.user?.roleId || authStore.user?.role_id
-  // Check both role name and roleId (6 for monitoring_user)
   return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
 })
+
+// Helper function to construct full media URL
+const getFullMediaUrl = (path) => {
+  if (!path) return null
+  
+  // Already a full URL
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  
+  // Remove leading slash if present, we'll add it
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  
+  // Construct full URL
+  return `${BACKEND_ORIGIN}${cleanPath}`
+}
+
+// Extract media from temple data
+const extractTempleMedia = (templeData) => {
+  if (!templeData) return { logo: null, video: null }
+  
+  console.log('🔍 Extracting media from temple data:', templeData)
+  
+  let logo = null
+  let video = null
+  
+  // Strategy 1: Check for media object (JSON string or object)
+  if (templeData.media) {
+    try {
+      const media = typeof templeData.media === 'string' 
+        ? JSON.parse(templeData.media) 
+        : templeData.media
+      
+      logo = media.logo || media.Logo || media.logo_url || media.logoUrl
+      video = media.video || media.Video || media.video_url || media.videoUrl || media.intro_video_url
+    } catch (e) {
+      console.warn('⚠️ Error parsing media JSON:', e)
+    }
+  }
+  
+  // Strategy 2: Check for direct fields
+  if (!logo) {
+    logo = templeData.logo_url || templeData.logoUrl || templeData.logo || templeData.Logo
+  }
+  if (!video) {
+    video = templeData.intro_video_url || templeData.videoUrl || templeData.video || templeData.Video
+  }
+  
+  const result = {
+    logo: logo ? getFullMediaUrl(logo) : null,
+    video: video ? getFullMediaUrl(video) : null
+  }
+  
+  console.log('✅ Extracted media:', result)
+  return result
+}
+
+// Load entity details with media
+const loadEntityDetails = async (entityId) => {
+  try {
+    console.log('🔍 Fetching entity details for entity:', entityId)
+    
+    const token = localStorage.getItem('auth_token')
+    
+    // Try the dedicated details endpoint
+    const response = await api.get(`/entities/${entityId}/details`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Entity-ID': entityId
+      }
+    })
+    
+    console.log('✅ Entity details response:', response.data)
+    
+    if (response.data) {
+      temple.value = response.data
+      
+      // Extract media URLs
+      const media = extractTempleMedia(response.data)
+      templeLogo.value = media.logo
+      templeVideo.value = media.video
+      
+      console.log('✅ Temple logo URL:', templeLogo.value)
+      console.log('✅ Temple video URL:', templeVideo.value)
+      
+      return response.data
+    }
+  } catch (err) {
+    console.error('❌ Error loading entity details:', err)
+    
+    // Fallback: try to get from temple store
+    try {
+      const fetchedTemple = await templeStore.getTempleById(entityId)
+      if (fetchedTemple) {
+        temple.value = fetchedTemple
+        const media = extractTempleMedia(fetchedTemple)
+        templeLogo.value = media.logo
+        templeVideo.value = media.video
+      }
+    } catch (storeErr) {
+      console.error('❌ Fallback temple fetch failed:', storeErr)
+    }
+  }
+  
+  return null
+}
+
+// Open temple video modal
+const openTempleVideo = () => {
+  if (templeVideo.value) {
+    showVideoModal.value = true
+  } else {
+    console.log('Temple video not available')
+  }
+}
+
+// Close video modal
+const closeVideoModal = () => {
+  showVideoModal.value = false
+  if (videoPlayer.value) {
+    videoPlayer.value.pause()
+    videoPlayer.value.currentTime = 0
+  }
+}
+
+// Handle logo error
+const handleLogoError = (event) => {
+  console.error('Temple logo failed to load:', event.target.src)
+  event.target.style.display = 'none'
+}
+
+// Handle video error
+const handleVideoError = (event) => {
+  console.error('Temple video failed to load:', event.target.src)
+  toast.error('Failed to load temple video')
+}
 
 const loadEntityData = async () => {
   try {
     loading.value = true
     console.log('Loading entity data for ID:', entityId.value)
     
-    // FIX: getTempleById is async, so we need to await it
-    try {
-      const fetchedTemple = await templeStore.getTempleById(entityId.value)
-      if (fetchedTemple) {
-        console.log('Found temple from store:', fetchedTemple)
-        temple.value = fetchedTemple
-      }
-    } catch (err) {
-      console.error('Failed to fetch temple details:', err)
-      toast.error('Failed to load temple details')
-    }
+    // Load entity details with media
+    await loadEntityDetails(entityId.value)
     
-   
+    // Load dashboard summary
     try {
       const dashboardResponse = await api.get(`/entities/dashboard-summary?entity_id=${entityId.value}`)
       
@@ -451,13 +596,12 @@ const loadEntityData = async () => {
             thisWeek: dashboardResponse.data.upcoming_events.this_week || 0
           }
         }
-        console.log('Dashboard data loaded successfully:', dashboardData.value)
       }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err)
-      toast.error('Failed to load dashboard statistics')
     }
     
+    // Load upcoming events
     try {
       const eventsResponse = await api.get(`/events/upcoming?entity_id=${entityId.value}&limit=3`)
       
@@ -466,17 +610,14 @@ const loadEntityData = async () => {
           ...event,
           date: new Date(event.event_date || event.date || Date.now())
         }))
-        dashboardData.value.events.upcoming = upcomingEvents.value.length
       }
     } catch (err) {
       console.error('Failed to fetch upcoming events:', err)
-      upcomingEvents.value = []
     }
     
+    // Load top donors
     try {
-      console.log('Fetching top donors...')
       const donorsResponse = await donationService.getTopDonors(5)
-      console.log('Top donors response:', donorsResponse)
       
       if (donorsResponse && donorsResponse.success && Array.isArray(donorsResponse.data)) {
         topDonors.value = donorsResponse.data.map(donor => ({
@@ -486,34 +627,9 @@ const loadEntityData = async () => {
           amount: donor.total_amount || donor.totalAmount || 0,
           totalDonations: donor.donation_count || donor.donationCount || 0
         }))
-      } else if (Array.isArray(donorsResponse.data)) {
-        topDonors.value = donorsResponse.data.map(donor => ({
-          id: donor.email || Math.random(),
-          name: donor.name || 'Unknown Donor',
-          email: donor.email || '',
-          amount: donor.total_amount || donor.totalAmount || 0,
-          totalDonations: donor.donation_count || donor.donationCount || 0
-        }))
-      } else if (Array.isArray(donorsResponse)) {
-        topDonors.value = donorsResponse.map(donor => ({
-          id: donor.email || Math.random(),
-          name: donor.name || 'Unknown Donor',
-          email: donor.email || '',
-          amount: donor.total_amount || donor.totalAmount || 0,
-          totalDonations: donor.donation_count || donor.donationCount || 0
-        }))
-      } else {
-        console.warn('Unexpected top donors response format:', donorsResponse)
-        topDonors.value = []
       }
-      
-      console.log('Final top donors data:', topDonors.value)
     } catch (err) {
       console.error('Failed to fetch top donors:', err)
-      topDonors.value = []
-      if (err.response?.status !== 404) {
-        toast.error('Failed to load top donors')
-      }
     }
     
   } catch (err) {
@@ -526,23 +642,6 @@ const loadEntityData = async () => {
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN').format(amount)
-}
-
-const formatTimeAgo = (date) => {
-  if (!date) return ''
-  const now = new Date()
-  const diff = now - date
-  const minutes = Math.floor(diff / (1000 * 60))
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-  if (minutes < 60) {
-    return `${minutes}m ago`
-  } else if (hours < 24) {
-    return `${hours}h ago`
-  } else {
-    return `${days}d ago`
-  }
 }
 
 const formatEventDate = (date) => {
@@ -559,28 +658,20 @@ const formatFullDate = (date) => {
   })
 }
 
-const getNotificationIconClass = (type) => {
-  const classes = {
-    seva: 'bg-orange-100 text-orange-600',
-    donation: 'bg-green-100 text-green-600',
-    event: 'bg-purple-100 text-purple-600',
-    devotee: 'bg-blue-100 text-blue-600'
-  }
-  return classes[type] || 'bg-gray-100 text-gray-600'
-}
-
-const getNotificationIconPath = (type) => {
-  const paths = {
-    seva: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-    donation: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1',
-    event: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-    devotee: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z'
-  }
-  return paths[type] || 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-}
-
 onMounted(() => {
   console.log('EntityDashboard mounted for entity:', entityId.value)
   loadEntityData()
 })
 </script>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+</style>
