@@ -344,13 +344,13 @@ const allStates = [
   "Ladakh", "Lakshadweep", "Puducherry"
 ]
 
-// BASE URL HELPER
-const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+const BACKEND_ORIGIN =
+  import.meta.env.VITE_API_BASE_URL || window.location.origin
 
 const getFullMediaUrl = (path) => {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${BACKEND_ORIGIN}${path.startsWith('/') ? path : '/' + path}`
+  return `${BACKEND_ORIGIN}${path}`
 }
 
 // TEMPLE MEDIA - ENHANCED VERSION WITH EXTENSIVE LOGGING

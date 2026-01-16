@@ -8,8 +8,8 @@
             <!-- Temple Logo -->
             <div 
               v-if="templeLogo" 
-              class="h-12 w-12 rounded-full overflow-hidden border-2 border-indigo-200 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
-              @click="openTempleVideo"
+              class="h-18 w-18 rounded-full overflow-hidden border-2 border-indigo-200 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+              @click="openLogoModal"
             >
               <img :src="templeLogo" :alt="temple?.name || 'Temple'" class="h-full w-full object-cover" @error="handleLogoError" />
             </div>

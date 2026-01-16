@@ -5,16 +5,84 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center space-x-4">
-           <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-          <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+  <!-- Temple Logo -->
+  <div 
+    v-if="templeLogo" 
+    class="h-12 w-12 rounded-full overflow-hidden border-2 border-indigo-200 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+    @click="openTempleVideo"
+  >
+    <img :src="templeLogo" :alt="temple?.name || 'Temple'" class="h-full w-full object-cover" @error="handleLogoError" />
+  </div>
+  <div v-else class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all" @click="openTempleVideo">
+    <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+    </svg>
+  </div>
+  <div>
+    <h2 
+      class="text-xl font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-2"
+      @click="openTempleVideo"
+    >
+      {{ temple ? temple.name : 'Loading...' }}
+      <!-- Video indicator icon -->
+      <svg 
+        v-if="templeVideo"
+        class="h-5 w-5 text-indigo-500 animate-pulse" 
+        fill="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+    </h2>
+    <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
+  </div>
+</div>
+<!-- Video Modal -->
+<transition name="modal">
+  <div v-if="showVideoModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-98 flex items-center justify-center p-4" @click.self="closeVideoModal">
+    <div class="relative w-full h-full max-w-7xl mx-auto flex flex-col" @click.stop>
+      <!-- Close Button -->
+      <button
+        @click="closeVideoModal"
+        class="absolute top-6 right-6 z-50 text-white hover:text-gray-200 transition-all duration-300 flex items-center gap-2 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20 hover:bg-black/80 hover:scale-105"
+      >
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        <span class="text-sm font-semibold">Close Video</span>
+      </button>
+      
+      <!-- Temple Name Title -->
+      <div class="absolute top-6 left-6 z-50 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20">
+        <h2 class="text-white text-lg font-semibold">{{ temple?.name }}</h2>
+      </div>
+      
+      <!-- Video Player -->
+      <div class="flex-1 w-full flex items-center justify-center relative">
+        <video
+          v-if="templeVideo"
+          ref="videoPlayer"
+          :src="templeVideo"
+          controls
+          autoplay
+          playsinline
+          class="w-full h-full max-w-6xl max-h-[85vh] object-contain rounded-3xl shadow-2xl"
+          @error="handleVideoError"
+        >
+          Your browser does not support the video tag.
+        </video>
+        
+        <!-- No Video Message -->
+        <div v-else class="text-center text-white">
+          <svg class="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
           </svg>
+          <p class="text-lg">Temple video not available</p>
         </div>
-            <div>
-              <h2 class="text-xl font-semibold text-gray-900">{{ temple ? temple.name : 'Loading...' }}</h2>
-              <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
-            </div>
-          </div>
+      </div>
+    </div>
+  </div>
+</transition>
           <div class="flex items-center space-x-3">
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
               Active
@@ -421,6 +489,13 @@ const selectedEvent = ref(null)
 const eventToDelete = ref(null)
 const searchTerm = ref('')
 const showPermissionAlert = ref(false)
+// Add these new refs after the existing refs
+const templeLogo = ref(null)
+const templeVideo = ref(null)
+const showVideoModal = ref(false)
+const videoPlayer = ref(null)
+
+const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 const filters = ref({
   status: 'all',
   category: 'all'
@@ -488,17 +563,104 @@ const handleCreateEventClick = () => {
 }
 
 // Load temple data
+// Replace your existing loadTempleData function with this:
 const loadTempleData = async () => {
   try {
-    
     const fetchedTemple = await templeStore.getTempleById(templeId.value)
     if (fetchedTemple) {
       temple.value = fetchedTemple
+      
+      // Extract media URLs
+      const media = extractTempleMedia(fetchedTemple)
+      templeLogo.value = media.logo
+      templeVideo.value = media.video
+      
+      console.log('✅ Temple logo URL:', templeLogo.value)
+      console.log('✅ Temple video URL:', templeVideo.value)
     }
   } catch (error) {
     console.error('Error loading temple data:', error)
-    showToast('Failed to load temple details', 'error')
+    toast.error('Failed to load temple details')
   }
+}
+// Helper function to construct full media URL
+const getFullMediaUrl = (path) => {
+  if (!path) return null
+  
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  return `${BACKEND_ORIGIN}${cleanPath}`
+}
+
+// Extract media from temple data
+const extractTempleMedia = (templeData) => {
+  if (!templeData) return { logo: null, video: null }
+  
+  console.log('🔍 Extracting media from temple data:', templeData)
+  
+  let logo = null
+  let video = null
+  
+  if (templeData.media) {
+    try {
+      const media = typeof templeData.media === 'string' 
+        ? JSON.parse(templeData.media) 
+        : templeData.media
+      
+      logo = media.logo || media.Logo || media.logo_url || media.logoUrl
+      video = media.video || media.Video || media.video_url || media.videoUrl || media.intro_video_url
+    } catch (e) {
+      console.warn('⚠️ Error parsing media JSON:', e)
+    }
+  }
+  
+  if (!logo) {
+    logo = templeData.logo_url || templeData.logoUrl || templeData.logo || templeData.Logo
+  }
+  if (!video) {
+    video = templeData.intro_video_url || templeData.videoUrl || templeData.video || templeData.Video
+  }
+  
+  const result = {
+    logo: logo ? getFullMediaUrl(logo) : null,
+    video: video ? getFullMediaUrl(video) : null
+  }
+  
+  console.log('✅ Extracted media:', result)
+  return result
+}
+
+// Open temple video modal
+const openTempleVideo = () => {
+  if (templeVideo.value) {
+    showVideoModal.value = true
+  } else {
+    console.log('Temple video not available')
+  }
+}
+
+// Close video modal
+const closeVideoModal = () => {
+  showVideoModal.value = false
+  if (videoPlayer.value) {
+    videoPlayer.value.pause()
+    videoPlayer.value.currentTime = 0
+  }
+}
+
+// Handle logo error
+const handleLogoError = (event) => {
+  console.error('Temple logo failed to load:', event.target.src)
+  event.target.style.display = 'none'
+}
+
+// Handle video error
+const handleVideoError = (event) => {
+  console.error('Temple video failed to load:', event.target.src)
+  toast.error('Failed to load temple video')
 }
 
 // Load events on component mount
@@ -669,3 +831,14 @@ const truncateText = (text, maxLength) => {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
 }
 </script>
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+</style>

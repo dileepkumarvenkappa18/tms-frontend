@@ -7,7 +7,7 @@
           <div class="flex items-center space-x-4">
             <!-- Temple Logo Icon -->
             <div 
-              class="h-14 w-14 rounded-full overflow-hidden bg-indigo-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+              class="h-18 w-18 rounded-full overflow-hidden bg-indigo-100 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
               @click="openTempleVideo"
             >
               <img

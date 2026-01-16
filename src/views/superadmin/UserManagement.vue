@@ -562,7 +562,7 @@
                   >
                     {{ form.templeDetails.logoUrl || logoPreview ? 'Change Logo' : 'Upload Logo' }}
                   </button>
-                  <span class="text-xs text-gray-500">JPG, PNG, GIF, WebP (Max 5MB)</span>
+                  <span class="text-xs text-gray-500">JPG, PNG, GIF, WebP (Max 500kb)</span>
                 </div>
                 
                 <input
@@ -613,7 +613,7 @@
                   >
                     {{ form.templeDetails.introVideoUrl || videoPreview ? 'Change Video' : 'Upload Video' }}
                   </button>
-                  <span class="text-xs text-gray-500">MP4, AVI, MOV, WMV, WebM (Max 50MB)</span>
+                  <span class="text-xs text-gray-500">MP4, AVI, MOV, WMV, WebM (Max 5MB)</span>
                 </div>
                 
                 <input
@@ -1438,12 +1438,67 @@ const toggleUserStatus = async (user) => {
   }
 }
 
-// ✅ FIXED: Edit user with proper media preview handling
-const editUser = (user) => {
+// ✅ Helper function to construct full media URLs
+const getFullMediaUrl = (relativePath) => {
+  if (!relativePath) return null
+  
+  // If already a full URL, return as-is
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    return relativePath
+  }
+  
+  // Construct full URL from relative path
+  // Assuming your API base URL is available from the api service
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin
+  return `${baseUrl}${relativePath.startsWith('/') ? '' : '/'}${relativePath}`
+}
+
+// ✅ FIXED: Edit user with proper media preview handling and temple details fetching
+const editUser = async (user) => {
   isEditing.value = true
   editingUserId.value = user.id
   
   console.log('📝 Editing user:', user)
+  
+  // Check if user is templeadmin and needs temple details
+  const isTempleAdmin = normalizeRoleName(user?.role) === 'templeadmin'
+  
+  let templeDetails = user.temple_details
+  
+  // If templeadmin but no temple_details, fetch them from the API
+  if (isTempleAdmin && !templeDetails) {
+    console.log('🔍 Fetching temple details for user:', user.id)
+    try {
+      isLoading.value = true
+      const response = await api.get(`/superadmin/users/${user.id}`)
+      console.log('📦 Fetched user details:', response)
+      
+      if (response && response.data) {
+        templeDetails = response.data.temple_details
+        console.log('✅ Got temple details:', templeDetails)
+      }
+    } catch (err) {
+      console.error('❌ Failed to fetch temple details:', err)
+      error('Failed to load temple details')
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  console.log('📷 Logo URL:', templeDetails?.logo_url)
+  console.log('🎥 Video URL:', templeDetails?.intro_video_url)
+  
+  // Construct full URLs for media
+  const logoUrl = templeDetails?.logo_url 
+    ? getFullMediaUrl(templeDetails.logo_url)
+    : ''
+  
+  const videoUrl = templeDetails?.intro_video_url
+    ? getFullMediaUrl(templeDetails.intro_video_url)
+    : ''
+  
+  console.log('📷 Full logo URL:', logoUrl)
+  console.log('🎥 Full video URL:', videoUrl)
   
   form.value = {
     fullName: user.full_name || '',
@@ -1452,27 +1507,25 @@ const editUser = (user) => {
     role: (typeof user.role === 'object' ? user.role?.role_name : user.role) || '',
     isActive: (user.status || '').toLowerCase() === 'active',
     templeDetails: {
-      name: user.temple_details?.temple_name || '',
-      place: user.temple_details?.temple_place || '',
-      address: user.temple_details?.temple_address || '',
-      phoneNumber: user.temple_details?.temple_phone_no || '',
-      description: user.temple_details?.temple_description || '',
-      logoUrl: user.temple_details?.logo_url || '',
-      introVideoUrl: user.temple_details?.intro_video_url || ''
+      name: templeDetails?.temple_name || '',
+      place: templeDetails?.temple_place || '',
+      address: templeDetails?.temple_address || '',
+      phoneNumber: templeDetails?.temple_phone_no || '',
+      description: templeDetails?.temple_description || '',
+      logoUrl: logoUrl,
+      introVideoUrl: videoUrl
     }
   }
   
-  // ✅ Set media previews for existing files
-  if (user.temple_details?.logo_url) {
-    logoPreview.value = user.temple_details.logo_url
-  }
-  if (user.temple_details?.intro_video_url) {
-    videoPreview.value = user.temple_details.intro_video_url
-  }
+  // ✅ Set media previews for existing files with full URLs
+  logoPreview.value = logoUrl
+  videoPreview.value = videoUrl
+  
+  console.log('✅ Logo preview set to:', logoPreview.value)
+  console.log('✅ Video preview set to:', videoPreview.value)
   
   showCreateModal.value = true
 }
-
 // Cancel form
 const cancelUserForm = () => {
   showCreateModal.value = false

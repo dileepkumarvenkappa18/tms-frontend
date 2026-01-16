@@ -315,7 +315,7 @@
             </div>
             
             <p class="mt-1 text-xs text-gray-500">
-              PNG, JPG, JPEG (max 2MB, recommended: 500x500px)
+              PNG, JPG, JPEG (max 500kb, recommended: 500x500px)
             </p>
             <div v-if="errors.logo" class="mt-1 text-xs text-red-600">
               {{ errors.logo }}
@@ -374,7 +374,7 @@
             </div>
             
             <p class="mt-1 text-xs text-gray-500">
-              MP4, WebM, MOV (max 20MB, recommended: under 2 minutes)
+              MP4, WebM, MOV (max 5MB, recommended: under 2 minutes)
             </p>
             <div v-if="errors.video" class="mt-1 text-xs text-red-600">
               {{ errors.video }}

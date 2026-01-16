@@ -65,13 +65,13 @@ export default defineConfig(({ mode }) => {
           rewrite: path => path,
           configure: (proxy, options) => {
             proxy.on('error', (err, req, res) => {
-              console.error('❌ File proxy error:', err.message)
+              //console.error('❌ File proxy error:', err.message)
             })
             proxy.on('proxyReq', (proxyReq, req, res) => {
-              console.log('📁 File proxy request:', req.method, req.url)
+              //console.log('📁 File proxy request:', req.method, req.url)
             })
             proxy.on('proxyRes', (proxyRes, req, res) => {
-              console.log('📁 File proxy response:', proxyRes.statusCode, req.url)
+              //console.log('📁 File proxy response:', proxyRes.statusCode, req.url)
             })
           }
         }
