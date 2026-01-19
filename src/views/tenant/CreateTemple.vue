@@ -450,7 +450,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Logo *</h3>
-                  <p class="text-gray-600 mb-4">Upload temple logo (JPG, PNG - Max 5MB)</p>
+                  <p class="text-gray-600 mb-4">Upload temple logo (JPG, PNG - Max 500kb)</p>
                   <div class="flex justify-center">
                     <label class="cursor-pointer bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
                       <span>Choose Logo</span>
@@ -476,7 +476,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Video (Optional)</h3>
-                  <p class="text-gray-600 mb-4">Upload temple video (MP4, MOV, AVI - Max 50MB)</p>
+                  <p class="text-gray-600 mb-4">Upload temple video (MP4, MOV, AVI - Max 5MB)</p>
                   <div class="flex justify-center">
                     <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
                       <span>Choose Video</span>

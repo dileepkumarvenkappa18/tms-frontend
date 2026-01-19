@@ -159,225 +159,377 @@
       </div>
       
       <!-- Temple Details Form (shown when Temple Admin is selected) -->
-      <div v-if="form.role === 'tenant'" class="mt-6 overflow-hidden bg-white rounded-lg border border-gray-200">
-        <!-- Temple Details Header -->
-        <div class="px-6 py-4 bg-indigo-600">
-          <div class="flex items-center">
-            <h3 class="text-lg font-medium leading-6 text-white">Temple Details</h3>
+      <div v-if="form.role === 'tenant'" class="mt-6 space-y-6">
+        <!-- Temple Details Section -->
+        <div class="overflow-hidden bg-white rounded-lg border border-gray-200">
+          <div class="px-6 py-4 bg-indigo-600">
+            <div class="flex items-center">
+              <h3 class="text-lg font-medium leading-6 text-white">Temple Details</h3>
+            </div>
+            <p class="mt-1 text-sm text-indigo-100">
+              Please provide the following details about your temple
+            </p>
           </div>
-          <p class="mt-1 text-sm text-indigo-100">
-            Please provide the following details about your temple
-          </p>
+          
+          <div class="px-6 py-5 space-y-6">
+            <!-- Temple Name -->
+            <div>
+              <label for="templeName" class="block text-sm font-medium text-gray-700 mb-1">
+                Temple Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="templeName"
+                v-model="templeDetails.name"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Enter temple name"
+                required
+                @input="clearError('templeName')"
+              />
+              <div v-if="errors.templeName" class="mt-1 text-xs text-red-600">
+                {{ errors.templeName }}
+              </div>
+            </div>
+            
+            <!-- Temple Place -->
+            <div>
+              <label for="templePlace" class="block text-sm font-medium text-gray-700 mb-1">
+                Temple Place <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="templePlace"
+                v-model="templeDetails.place"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Enter temple location"
+                required
+                @input="clearError('templePlace')"
+              />
+              <div v-if="errors.templePlace" class="mt-1 text-xs text-red-600">
+                {{ errors.templePlace }}
+              </div>
+            </div>
+            
+            <!-- Temple Address -->
+            <div>
+              <label for="templeAddress" class="block text-sm font-medium text-gray-700 mb-1">
+                Temple Address <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                id="templeAddress"
+                v-model="templeDetails.address"
+                rows="3"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Enter complete temple address"
+                required
+                @input="clearError('templeAddress')"
+              ></textarea>
+              <div v-if="errors.templeAddress" class="mt-1 text-xs text-red-600">
+                {{ errors.templeAddress }}
+              </div>
+            </div>
+            
+            <!-- Temple Phone -->
+            <div>
+              <label for="templePhone" class="block text-sm font-medium text-gray-700 mb-1">
+                Temple Phone Number <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="templePhone"
+                v-model="templeDetails.phoneNumber"
+                type="tel"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Enter temple contact number"
+                required
+                @input="clearError('templePhoneNo')"
+              />
+              <div v-if="errors.templePhoneNo" class="mt-1 text-xs text-red-600">
+                {{ errors.templePhoneNo }}
+              </div>
+            </div>
+            
+            <!-- Temple Description -->
+            <div>
+              <label for="templeDescription" class="block text-sm font-medium text-gray-700 mb-1">
+                Description <span class="text-red-500">*</span>
+              </label>
+              <textarea
+                id="templeDescription"
+                v-model="templeDetails.description"
+                rows="4"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Provide additional details about your temple (history, services, etc.)"
+                required
+                @input="clearError('templeDescription')"
+              ></textarea>
+              <div v-if="errors.templeDescription" class="mt-1 text-xs text-red-600">
+                {{ errors.templeDescription }}
+              </div>
+            </div>
+
+            <!-- Temple Logo Upload -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Temple Logo <span class="text-red-500">*</span>
+              </label>
+              
+              <div class="mt-1 flex items-center space-x-4">
+                <input
+                  ref="logoInput"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  @change="onLogoChange"
+                  class="hidden"
+                />
+                
+                <button
+                  type="button"
+                  @click="$refs.logoInput.click()"
+                  class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Choose Logo
+                </button>
+                
+                <span v-if="logoFile" class="text-sm text-gray-600">
+                  {{ logoFile.name }}
+                </span>
+                <span v-else class="text-sm text-gray-400">
+                  No file chosen
+                </span>
+              </div>
+              
+              <div v-if="logoPreview" class="mt-3">
+                <img 
+                  :src="logoPreview" 
+                  alt="Logo Preview" 
+                  class="h-24 w-24 object-cover rounded-lg border-2 border-gray-200"
+                />
+                <button
+                  type="button"
+                  @click="removeLogo"
+                  class="mt-2 text-sm text-red-600 hover:text-red-800"
+                >
+                  Remove
+                </button>
+              </div>
+              
+              <p class="mt-1 text-xs text-gray-500">
+                PNG, JPG, JPEG (max 500kb, recommended: 500x500px)
+              </p>
+              <div v-if="errors.logo" class="mt-1 text-xs text-red-600">
+                {{ errors.logo }}
+              </div>
+            </div>
+
+            <!-- Temple Intro Video Upload -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Temple Intro Video <span class="text-red-500">*</span>
+              </label>
+              
+              <div class="mt-1 flex items-center space-x-4">
+                <input
+                  ref="videoInput"
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  @change="onVideoChange"
+                  class="hidden"
+                />
+                
+                <button
+                  type="button"
+                  @click="$refs.videoInput.click()"
+                  class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Choose Video
+                </button>
+                
+                <span v-if="videoFile" class="text-sm text-gray-600">
+                  {{ videoFile.name }}
+                </span>
+                <span v-else class="text-sm text-gray-400">
+                  No file chosen
+                </span>
+              </div>
+              
+              <div v-if="videoPreview" class="mt-3">
+                <video 
+                  :src="videoPreview" 
+                  controls 
+                  class="w-full max-w-md rounded-lg border-2 border-gray-200"
+                  style="max-height: 200px;"
+                >
+                  Your browser does not support the video tag.
+                </video>
+                <button
+                  type="button"
+                  @click="removeVideo"
+                  class="mt-2 text-sm text-red-600 hover:text-red-800"
+                >
+                  Remove
+                </button>
+              </div>
+              
+              <p class="mt-1 text-xs text-gray-500">
+                MP4, WebM, MOV (max 5MB, recommended: under 2 minutes)
+              </p>
+              <div v-if="errors.video" class="mt-1 text-xs text-red-600">
+                {{ errors.video }}
+              </div>
+            </div>
+          </div>
         </div>
-        
-        <div class="px-6 py-5 space-y-6">
-          <!-- Temple Name -->
-          <div>
-            <label for="templeName" class="block text-sm font-medium text-gray-700 mb-1">
-              Temple Name <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="templeName"
-              v-model="templeDetails.name"
-              type="text"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter temple name"
-              required
-              @input="clearError('templeName')"
-            />
-            <div v-if="errors.templeName" class="mt-1 text-xs text-red-600">
-              {{ errors.templeName }}
-            </div>
-          </div>
-          
-          <!-- Temple Place -->
-          <div>
-            <label for="templePlace" class="block text-sm font-medium text-gray-700 mb-1">
-              Temple Place <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="templePlace"
-              v-model="templeDetails.place"
-              type="text"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter temple location"
-              required
-              @input="clearError('templePlace')"
-            />
-            <div v-if="errors.templePlace" class="mt-1 text-xs text-red-600">
-              {{ errors.templePlace }}
-            </div>
-          </div>
-          
-          <!-- Temple Address -->
-          <div>
-            <label for="templeAddress" class="block text-sm font-medium text-gray-700 mb-1">
-              Temple Address <span class="text-red-500">*</span>
-            </label>
-            <textarea
-              id="templeAddress"
-              v-model="templeDetails.address"
-              rows="3"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter complete temple address"
-              required
-              @input="clearError('templeAddress')"
-            ></textarea>
-            <div v-if="errors.templeAddress" class="mt-1 text-xs text-red-600">
-              {{ errors.templeAddress }}
-            </div>
-          </div>
-          
-          <!-- Temple Phone -->
-          <div>
-            <label for="templePhone" class="block text-sm font-medium text-gray-700 mb-1">
-              Temple Phone Number <span class="text-red-500">*</span>
-            </label>
-            <input
-              id="templePhone"
-              v-model="templeDetails.phoneNumber"
-              type="tel"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Enter temple contact number"
-              required
-              @input="clearError('templePhoneNo')"
-            />
-            <div v-if="errors.templePhoneNo" class="mt-1 text-xs text-red-600">
-              {{ errors.templePhoneNo }}
-            </div>
-          </div>
-          
-          <!-- Temple Description -->
-          <div>
-            <label for="templeDescription" class="block text-sm font-medium text-gray-700 mb-1">
-              Description <span class="text-red-500">*</span>
-            </label>
-            <textarea
-              id="templeDescription"
-              v-model="templeDetails.description"
-              rows="4"
-              class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              placeholder="Provide additional details about your temple (history, services, etc.)"
-              required
-              @input="clearError('templeDescription')"
-            ></textarea>
-            <div v-if="errors.templeDescription" class="mt-1 text-xs text-red-600">
-              {{ errors.templeDescription }}
-            </div>
-          </div>
 
-          <!-- Temple Logo Upload -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Temple Logo <span class="text-red-500">*</span>
-            </label>
-            
-            <!-- File Input -->
-            <div class="mt-1 flex items-center space-x-4">
-              <input
-                ref="logoInput"
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                @change="onLogoChange"
-                class="hidden"
-              />
-              
-              <button
-                type="button"
-                @click="$refs.logoInput.click()"
-                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Choose Logo
-              </button>
-              
-              <span v-if="logoFile" class="text-sm text-gray-600">
-                {{ logoFile.name }}
-              </span>
-              <span v-else class="text-sm text-gray-400">
-                No file chosen
-              </span>
+        <!-- Bank Account Details Section -->
+        <div class="overflow-hidden bg-white rounded-lg border border-gray-200">
+          <div class="px-6 py-4 bg-emerald-600">
+            <div class="flex items-center">
+              <svg class="w-5 h-5 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              <h3 class="text-lg font-medium leading-6 text-white">Bank Account Details</h3>
             </div>
-            
-            <!-- Logo Preview -->
-            <div v-if="logoPreview" class="mt-3">
-              <img 
-                :src="logoPreview" 
-                alt="Logo Preview" 
-                class="h-24 w-24 object-cover rounded-lg border-2 border-gray-200"
-              />
-              <button
-                type="button"
-                @click="removeLogo"
-                class="mt-2 text-sm text-red-600 hover:text-red-800"
-              >
-                Remove
-              </button>
-            </div>
-            
-            <p class="mt-1 text-xs text-gray-500">
-              PNG, JPG, JPEG (max 2MB, recommended: 500x500px)
+            <p class="mt-1 text-sm text-emerald-100">
+              Required for receiving donations and payments
             </p>
-            <div v-if="errors.logo" class="mt-1 text-xs text-red-600">
-              {{ errors.logo }}
-            </div>
           </div>
-
-          <!-- Temple Intro Video Upload -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">
-              Temple Intro Video <span class="text-red-500">*</span>
-            </label>
-            
-            <!-- File Input -->
-            <div class="mt-1 flex items-center space-x-4">
+          
+          <div class="px-6 py-5 space-y-6">
+            <!-- Account Holder Name -->
+            <div>
+              <label for="accountHolderName" class="block text-sm font-medium text-gray-700 mb-1">
+                Account Holder Name <span class="text-red-500">*</span>
+              </label>
               <input
-                ref="videoInput"
-                type="file"
-                accept="video/mp4,video/webm,video/quicktime"
-                @change="onVideoChange"
-                class="hidden"
+                id="accountHolderName"
+                v-model="bankDetails.accountHolderName"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                placeholder="Enter account holder name"
+                required
+                @input="clearError('accountHolderName')"
               />
-              
-              <button
-                type="button"
-                @click="$refs.videoInput.click()"
-                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Choose Video
-              </button>
-              
-              <span v-if="videoFile" class="text-sm text-gray-600">
-                {{ videoFile.name }}
-              </span>
-              <span v-else class="text-sm text-gray-400">
-                No file chosen
-              </span>
+              <div v-if="errors.accountHolderName" class="mt-1 text-xs text-red-600">
+                {{ errors.accountHolderName }}
+              </div>
             </div>
-            
-            <!-- Video Preview -->
-            <div v-if="videoPreview" class="mt-3">
-              <video 
-                :src="videoPreview" 
-                controls 
-                class="w-full max-w-md rounded-lg border-2 border-gray-200"
-                style="max-height: 200px;"
-              >
-                Your browser does not support the video tag.
-              </video>
-              <button
-                type="button"
-                @click="removeVideo"
-                class="mt-2 text-sm text-red-600 hover:text-red-800"
-              >
-                Remove
-              </button>
+
+            <!-- Account Number -->
+            <div>
+              <label for="accountNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                Account Number <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="accountNumber"
+                v-model="bankDetails.accountNumber"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                placeholder="Enter account number"
+                required
+                @input="clearError('accountNumber')"
+              />
+              <div v-if="errors.accountNumber" class="mt-1 text-xs text-red-600">
+                {{ errors.accountNumber }}
+              </div>
             </div>
-            
-            <p class="mt-1 text-xs text-gray-500">
-              MP4, WebM, MOV (max 20MB, recommended: under 2 minutes)
-            </p>
-            <div v-if="errors.video" class="mt-1 text-xs text-red-600">
-              {{ errors.video }}
+
+            <!-- Bank Name -->
+            <div>
+              <label for="bankName" class="block text-sm font-medium text-gray-700 mb-1">
+                Bank Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="bankName"
+                v-model="bankDetails.bankName"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                placeholder="Enter bank name"
+                required
+                @input="clearError('bankName')"
+              />
+              <div v-if="errors.bankName" class="mt-1 text-xs text-red-600">
+                {{ errors.bankName }}
+              </div>
+            </div>
+
+            <!-- Branch Name -->
+            <div>
+              <label for="branchName" class="block text-sm font-medium text-gray-700 mb-1">
+                Branch Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="branchName"
+                v-model="bankDetails.branchName"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                placeholder="Enter branch name"
+                required
+                @input="clearError('branchName')"
+              />
+              <div v-if="errors.branchName" class="mt-1 text-xs text-red-600">
+                {{ errors.branchName }}
+              </div>
+            </div>
+
+            <!-- IFSC Code -->
+            <div>
+              <label for="ifscCode" class="block text-sm font-medium text-gray-700 mb-1">
+                IFSC Code <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="ifscCode"
+                v-model="bankDetails.ifscCode"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm uppercase"
+                placeholder="Enter IFSC code"
+                maxlength="11"
+                required
+                @input="clearError('ifscCode'); bankDetails.ifscCode = bankDetails.ifscCode.toUpperCase()"
+              />
+              <p class="mt-1 text-xs text-gray-500">11-character code (e.g., SBIN0001234)</p>
+              <div v-if="errors.ifscCode" class="mt-1 text-xs text-red-600">
+                {{ errors.ifscCode }}
+              </div>
+            </div>
+
+            <!-- Account Type -->
+            <div>
+              <label for="accountType" class="block text-sm font-medium text-gray-700 mb-1">
+                Account Type <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="accountType"
+                v-model="bankDetails.accountType"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                required
+                @change="clearError('accountType')"
+              >
+                <option value="">Select account type</option>
+                <option value="savings">Savings</option>
+                <option value="current">Current</option>
+              </select>
+              <div v-if="errors.accountType" class="mt-1 text-xs text-red-600">
+                {{ errors.accountType }}
+              </div>
+            </div>
+
+            <!-- UPI ID (Optional) -->
+            <div>
+              <label for="upiId" class="block text-sm font-medium text-gray-700 mb-1">
+                UPI ID <span class="text-gray-400">(Optional)</span>
+              </label>
+              <input
+                id="upiId"
+                v-model="bankDetails.upiId"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
+                placeholder="yourname@bank"
+                @input="clearError('upiId')"
+              />
+              <p class="mt-1 text-xs text-gray-500">Format: username@bank (e.g., templename@paytm)</p>
+              <div v-if="errors.upiId" class="mt-1 text-xs text-red-600">
+                {{ errors.upiId }}
+              </div>
             </div>
           </div>
         </div>
@@ -443,7 +595,7 @@
       </div>
     </form>
 
-    <!-- Registration Success Modal (alternative approach) -->
+    <!-- Registration Success Modal -->
     <BaseModal v-if="showSuccessModal" @close="goToLogin">
       <template #header>
         <h3 class="text-lg font-medium text-gray-900">Registration Successful!</h3>
@@ -526,12 +678,26 @@ const templeDetails = ref({
   description: ''
 })
 
+// Bank account details
+const bankDetails = ref({
+  accountHolderName: '',
+  accountNumber: '',
+  bankName: '',
+  branchName: '',
+  ifscCode: '',
+  accountType: '',
+  upiId: ''
+})
+
 // Watch for role changes to clear temple-related errors
 watch(() => form.value.role, (newRole, oldRole) => {
   if (oldRole === 'tenant' && newRole !== 'tenant') {
-    // Clear all temple-related errors when switching away from temple admin
+    // Clear all temple and bank-related errors when switching away from temple admin
     const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription', 'logo', 'video']
-    templeErrorKeys.forEach(key => {
+    const bankErrorKeys = ['accountHolderName', 'accountNumber', 'bankName', 'branchName', 'ifscCode', 'accountType', 'upiId']
+    const allKeys = [...templeErrorKeys, ...bankErrorKeys]
+    
+    allKeys.forEach(key => {
       delete errors.value[key]
     })
     
@@ -540,6 +706,17 @@ watch(() => form.value.role, (newRole, oldRole) => {
     videoFile.value = null
     logoPreview.value = null
     videoPreview.value = null
+    
+    // Clear bank details
+    bankDetails.value = {
+      accountHolderName: '',
+      accountNumber: '',
+      bankName: '',
+      branchName: '',
+      ifscCode: '',
+      accountType: '',
+      upiId: ''
+    }
   }
 })
 
@@ -560,8 +737,16 @@ const isFormValid = computed(() => {
                            templeDetails.value.description &&
                            logoFile.value &&
                            videoFile.value)
+  
+  const hasBankDetails = form.value.role !== 'tenant' ||
+                        (bankDetails.value.accountHolderName &&
+                         bankDetails.value.accountNumber &&
+                         bankDetails.value.bankName &&
+                         bankDetails.value.branchName &&
+                         bankDetails.value.ifscCode &&
+                         bankDetails.value.accountType)
                            
-  return hasBasicFields && hasTempleDetails && Object.keys(errors.value).length === 0
+  return hasBasicFields && hasTempleDetails && hasBankDetails && Object.keys(errors.value).length === 0
 })
 
 // Methods
@@ -569,7 +754,6 @@ const onLogoChange = (e) => {
   const file = e.target.files[0]
   if (!file) return
 
-  // Validate file type
   const validTypes = ['image/png', 'image/jpeg', 'image/jpg']
   if (!validTypes.includes(file.type)) {
     errors.value.logo = 'Please upload a PNG, JPG, or JPEG file'
@@ -577,8 +761,7 @@ const onLogoChange = (e) => {
     return
   }
 
-  // Validate file size (2MB)
-  const maxSize = 2 * 1024 * 1024 // 2MB in bytes
+  const maxSize = 2 * 1024 * 1024
   if (file.size > maxSize) {
     errors.value.logo = 'Logo file size must be less than 2MB'
     showError('Logo file size must be less than 2MB')
@@ -588,7 +771,6 @@ const onLogoChange = (e) => {
   logoFile.value = file
   clearError('logo')
   
-  // Create preview
   const reader = new FileReader()
   reader.onload = (e) => {
     logoPreview.value = e.target.result
@@ -600,7 +782,6 @@ const onVideoChange = (e) => {
   const file = e.target.files[0]
   if (!file) return
 
-  // Validate file type
   const validTypes = ['video/mp4', 'video/webm', 'video/quicktime']
   if (!validTypes.includes(file.type)) {
     errors.value.video = 'Please upload an MP4, WebM, or MOV file'
@@ -608,8 +789,7 @@ const onVideoChange = (e) => {
     return
   }
 
-  // Validate file size (20MB)
-  const maxSize = 20 * 1024 * 1024 // 20MB in bytes
+  const maxSize = 20 * 1024 * 1024
   if (file.size > maxSize) {
     errors.value.video = 'Video file size must be less than 20MB'
     showError('Video file size must be less than 20MB')
@@ -619,7 +799,6 @@ const onVideoChange = (e) => {
   videoFile.value = file
   clearError('video')
   
-  // Create preview
   const reader = new FileReader()
   reader.onload = (e) => {
     videoPreview.value = e.target.result
@@ -639,11 +818,9 @@ const removeVideo = () => {
   clearError('video')
 }
 
-// Clear specific error when user starts typing
 const clearError = (field) => {
   if (errors.value[field]) {
     delete errors.value[field]
-    // Force reactivity
     errors.value = { ...errors.value }
   }
 }
@@ -653,10 +830,12 @@ const selectRole = (role) => {
   form.value.role = role
   clearError('role')
   
-  // Clear temple-related errors when changing roles
   if (role !== 'tenant') {
     const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription', 'logo', 'video']
-    templeErrorKeys.forEach(key => delete errors.value[key])
+    const bankErrorKeys = ['accountHolderName', 'accountNumber', 'bankName', 'branchName', 'ifscCode', 'accountType', 'upiId']
+    const allKeys = [...templeErrorKeys, ...bankErrorKeys]
+    
+    allKeys.forEach(key => delete errors.value[key])
     errors.value = { ...errors.value }
   }
 }
@@ -664,7 +843,6 @@ const selectRole = (role) => {
 const validateForm = () => {
   const newErrors = {}
 
-  // Full name validation
   const namePattern = /^[A-Za-z\s]+$/
   if (!form.value.fullName.trim()) {
     newErrors.fullName = 'Full name is required'
@@ -674,7 +852,6 @@ const validateForm = () => {
     newErrors.fullName = 'Full name cannot contain numbers or special characters'
   }
 
-  // Email validation
   if (!form.value.email) {
     newErrors.email = 'Email is required'
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
@@ -683,27 +860,24 @@ const validateForm = () => {
     newErrors.email = 'Only @gmail.com email addresses are allowed'
   }
 
-  // Password validation
   if (!form.value.password) {
     newErrors.password = 'Password is required'
   } else if (form.value.password.length < 8) {
     newErrors.password = 'Password must be at least 8 characters'
   }
 
-  // Phone validation
   if (!form.value.phone) {
     newErrors.phone = 'Phone number is required'
   } else if (!/^[\+]?[1-9][\d]{0,15}$/.test(form.value.phone.replace(/\s/g, ''))) {
     newErrors.phone = 'Please enter a valid phone number'
   }
 
-  // Role validation
   if (!form.value.role) {
     newErrors.role = 'Please select your role'
   }
 
-  // Temple details validation for Temple Admin role
   if (form.value.role === 'tenant') {
+    // Temple details validation
     if (!templeDetails.value.name) {
       newErrors.templeName = 'Temple name is required'
     }
@@ -726,7 +900,35 @@ const validateForm = () => {
       newErrors.video = 'Temple intro video is required'
     }
     
-    // Set temple details in form for submission
+    // Bank details validation
+    if (!bankDetails.value.accountHolderName) {
+      newErrors.accountHolderName = 'Account holder name is required'
+    }
+    if (!bankDetails.value.accountNumber) {
+      newErrors.accountNumber = 'Account number is required'
+    } else if (!/^\d{9,18}$/.test(bankDetails.value.accountNumber)) {
+      newErrors.accountNumber = 'Account number must be 9-18 digits'
+    }
+    if (!bankDetails.value.bankName) {
+      newErrors.bankName = 'Bank name is required'
+    }
+    if (!bankDetails.value.branchName) {
+      newErrors.branchName = 'Branch name is required'
+    }
+    if (!bankDetails.value.ifscCode) {
+      newErrors.ifscCode = 'IFSC code is required'
+    } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.value.ifscCode)) {
+      newErrors.ifscCode = 'Invalid IFSC code format'
+    }
+    if (!bankDetails.value.accountType) {
+      newErrors.accountType = 'Account type is required'
+    }
+    
+    // UPI validation (optional but if provided, validate format)
+    if (bankDetails.value.upiId && !/^[\w.-]+@[\w]+$/.test(bankDetails.value.upiId)) {
+      newErrors.upiId = 'Invalid UPI ID format'
+    }
+    
     if (templeDetails.value.name && 
         templeDetails.value.place && 
         templeDetails.value.address && 
@@ -736,17 +938,14 @@ const validateForm = () => {
     }
   }
 
-  // Terms validation
   if (!form.value.acceptTerms) {
     newErrors.acceptTerms = 'You must accept the terms and privacy policy'
   }
 
-  // Replace errors object completely to ensure reactivity
   errors.value = newErrors
   return Object.keys(newErrors).length === 0
 }
 
-// Reset CAPTCHA function
 const resetCaptcha = () => {
   if (import.meta.env.VITE_ENABLE_TURNSTILE === "false") {
     console.log("⚠️ CAPTCHA is disabled via VITE_ENABLE_TURNSTILE=false")
@@ -761,23 +960,18 @@ const resetCaptcha = () => {
   }
 }
 
-// Register handler
 const handleRegister = async () => {
-  // Clear global error
   globalError.value = ''
   
-  // Check CAPTCHA verification first
   if (!isCaptchaVerified.value) {
     globalError.value = 'Please complete the CAPTCHA verification'
     showError('Please complete the CAPTCHA verification')
     return
   }
 
-  // Clear all previous errors before validation
   errors.value = {}
   
   if (!validateForm()) {
-    // Scroll to first error
     nextTick(() => {
       const firstError = document.querySelector('.text-red-600')
       if (firstError) {
@@ -805,8 +999,8 @@ const handleRegister = async () => {
     formData.append('role', roleMapping[form.value.role] || form.value.role)
     formData.append('captchaToken', captchaToken.value)
 
-    // Temple admin extra fields
     if (form.value.role === 'tenant') {
+      // Temple details
       formData.append('templeName', templeDetails.value.name)
       formData.append('templePlace', templeDetails.value.place)
       formData.append('templeAddress', templeDetails.value.address)
@@ -819,6 +1013,18 @@ const handleRegister = async () => {
 
       if (videoFile.value) {
         formData.append('video', videoFile.value)
+      }
+      
+      // Bank account details
+      formData.append('accountHolderName', bankDetails.value.accountHolderName)
+      formData.append('accountNumber', bankDetails.value.accountNumber)
+      formData.append('bankName', bankDetails.value.bankName)
+      formData.append('branchName', bankDetails.value.branchName)
+      formData.append('ifscCode', bankDetails.value.ifscCode)
+      formData.append('accountType', bankDetails.value.accountType)
+      
+      if (bankDetails.value.upiId) {
+        formData.append('upiId', bankDetails.value.upiId)
       }
     }
 
@@ -848,12 +1054,10 @@ const handleRegister = async () => {
     } catch (apiError) {
       console.error('API Error during registration:', apiError)
 
-      // Handle duplicate email error with multiple detection patterns
       if (apiError.response?.data?.error) {
         const backendError = apiError.response.data.error
         const errorLower = backendError.toLowerCase()
 
-        // Check for duplicate email errors (multiple variations)
         if (errorLower.includes('email') && 
             (errorLower.includes('already') || 
              errorLower.includes('exists') ||
@@ -865,18 +1069,15 @@ const handleRegister = async () => {
           globalError.value = errorMessage
           showError(errorMessage)
           
-          // Scroll to email field
           nextTick(() => {
             document.getElementById('email')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
           })
         } else {
-          // Other backend errors
           globalError.value = backendError
           showError(backendError)
         }
       }
 
-      // Handle field-specific errors from backend
       if (apiError.response?.data?.errors) {
         const backendErrors = apiError.response.data.errors
         Object.keys(backendErrors).forEach(field => {
@@ -884,25 +1085,19 @@ const handleRegister = async () => {
         })
       }
       
-      // Ensure errors object is reactive
       errors.value = { ...errors.value }
-      
-      // Reset CAPTCHA on error
       resetCaptcha()
     }
   } catch (err) {
     console.error('Registration error:', err)
     globalError.value = 'An error occurred during registration. Please try again.'
     showError('An error occurred during registration. Please try again.')
-    
-    // Reset CAPTCHA on error
     resetCaptcha()
   } finally {
     isLoading.value = false
   }
 }
 
-// Reset form
 const resetForm = () => {
   form.value = {
     fullName: '',
@@ -922,6 +1117,16 @@ const resetForm = () => {
     description: ''
   }
 
+  bankDetails.value = {
+    accountHolderName: '',
+    accountNumber: '',
+    bankName: '',
+    branchName: '',
+    ifscCode: '',
+    accountType: '',
+    upiId: ''
+  }
+
   logoFile.value = null
   videoFile.value = null
   logoPreview.value = null
@@ -931,7 +1136,6 @@ const resetForm = () => {
   globalError.value = ''
 }
 
-// Redirect to login
 const goToLogin = () => {
   showSuccessModal.value = false
   nextTick(() => router.push('/login'))
@@ -946,7 +1150,6 @@ onMounted(async () => {
     return
   }
 
-  // Validate sitekey before rendering
   if (!siteKey) {
     console.error('❌ Cloudflare Turnstile sitekey is missing. Please set VITE_CLOUDFLARE_CAPTCHA_KEY in your .env file')
     globalError.value = 'CAPTCHA configuration error. Please contact support.'
@@ -971,7 +1174,6 @@ onMounted(async () => {
             const errorCode = error?.error || error || 'Unknown error'
             console.error("❌ CAPTCHA verification failed:", errorCode, error)
             
-            // Provide specific error messages for common error codes
             if (String(errorCode).includes('300010') || String(error).includes('300010')) {
               globalError.value = 'Invalid CAPTCHA sitekey. Please check your VITE_CLOUDFLARE_CAPTCHA_KEY environment variable.'
             } else if (String(errorCode).includes('300011') || String(error).includes('300011')) {

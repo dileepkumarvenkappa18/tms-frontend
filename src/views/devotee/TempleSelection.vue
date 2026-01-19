@@ -350,7 +350,7 @@ const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL
 const getFullMediaUrl = (path) => {
   if (!path) return null
   if (path.startsWith('http')) return path
-  return `${BACKEND_ORIGIN}${path.startsWith('/') ? path : '/' + path}`
+  return `${BACKEND_ORIGIN}${path}`
 }
 
 // TEMPLE MEDIA - ENHANCED VERSION WITH EXTENSIVE LOGGING

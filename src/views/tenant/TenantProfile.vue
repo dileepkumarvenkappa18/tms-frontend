@@ -202,7 +202,6 @@
                   Temple Logo
                 </label>
 
-                <!-- Current Logo Display -->
                 <div v-if="logoPreview || currentLogoUrl" class="mb-3">
                   <img
                     :src="logoPreview || currentLogoUrl"
@@ -216,7 +215,6 @@
                   No logo uploaded
                 </p>
 
-                <!-- Upload Button (only in edit mode) -->
                 <div v-if="isEditing" class="flex items-center gap-3">
                   <input
                     ref="logoInput"
@@ -265,7 +263,6 @@
                   Temple Introduction Video
                 </label>
 
-                <!-- Current Video Display -->
                 <div v-if="videoPreview || currentVideoUrl" class="mb-3">
                   <video
                     :src="videoPreview || currentVideoUrl"
@@ -279,7 +276,6 @@
                   No video uploaded
                 </p>
 
-                <!-- Upload Button (only in edit mode) -->
                 <div v-if="isEditing" class="flex items-center gap-3">
                   <input
                     ref="videoInput"
@@ -321,8 +317,103 @@
                   Recommended: MP4 format, max 50MB
                 </p>
               </div>
+            </div>
+          </div>
+        </BaseCard>
 
-              
+        <!-- 🆕 Bank Account Details -->
+        <BaseCard class="mb-6">
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-6">
+              <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              <h2 class="text-xl font-bold text-gray-800">Bank Account Details</h2>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Account Holder Name
+                </label>
+                <BaseInput
+                  v-model="formData.account_holder_name"
+                  type="text"
+                  :disabled="!isEditing"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Account Number
+                </label>
+                <BaseInput
+                  v-model="formData.account_number"
+                  type="text"
+                  :disabled="!isEditing"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Bank Name
+                </label>
+                <BaseInput
+                  v-model="formData.bank_name"
+                  type="text"
+                  :disabled="!isEditing"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Branch Name
+                </label>
+                <BaseInput
+                  v-model="formData.branch_name"
+                  type="text"
+                  :disabled="!isEditing"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  IFSC Code
+                </label>
+                <BaseInput
+                  v-model="formData.ifsc_code"
+                  type="text"
+                  :disabled="!isEditing"
+                  class="uppercase"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Account Type
+                </label>
+                <select
+                  v-model="formData.account_type"
+                  :disabled="!isEditing"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100 disabled:text-gray-600"
+                >
+                  <option value="">Select account type</option>
+                  <option value="savings">Savings</option>
+                  <option value="current">Current</option>
+                </select>
+              </div>
+
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  UPI ID <span class="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <BaseInput
+                  v-model="formData.upi_id"
+                  type="text"
+                  :disabled="!isEditing"
+                  placeholder="yourname@bank"
+                />
+              </div>
             </div>
           </div>
         </BaseCard>
@@ -427,7 +518,15 @@ const formData = ref({
   temple_phone_no: '',
   temple_description: '',
   logo_url: '',
-  intro_video_url: ''
+  intro_video_url: '',
+  // 🆕 Bank details
+  account_holder_name: '',
+  account_number: '',
+  bank_name: '',
+  branch_name: '',
+  ifsc_code: '',
+  account_type: '',
+  upi_id: ''
 })
 
 const currentLogoUrl = computed(() => {
@@ -458,13 +557,11 @@ const handleLogoChange = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // Validate file type
   if (!file.type.startsWith('image/')) {
     showError('Please select a valid image file')
     return
   }
 
-  // Validate file size (5MB)
   if (file.size > 5 * 1024 * 1024) {
     showError('Logo file size must be less than 5MB')
     return
@@ -472,7 +569,6 @@ const handleLogoChange = (event) => {
 
   logoFile.value = file
   
-  // Create preview
   const reader = new FileReader()
   reader.onload = (e) => {
     logoPreview.value = e.target.result
@@ -484,13 +580,11 @@ const handleVideoChange = (event) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // Validate file type
   if (!file.type.startsWith('video/')) {
     showError('Please select a valid video file')
     return
   }
 
-  // Validate file size (50MB)
   if (file.size > 50 * 1024 * 1024) {
     showError('Video file size must be less than 50MB')
     return
@@ -498,7 +592,6 @@ const handleVideoChange = (event) => {
 
   videoFile.value = file
   
-  // Create preview
   const reader = new FileReader()
   reader.onload = (e) => {
     videoPreview.value = e.target.result
@@ -524,7 +617,6 @@ const removeVideo = () => {
   }
 }
 
-// Upload file to server
 const uploadFile = async (file, type) => {
   const uploadFormData = new FormData()
   uploadFormData.append('file', file)
@@ -550,24 +642,34 @@ const fetchProfile = async () => {
     loading.value = true
     error.value = ''
 
-    console.log('📡 Fetching tenant profile...')
+    console.log('📡 Fetching account details...')
 
-    const response = await api.get('/tenant/profile')
+    // Change endpoint to auth endpoint
+    const response = await api.get('/auth/account/details')
 
     console.log('✅ Profile data received:', response.data)
-    profile.value = response.data
+    const accountData = response.data.data // Note the .data.data structure
+    profile.value = accountData
     
     // Populate form data
     formData.value = {
-      full_name: response.data.user?.full_name || '',
-      phone: response.data.user?.phone || '',
-      temple_name: response.data.temple_name || '',
-      temple_place: response.data.temple_place || '',
-      temple_address: response.data.temple_address || '',
-      temple_phone_no: response.data.temple_phone_no || '',
-      temple_description: response.data.temple_description || '',
-      logo_url: response.data.logo_url || '',
-      intro_video_url: response.data.intro_video_url || ''
+      full_name: accountData.user?.full_name || '',
+      phone: accountData.user?.phone || '',
+      temple_name: accountData.temple?.temple_name || '',
+      temple_place: accountData.temple?.temple_place || '',
+      temple_address: accountData.temple?.temple_address || '',
+      temple_phone_no: accountData.temple?.temple_phone_no || '',
+      temple_description: accountData.temple?.temple_description || '',
+      logo_url: accountData.temple?.logo_url || '',
+      intro_video_url: accountData.temple?.intro_video_url || '',
+      // Bank details
+      account_holder_name: accountData.bank?.account_holder_name || '',
+      account_number: accountData.bank?.account_number || '',
+      bank_name: accountData.bank?.bank_name || '',
+      branch_name: accountData.bank?.branch_name || '',
+      ifsc_code: accountData.bank?.ifsc_code || '',
+      account_type: accountData.bank?.account_type || '',
+      upi_id: accountData.bank?.upi_id || ''
     }
 
     console.log('✅ Form data populated:', formData.value)
@@ -589,39 +691,6 @@ const fetchProfile = async () => {
     showError(errorMsg)
   } finally {
     loading.value = false
-  }
-}
-
-const startEditing = () => {
-  isEditing.value = true
-  error.value = ''
-  successMessage.value = ''
-}
-
-const cancelEditing = () => {
-  isEditing.value = false
-  error.value = ''
-  successMessage.value = ''
-  
-  // Reset file uploads
-  logoFile.value = null
-  videoFile.value = null
-  logoPreview.value = ''
-  videoPreview.value = ''
-  
-  // Reset form to current profile data
-  if (profile.value) {
-    formData.value = {
-      full_name: profile.value.user?.full_name || '',
-      phone: profile.value.user?.phone || '',
-      temple_name: profile.value.temple_name || '',
-      temple_place: profile.value.temple_place || '',
-      temple_address: profile.value.temple_address || '',
-      temple_phone_no: profile.value.temple_phone_no || '',
-      temple_description: profile.value.temple_description || '',
-      logo_url: profile.value.logo_url || '',
-      intro_video_url: profile.value.intro_video_url || ''
-    }
   }
 }
 
@@ -652,14 +721,15 @@ const handleSubmit = async () => {
 
     uploading.value = false
 
-    console.log('📤 Updating profile with data:', formData.value)
+    console.log('📤 Updating account details with data:', formData.value)
 
-    const response = await api.put('/tenant/profile', formData.value)
+    // Change endpoint to auth endpoint
+    const response = await api.put('/auth/account/details', formData.value)
 
     console.log('✅ Update response:', response.data)
-    profile.value = response.data.profile
-    successMessage.value = 'Profile updated successfully!'
-    success('Profile updated successfully!')
+    profile.value = response.data.data
+    successMessage.value = response.data.message || 'Account details updated successfully!'
+    success(successMessage.value)
     isEditing.value = false
     
     // Reset file uploads
@@ -673,19 +743,58 @@ const handleSubmit = async () => {
       successMessage.value = ''
     }, 3000)
   } catch (err) {
-    console.error('❌ Error updating profile:', err)
+    console.error('❌ Error updating account details:', err)
     console.error('❌ Error response:', err.response?.data)
     
     const errorMsg = err.response?.data?.error || 
                      err.response?.data?.details || 
                      err.message || 
-                     'Failed to update profile'
+                     'Failed to update account details'
     
     error.value = errorMsg
     showError(errorMsg)
   } finally {
     saving.value = false
     uploading.value = false
+  }
+}
+
+const startEditing = () => {
+  isEditing.value = true
+  error.value = ''
+  successMessage.value = ''
+}
+
+const cancelEditing = () => {
+  isEditing.value = false
+  error.value = ''
+  successMessage.value = ''
+  
+  logoFile.value = null
+  videoFile.value = null
+  logoPreview.value = ''
+  videoPreview.value = ''
+  
+  if (profile.value) {
+    formData.value = {
+      full_name: profile.value.user?.full_name || '',
+      phone: profile.value.user?.phone || '',
+      temple_name: profile.value.temple_name || '',
+      temple_place: profile.value.temple_place || '',
+      temple_address: profile.value.temple_address || '',
+      temple_phone_no: profile.value.temple_phone_no || '',
+      temple_description: profile.value.temple_description || '',
+      logo_url: profile.value.logo_url || '',
+      intro_video_url: profile.value.intro_video_url || '',
+      // 🆕 Bank details
+      account_holder_name: profile.value.bank?.account_holder_name || '',
+      account_number: profile.value.bank?.account_number || '',
+      bank_name: profile.value.bank?.bank_name || '',
+      branch_name: profile.value.bank?.branch_name || '',
+      ifsc_code: profile.value.bank?.ifsc_code || '',
+      account_type: profile.value.bank?.account_type || '',
+      upi_id: profile.value.bank?.upi_id || ''
+    }
   }
 }
 
