@@ -12,7 +12,8 @@ const api = axios.create({
   timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json'
+    'Accept': 'application/json',
+    'X-Custom-Header': 'TMS', // Adding a custom header will trigger a preflight OPTIONS request
   }
 })
 

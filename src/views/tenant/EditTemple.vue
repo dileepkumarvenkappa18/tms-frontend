@@ -1,7 +1,68 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header Section -->
-    <div class="bg-white shadow-sm border-b border-gray-200">
+    <!-- Simple Document Viewer (replaces main content when viewing) -->
+    <div v-if="showDocumentViewer" class="min-h-screen bg-gray-50">
+      <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div class="flex items-center justify-between">
+            <button
+              @click="closeDocumentViewer"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back
+            </button>
+            <h2 class="text-lg font-semibold text-gray-900">{{ currentDocumentTitle }}</h2>
+            <button
+              @click="downloadFromViewer"
+              :disabled="downloadingFiles.viewer"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              <span v-if="downloadingFiles.viewer">Downloading...</span>
+              <span v-else>Download</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <object 
+            v-if="isDocumentPdf && currentDocumentUrl" 
+            :data="currentDocumentUrl" 
+            type="application/pdf"
+            class="w-full h-[calc(100vh-120px)] border border-gray-300 rounded"
+            :key="`pdf-${currentDocumentUrl}`"
+          >
+            <iframe 
+              :src="currentDocumentUrl" 
+              class="w-full h-[calc(100vh-120px)] border border-gray-300 rounded"
+            ></iframe>
+          </object>
+          <img 
+            v-else-if="currentDocumentUrl && !isDocumentPdf"
+            :src="currentDocumentUrl" 
+            :alt="currentDocumentTitle" 
+            class="max-w-full h-auto mx-auto rounded"
+            :key="`img-${currentDocumentUrl}`"
+            @error="handleImageError"
+          />
+          <div v-if="!currentDocumentUrl" class="flex items-center justify-center h-[calc(100vh-120px)] text-gray-500">
+            <p>Loading document...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Edit Form (shown when not viewing document) -->
+    <template v-else>
+      <!-- Header Section -->
+      <div class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div class="flex items-center justify-between">
           <div>
@@ -685,6 +746,7 @@
         </div>
       </div>
     </div>
+    </template>
 
     <!-- Documents Modal -->
     <div v-if="showDocumentsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -803,45 +865,16 @@
         </div>
       </div>
     </div>
-
-    <!-- Document Viewer Modal -->
-    <div v-if="showDocumentViewer" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div class="bg-white rounded-lg max-w-6xl w-full max-h-[95vh] overflow-hidden">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 class="text-lg font-semibold text-gray-900">{{ currentDocumentTitle }}</h3>
-          <div class="flex items-center space-x-2">
-            <button
-              @click="downloadFromViewer"
-              :disabled="downloadingFiles.viewer"
-              class="text-sm bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span v-if="downloadingFiles.viewer">Downloading...</span>
-              <span v-else>Download</span>
-            </button>
-            <button @click="closeDocumentViewer" class="text-gray-400 hover:text-gray-600 transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="p-4 overflow-auto max-h-[85vh]">
-          <iframe v-if="isDocumentPdf" :src="currentDocumentUrl" class="w-full h-[75vh] border border-gray-300 rounded" type="application/pdf"></iframe>
-          <img v-else :src="currentDocumentUrl" :alt="currentDocumentTitle" class="max-w-full h-auto mx-auto rounded border border-gray-300" />
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from '@/composables/useToast'
 import templeService from '@/services/temple.service.js'
 
-const API_URL = 'http://localhost:8080'
+const API_URL = import.meta.env.VITE_API_BASE_URL
 
 const router = useRouter()
 const route = useRoute()
@@ -856,6 +889,7 @@ const showDocumentsModal = ref(false)
 const showDocumentViewer = ref(false)
 const currentDocumentUrl = ref('')
 const currentDocumentTitle = ref('')
+const currentDocumentType = ref('') // Store MIME type for better detection
 
 const downloadingFiles = reactive({
   registration: false,
@@ -957,7 +991,22 @@ const hasExistingDocuments = computed(() => {
 
 const isDocumentPdf = computed(() => {
   const url = (currentDocumentUrl.value || '').toLowerCase()
-  return url.includes('.pdf') || url.includes('application/pdf') || (url.startsWith('blob:') && currentDocumentTitle.value.toLowerCase().includes('pdf'))
+  const title = (currentDocumentTitle.value || '').toLowerCase()
+  const mimeType = (currentDocumentType.value || '').toLowerCase()
+  
+  // Check MIME type first (most reliable)
+  if (mimeType === 'application/pdf') return true
+  
+  // Check URL for PDF indicators
+  if (url.includes('.pdf') || url.includes('application/pdf')) return true
+  
+  // For blob URLs, check the file name extension in title
+  if (url.startsWith('blob:')) {
+    // Check if title ends with .pdf or contains .pdf
+    if (title.includes('.pdf')) return true
+  }
+  
+  return false
 })
 
 const sanitizeFileName = (name) => {
@@ -1000,6 +1049,7 @@ const pickDownloadName = (preferred, url, disposition) => {
   )
 }
 
+// needs to be fixed..
 const fixToAbsoluteUrl = (direct) => {
   if (!direct) return ''
   let url = String(direct)
@@ -1027,7 +1077,12 @@ const fixToAbsoluteUrl = (direct) => {
   else if (url.startsWith('/')) path = `/uploads${url}`
   else path = `/uploads/${url}`
 
-  return `${API_URL}${path}`
+  const apiUrl = window.location.protocol === 'https:' 
+    ? `https://${API_URL.replace(/^https?:\/\//, '')}` 
+    : `${API_URL.replace(/^https?:\/\//, '')}`;
+  const fullUrl = `${apiUrl}${path}`;
+  console.log("fullUrl: ", fullUrl)
+  return fullUrl
 }
 
 const viewRemote = (rawUrl, title) => {
@@ -1036,6 +1091,7 @@ const viewRemote = (rawUrl, title) => {
     showToast('Document URL not available', 'error')
     return
   }
+  currentDocumentType.value = ''
   currentDocumentUrl.value = url
   currentDocumentTitle.value = title || 'Document'
   showDocumentViewer.value = true
@@ -1046,13 +1102,91 @@ const viewLocalFile = (file, title, key) => {
     showToast('No file selected', 'error')
     return
   }
-  if (!localPreviews[key]) {
-    localPreviews[key] = URL.createObjectURL(file)
+
+  if (!(file instanceof File) && !(file instanceof Blob)) {
+    showToast('Invalid file type', 'error')
+    return
   }
-  currentDocumentUrl.value = localPreviews[key]
-  currentDocumentTitle.value = title || file.name
-  showDocumentViewer.value = true
+
+  // Revoke old URL if exists
+  if (localPreviews[key]) {
+    try {
+      URL.revokeObjectURL(localPreviews[key])
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  try {
+    // Verify file is valid
+    if (file.size === 0) {
+      showToast('File is empty', 'error')
+      return
+    }
+
+    const blobUrl = URL.createObjectURL(file)
+    
+    // Verify blob URL was created
+    if (!blobUrl || !blobUrl.startsWith('blob:')) {
+      throw new Error('Failed to create blob URL')
+    }
+    
+    localPreviews[key] = blobUrl
+    currentDocumentType.value = file.type || ''
+    currentDocumentTitle.value = title || file.name || 'Document'
+    
+    // Clear URL first to force re-render
+    currentDocumentUrl.value = ''
+    
+    // Use nextTick to ensure DOM is ready
+    nextTick(() => {
+      currentDocumentUrl.value = blobUrl
+      showDocumentViewer.value = true
+    })
+  } catch (error) {
+    console.error('Error creating object URL:', error)
+    showToast('Error creating file preview', 'error')
+  }
 }
+
+const handleImageError = (event) => {
+  console.error('Error loading image:', event)
+  showToast('Failed to load document image', 'error')
+}
+
+/*
+const viewLocalFile = (file, title, key) => {
+  if (!file) {
+    showToast('No file selected', 'error');
+    return;
+  }
+
+  // Introducing a delay using setTimeout (e.g., 2 seconds delay)
+  setTimeout(() => {
+    console.log('Selected file name after delay:', file.name);
+    
+    // Proceed with the rest of your logic after the delay
+    if (!(file instanceof Blob)) {
+      showToast('Invalid file type', 'error');
+      return;
+    }
+
+    if (!localPreviews[key]) {
+      try {
+        localPreviews[key] = URL.createObjectURL(file);
+      } catch (error) {
+        showToast('Error creating object URL', 'error');
+        console.error('Error creating object URL:', error);
+        return;
+      }
+    }
+
+    currentDocumentUrl.value = localPreviews[key];
+    currentDocumentTitle.value = title || file.name;
+    showDocumentViewer.value = true;
+  }, 2000); // 2000 milliseconds = 2 seconds delay
+};
+*/
 
 const viewLocalAdditional = (idx) => {
   const file = form.documents.additional?.[idx]
@@ -1060,8 +1194,9 @@ const viewLocalAdditional = (idx) => {
   if (!localPreviews.additional[idx]) {
     localPreviews.additional[idx] = URL.createObjectURL(file)
   }
-  currentDocumentUrl.value = localPreviews.additional[idx]
+  currentDocumentType.value = file.type || ''
   currentDocumentTitle.value = `Additional Document ${idx + 1}`
+  currentDocumentUrl.value = localPreviews.additional[idx]
   showDocumentViewer.value = true
 }
 
@@ -1070,8 +1205,9 @@ const viewLocalMedia = (type) => {
     showToast(`No ${type} file selected`, 'error')
     return
   }
-  currentDocumentUrl.value = localPreviews[type]
+  currentDocumentType.value = form.media[type].type || ''
   currentDocumentTitle.value = `Temple ${type.charAt(0).toUpperCase() + type.slice(1)}`
+  currentDocumentUrl.value = localPreviews[type]
   showDocumentViewer.value = true
 }
 
@@ -1532,8 +1668,8 @@ const fetchTempleData = async () => {
       existingFiles.additional = documentUrls.additional.map(u => getFilenameFromUrl(u))
     }
 
-    console.log('✅ Final existingFiles:', existingFiles)
-    console.log('✅ Final documentUrls:', documentUrls)
+    console.log('✅ Final existingFiles:', JSON.stringify(existingFiles))
+    console.log('✅ Final documentUrls:', JSON.stringify(documentUrls))
 
     isLoading.value = false
   } catch (err) {
@@ -1551,6 +1687,7 @@ const closeDocumentViewer = () => {
   showDocumentViewer.value = false
   currentDocumentUrl.value = ''
   currentDocumentTitle.value = ''
+  currentDocumentType.value = ''
 }
 
 const revokeAllPreviews = () => {

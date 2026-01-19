@@ -1,8 +1,69 @@
 
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- Header Section -->
-    <div class="bg-white border-b border-gray-200 shadow-sm">
+    <!-- Simple Document Viewer (replaces main content when viewing) -->
+    <div v-if="showDocumentViewer" class="min-h-screen bg-gray-50">
+      <div class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div class="flex items-center justify-between">
+            <button
+              @click="closeDocumentViewer"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Back
+            </button>
+            <h2 class="text-lg font-semibold text-gray-900">{{ currentDocumentTitle }}</h2>
+            <button
+              @click="downloadFromViewer"
+              :disabled="downloadingFromViewer"
+              class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              <span v-if="downloadingFromViewer">Downloading...</span>
+              <span v-else>Download</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <object 
+            v-if="isDocumentPdf && currentDocumentUrl" 
+            :data="currentDocumentUrl" 
+            type="application/pdf"
+            class="w-full h-[calc(100vh-120px)] border border-gray-300 rounded"
+            :key="`pdf-${currentDocumentUrl}`"
+          >
+            <iframe 
+              :src="currentDocumentUrl" 
+              class="w-full h-[calc(100vh-120px)] border border-gray-300 rounded"
+            ></iframe>
+          </object>
+          <img 
+            v-else-if="currentDocumentUrl && !isDocumentPdf"
+            :src="currentDocumentUrl" 
+            :alt="currentDocumentTitle" 
+            class="max-w-full h-auto mx-auto rounded"
+            :key="`img-${currentDocumentUrl}`"
+            @error="handleImageError"
+          />
+          <div v-else-if="!currentDocumentUrl" class="flex items-center justify-center h-[calc(100vh-120px)] text-gray-500">
+            <p>Loading document...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Dashboard Content (shown when not viewing document) -->
+    <div v-else>
+      <!-- Header Section -->
+      <div class="bg-white border-b border-gray-200 shadow-sm">
       <div class="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6">
        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div class="mb-4 sm:mb-0">
@@ -461,6 +522,7 @@
           </div>
         </div>
       </div>
+    </div>
 
       <!-- Debug Modal for API Testing -->
       <div v-if="showDebugModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -490,7 +552,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useToast } from '@/composables/useToast'
 import superAdminService from '@/services/superadmin.service'
 
@@ -506,6 +568,14 @@ const filterStatus = ref('all')
 const showDetailsModal = ref(false)
 const showRejectModal = ref(false)
 const selectedApplication = ref(null)
+
+// Document viewer state
+const showDocumentViewer = ref(false)
+const currentDocumentUrl = ref('')
+const currentDocumentTitle = ref('')
+const currentDocumentType = ref('')
+const downloadingFromViewer = ref(false)
+const currentViewingDoc = ref(null)
 const rejectionNotes = ref('')
 
 // Debug mode and API status tracking
@@ -596,14 +666,21 @@ const templeVideo = computed(() => {
 // Media URL helper (backend already serves /files)
 const getMediaUrl = (path) => {
   if (!path) return ''
-  if (path.startsWith('http')) return path
+  
+  if (path.startsWith('http')) {
+    return path
+  }
   return path
 }
 
 // Error handlers
 const handleImageError = (e) => {
-  console.error('❌ Logo load failed:', e.target.src)
-  e.target.style.display = 'none'
+  console.error('❌ Image load failed:', e.target?.src || e)
+  if (e.target) {
+    e.target.style.display = 'none'
+  } else {
+    toast.error('Failed to load document image')
+  }
 }
 
 const handleVideoError = (e) => {
@@ -830,13 +907,15 @@ const buildDocUrl = (doc, appId, action = 'view') => {
   // Fix double uploads
   cleanPath = cleanPath.replace(/uploads\/uploads\//g, "uploads/");
 
-  let finalUrl = `http://localhost:8080/${cleanPath}`;
-  
+  let finalUrl = `${window.location.protocol}//${window.location.host}/${cleanPath}`;
+  console.log("buildDocUrl - window.location.protocol:", window.location.protocol);
+
   // Add download parameters if action is download
   if (action === 'download') {
     finalUrl = `${finalUrl}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`;
   }
   
+  console.log("buildDocUrl - cleanpath:", cleanPath);
   console.log("buildDocUrl - FINAL URL:", finalUrl);
 
   return finalUrl;
@@ -845,6 +924,7 @@ const buildDocUrl = (doc, appId, action = 'view') => {
 // Fixed openInNewTab function (was missing)
 const openInNewTab = (url) => {
   try {
+    console.log("openInNewTab the url: ", url)
     const w = window.open(url, '_blank', 'noopener,noreferrer')
     if (!w) {
       toast.warning('Pop-up blocked. Please allow pop-ups for this site.')
@@ -911,7 +991,7 @@ const pickDownloadName = (doc, url, disposition) => {
   )
 }
 
-// Direct document access for CORS issues
+// Document viewer functions
 const viewDocument = async (doc) => {
   console.log('viewDocument called with doc:', doc)
   if (!selectedApplication.value) {
@@ -927,14 +1007,65 @@ const viewDocument = async (doc) => {
   }
   
   try {
-    // Always open documents directly - bypass CORS by opening in new tab
-    console.log('viewDocument - opening URL directly in new tab:', url)
-    openInNewTab(url)
+    currentViewingDoc.value = doc
+    currentDocumentType.value = doc.type || ''
+    currentDocumentTitle.value = doc.name || doc.filename || 'Document'
+    
+    // Clear URL first to force re-render
+    currentDocumentUrl.value = ''
+    
+    // Use nextTick to ensure DOM is ready
+    nextTick(() => {
+      currentDocumentUrl.value = url
+      showDocumentViewer.value = true
+    })
   } catch (error) {
     console.error('Error viewing document:', error)
     toast.error('Failed to open document for viewing.')
   }
 }
+
+const closeDocumentViewer = () => {
+  showDocumentViewer.value = false
+  currentDocumentUrl.value = ''
+  currentDocumentTitle.value = ''
+  currentDocumentType.value = ''
+  currentViewingDoc.value = null
+}
+
+const downloadFromViewer = async () => {
+  if (!currentViewingDoc.value || !selectedApplication.value) return
+  
+  downloadingFromViewer.value = true
+  try {
+    await downloadDocument(currentViewingDoc.value)
+  } catch (error) {
+    console.error('Error downloading from viewer:', error)
+    toast.error('Failed to download document')
+  } finally {
+    downloadingFromViewer.value = false
+  }
+}
+
+
+const isDocumentPdf = computed(() => {
+  const url = (currentDocumentUrl.value || '').toLowerCase()
+  const mimeType = (currentDocumentType.value || '').toLowerCase()
+  
+  // Check MIME type first (most reliable)
+  if (mimeType === 'application/pdf') return true
+  
+  // Check URL for PDF indicators
+  if (url.includes('.pdf') || url.includes('application/pdf')) return true
+  
+  // For blob URLs, check the file name extension in title
+  if (url.startsWith('blob:')) {
+    const title = (currentDocumentTitle.value || '').toLowerCase()
+    if (title.includes('.pdf')) return true
+  }
+  
+  return false
+})
 
 // UPDATED: Force-download implementation with Blob first, then graceful fallbacks
 const downloadDocument = async (doc) => {

@@ -374,17 +374,31 @@ const { success, error: showError } = useToast()
 
 // Helper function to convert relative URLs to proper URLs
 // Since baseURL is '/api/v1', we need to handle media files differently
-const BACKEND_URL =
-  import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 
 const getMediaUrl = (path) => {
+  let test
   if (!path) return ''
 
   // If already absolute
-  if (path.startsWith('http')) return path
+  if (path.startsWith('http')) {  
+    test = convertToHttps(path)
+    console.log("test: ",test)
+    return test
+  }
 
-  // ✅ Backend already serves /uploads/*
-  return `${BACKEND_URL}${path}`
+  // ✅ Backend already serves /uploads/*  
+  console.log("getMediaUrl BACKEND_URL: ",BACKEND_URL)
+  console.log("getMediaUrl path: ",path)
+  test = convertToHttps(`${BACKEND_URL}${path}`)
+  console.log("test: ",test)
+  return test
+}
+
+function convertToHttps(url) {
+    const parsedUrl = new URL(url);
+    parsedUrl.protocol = 'https:';  // Set protocol to https
+    return parsedUrl.href;  // Return the modified URL
 }
 
 // State
@@ -416,14 +430,17 @@ const formData = ref({
   intro_video_url: ''
 })
 
-const currentLogoUrl = computed(() =>
-  getMediaUrl(formData.value.logo_url)
+const currentLogoUrl = computed(() => {
+    console.log("getMediaUrl formData.value.logo_url: ",formData.value.logo_url)
+    return getMediaUrl(formData.value.logo_url)
+  }
 )
 
-const currentVideoUrl = computed(() =>
-  getMediaUrl(formData.value.intro_video_url)
+const currentVideoUrl = computed(() => {
+    console.log("getMediaUrl formData.value.video_url: ",formData.value.intro_video_url)
+    return getMediaUrl(formData.value.intro_video_url)
+  }
 )
-
 
 // Error handlers
 const handleImageError = (event) => {
@@ -554,8 +571,11 @@ const fetchProfile = async () => {
     }
 
     console.log('✅ Form data populated:', formData.value)
-    console.log('🖼️ Logo URL:', currentLogoUrl.value)
-    console.log('🎥 Video URL:', currentVideoUrl.value)
+    console.log('🖼️ 1Logo URL:', formData.value.logo_url)
+    console.log('🎥 1Video URL:', formData.value.intro_video_url)
+
+    console.log('🖼️ 2Logo URL:', currentLogoUrl.value)
+    console.log('🎥 2Video URL:', currentVideoUrl.value)
   } catch (err) {
     console.error('❌ Error fetching profile:', err)
     console.error('❌ Error response:', err.response?.data)

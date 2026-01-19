@@ -29,7 +29,6 @@
         <select 
           v-model="statusFilter" 
           class="px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm w-full sm:w-auto"
-          @change="applyFilters"
         >
           <option value="">View All</option>
           <option value="pending">Pending</option>
@@ -472,7 +471,7 @@ export default {
     const toast = useToast()
     const isProcessing = ref(false)
     const API_URL = '/api/v1'
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
     
     // Debug mode
     const debugMode = ref(false)

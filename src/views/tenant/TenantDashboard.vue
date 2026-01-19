@@ -772,7 +772,7 @@ const fetchLogoFromAPI = async () => {
           let finalLogoUrl = logoUrl
           
           if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
-            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
             const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
             finalLogoUrl = `${API_BASE_URL}${cleanPath}`
           }
@@ -789,7 +789,7 @@ const fetchLogoFromAPI = async () => {
           let finalVideoUrl = videoUrl
           
           if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
-            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
             const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
             finalVideoUrl = `${API_BASE_URL}${cleanPath}`
           }
@@ -872,7 +872,7 @@ const fetchLogoFromAPI = async () => {
             let finalLogoUrl = logoUrl
             
             if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
-              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
               const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
               finalLogoUrl = `${API_BASE_URL}${cleanPath}`
             }
@@ -887,7 +887,7 @@ const fetchLogoFromAPI = async () => {
             let finalVideoUrl = videoUrl
             
             if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
-              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
               const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
               finalVideoUrl = `${API_BASE_URL}${cleanPath}`
             }
@@ -919,6 +919,7 @@ onMounted(async () => {
   console.log('TenantDashboard mounted with tenantId:', tenantId.value)
   console.log('User role:', userStore.userRole, 'Role ID:', userStore.user?.roleId)
   console.log('Is Monitoring User:', isMonitoringUser.value)
+  console.log('import.meta.env.VITE_API_BASE_URL: ',import.meta.env.VITE_API_BASE_URL)
   
   // Fetch logo from API
   await fetchLogoFromAPI()
