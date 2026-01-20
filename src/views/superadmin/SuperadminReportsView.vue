@@ -70,9 +70,7 @@
                   class="border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
                 >
                   <option value="all">All Status</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Rejected</option>
+                  <option value="inactive">InActive</option>
                   <option value="active">Active</option>
                 </select>
               </div>

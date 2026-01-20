@@ -605,7 +605,17 @@ const filteredApplications = computed(() => {
   if (filterStatus.value === 'all') {
     return templeApplications.value
   }
-  return templeApplications.value.filter(app => app.status.toLowerCase() === filterStatus.value.toLowerCase())
+  return templeApplications.value.filter(app => {
+    const appStatus = (app.status || '').toLowerCase().trim()
+    const filterValue = filterStatus.value.toLowerCase().trim()
+    
+    // Handle "active" and "approved" as synonyms
+    if (filterValue === 'active' || filterValue === 'approved') {
+      return appStatus === 'active' || appStatus === 'approved'
+    }
+    
+    return appStatus === filterValue
+  })
 })
 
 // Helpers: document normalization and utilities

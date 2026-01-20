@@ -858,62 +858,73 @@ async getAllTenants(filters = {}) {
     }
   }
 
-  // ==========================================
-  // TEMPLE MANAGEMENT - EXISTING
-  // ==========================================
-// Replace inside class SuperAdminService
+// In superadmin.service.js - Replace the getPendingEntities method
 
-async getPendingEntities(params = {}) {
+async getPendingEntities(statusFilter = null) {
   try {
-    console.log('Fetching pending entities from API...');
-    const response = await api.get(`${this.baseURL}/entities`, {
-      params: { status: 'PENDING', ...params }
-    });
-    const d = response?.data ?? {};
+    console.log('🔧 Service: Fetching entities with status filter:', statusFilter);
+    
+    // Build params object
+    const params = {};
+    
+    // Add status parameter if provided
+    if (statusFilter && statusFilter !== 'all') {
+      // Don't convert to uppercase - let backend handle case-insensitivity
+      params.status = statusFilter;
+      console.log('🔍 Adding status filter to params:', params.status);
+    } else if (statusFilter === 'all') {
+      // Explicitly pass 'all' to backend
+      params.status = 'all';
+      console.log('🔍 Fetching ALL entities');
+    }
+    
+    console.log('📤 API Request params:', params);
+    
+    const response = await api.get(`${this.baseURL}/entities`, { params });
+    
+    console.log('📥 Raw API response:', response);
+    
+    const d = response?.data ?? response ?? {};
 
-    // Accept common shapes: array, {pending_entities:[]}, {entities:[]}, {data:[]}
-    if (Array.isArray(d)) {
-      return {
-        success: true,
-        data: d,
-        total: d.length,
-        message: 'Pending entities fetched successfully'
-      };
-    }
-    if (Array.isArray(d.pending_entities)) {
-      return {
-        success: true,
-        data: d.pending_entities,
-        total: d.pending_entities.length,
-        message: 'Pending entities fetched successfully'
-      };
-    }
-    if (Array.isArray(d.entities)) {
-      return {
-        success: true,
-        data: d.entities,
-        total: d.total || d.entities.length,
-        message: 'Pending entities fetched successfully'
-      };
-    }
-    if (Array.isArray(d.data)) {
-      return {
-        success: true,
-        data: d.data,
-        total: d.total || d.data.length,
-        message: 'Pending entities fetched successfully'
-      };
+    // Backend now returns entities as direct array (not wrapped in data object)
+    // Handle both old format (wrapped) and new format (direct array)
+    let entitiesArray = [];
+    
+    if (Array.isArray(response)) {
+      // Direct array response
+      entitiesArray = response;
+      console.log('✅ Direct array response:', entitiesArray.length, 'entities');
+    } else if (Array.isArray(response?.data)) {
+      // Wrapped in response.data
+      entitiesArray = response.data;
+      console.log('✅ Wrapped response.data:', entitiesArray.length, 'entities');
+    } else if (Array.isArray(d.pending_entities)) {
+      // Old format
+      entitiesArray = d.pending_entities;
+      console.log('✅ Old format pending_entities:', entitiesArray.length, 'entities');
+    } else if (Array.isArray(d.entities)) {
+      // Another old format
+      entitiesArray = d.entities;
+      console.log('✅ Old format entities:', entitiesArray.length, 'entities');
+    } else if (Array.isArray(d.data)) {
+      // Nested data
+      entitiesArray = d.data;
+      console.log('✅ Nested data:', entitiesArray.length, 'entities');
+    } else {
+      console.warn('⚠️ Unexpected response format:', d);
     }
 
-    console.warn('API returned unexpected data format:', d);
+    console.log('📊 Final entities array length:', entitiesArray.length);
+    
     return {
       success: true,
-      data: [],
-      total: 0,
-      message: 'No pending entities found'
+      data: entitiesArray,
+      total: entitiesArray.length,
+      message: `Entities fetched successfully (${entitiesArray.length} found)`
     };
   } catch (error) {
-    console.error('Error fetching pending entities:', error);
+    console.error('❌ Error fetching entities:', error);
+    
     if (error.response?.status === 404) {
       const mocks = this.getMockPendingEntities?.() || [];
       return {
@@ -923,10 +934,11 @@ async getPendingEntities(params = {}) {
         message: 'Mock entities loaded (API endpoint not available)'
       };
     }
+    
     return {
       success: false,
       data: [],
-      message: error.response?.data?.error || error.message || 'Failed to fetch pending entities'
+      message: error.response?.data?.error || error.message || 'Failed to fetch entities'
     };
   }
 }

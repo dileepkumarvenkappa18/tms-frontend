@@ -38,9 +38,6 @@
             </div>
           </div>
           <div class="flex items-center space-x-3">
-            <!-- Temple Video Button -->
-            
-            
             <button class="relative p-2 text-gray-400 hover:text-gray-500 transition-colors duration-200">
               <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
@@ -51,6 +48,48 @@
         </div>
       </div>
     </div>
+
+    <!-- Logo Modal -->
+    <transition name="modal">
+      <div v-if="showLogoModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-98 flex items-center justify-center p-4" @click.self="closeLogoModal">
+        <div class="relative w-full h-full max-w-7xl mx-auto flex flex-col" @click.stop>
+          <!-- Close Button -->
+          <button
+            @click="closeLogoModal"
+            class="absolute top-6 right-6 z-50 text-white hover:text-gray-200 transition-all duration-300 flex items-center gap-2 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20 hover:bg-black/80 hover:scale-105"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span class="text-sm font-semibold">Close</span>
+          </button>
+          
+          <!-- Temple Name Title -->
+          <div class="absolute top-6 left-6 z-50 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20">
+            <h2 class="text-white text-lg font-semibold">{{ temple?.name }}</h2>
+          </div>
+          
+          <!-- Logo Image -->
+          <div class="flex-1 w-full flex items-center justify-center relative">
+            <img
+              v-if="templeLogo"
+              :src="templeLogo"
+              :alt="temple?.name || 'Temple Logo'"
+              class="max-w-full max-h-[85vh] object-contain rounded-3xl shadow-2xl"
+              @error="handleLogoError"
+            />
+            
+            <!-- No Logo Message -->
+            <div v-else class="text-center text-white">
+              <svg class="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-lg">Temple logo not available</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
 
     <!-- Video Modal -->
     <transition name="modal">
@@ -412,8 +451,9 @@ const notifications = ref([])
 const upcomingEvents = ref([])
 const topDonors = ref([])
 
-// Video modal state
+// Modal states
 const showVideoModal = ref(false)
+const showLogoModal = ref(false)
 const videoPlayer = ref(null)
 
 // Media URLs
@@ -544,6 +584,15 @@ const openTempleVideo = () => {
   }
 }
 
+// Open logo modal
+const openLogoModal = () => {
+  if (templeLogo.value) {
+    showLogoModal.value = true
+  } else {
+    console.log('Temple logo not available')
+  }
+}
+
 // Close video modal
 const closeVideoModal = () => {
   showVideoModal.value = false
@@ -551,6 +600,11 @@ const closeVideoModal = () => {
     videoPlayer.value.pause()
     videoPlayer.value.currentTime = 0
   }
+}
+
+// Close logo modal
+const closeLogoModal = () => {
+  showLogoModal.value = false
 }
 
 // Handle logo error
