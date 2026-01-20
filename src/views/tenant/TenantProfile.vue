@@ -465,7 +465,8 @@ const { success, error: showError } = useToast()
 
 // Helper function to convert relative URLs to proper URLs
 // Since baseURL is '/api/v1', we need to handle media files differently
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+//const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL
 
 const getMediaUrl = (path) => {
   let test
@@ -488,7 +489,8 @@ const getMediaUrl = (path) => {
 
 function convertToHttps(url) {
     const parsedUrl = new URL(url);
-    parsedUrl.protocol = 'https:';  // Set protocol to https
+    //parsedUrl.protocol = 'https:';  // Set protocol to https
+    parsedUrl.protocol = window.location.protocol
     return parsedUrl.href;  // Return the modified URL
 }
 

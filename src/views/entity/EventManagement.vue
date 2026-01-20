@@ -495,7 +495,7 @@ const templeVideo = ref(null)
 const showVideoModal = ref(false)
 const videoPlayer = ref(null)
 
-const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+const BACKEND_ORIGIN = import.meta.env.VITE_API_BASE_URL
 const filters = ref({
   status: 'all',
   category: 'all'

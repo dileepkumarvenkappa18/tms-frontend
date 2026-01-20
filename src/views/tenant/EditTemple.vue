@@ -1051,12 +1051,15 @@ const pickDownloadName = (preferred, url, disposition) => {
 
 // needs to be fixed..
 const fixToAbsoluteUrl = (direct) => {
+  console.log("direct: ", direct)
+
   if (!direct) return ''
   let url = String(direct)
 
   if (url.includes('/files/')) {
     url = url.replace(/\/files\//g, '/')
   }
+  console.log("url 1: ", url)
 
   if (url.startsWith('http://') || url.startsWith('https://')) {
     if (url.includes('://localhost:8080/') && !/\/(uploads|api|public)\//.test(url)) {
@@ -1070,6 +1073,7 @@ const fixToAbsoluteUrl = (direct) => {
     }
     return url
   }
+  console.log("url 2: ", url)
 
   let path
   if (url.startsWith('/uploads/')) path = url
@@ -1077,12 +1081,26 @@ const fixToAbsoluteUrl = (direct) => {
   else if (url.startsWith('/')) path = `/uploads${url}`
   else path = `/uploads/${url}`
 
+  console.log("path: ", path)
+  /*
   const apiUrl = window.location.protocol === 'https:' 
     ? `https://${API_URL.replace(/^https?:\/\//, '')}` 
     : `${API_URL.replace(/^https?:\/\//, '')}`;
-  const fullUrl = `${apiUrl}${path}`;
+  */
+
+  console.log("apiUrl: ", API_URL)
+  //const fullUrl = `$VITE_API_BASE_URL${path}`;
+  const fullUrl = convertToHttps(`${API_URL}${path}`)
+
   console.log("fullUrl: ", fullUrl)
   return fullUrl
+}
+ 
+function convertToHttps(url) {
+    const parsedUrl = new URL(url);
+    //parsedUrl.protocol = 'https:';  // Set protocol to https
+    parsedUrl.protocol = window.location.protocol
+    return parsedUrl.href;  // Return the modified URL
 }
 
 const viewRemote = (rawUrl, title) => {

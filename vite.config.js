@@ -11,6 +11,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => {
 
   const env = loadEnv(mode, process.cwd(), '')
+  console.log("env.VITE_API_BASE_URL: ", env.VITE_API_BASE_URL)
 
   return {
     plugins: [
@@ -49,18 +50,18 @@ export default defineConfig(({ mode }) => {
     server: {    
       proxy: {
         '/api/v1': {        
-          target: env.VITE_API_URL,
+          target: env.VITE_API_BASE_URL,
           changeOrigin: true,
           rewrite: path => path
         },
         '/uploads': {
-          target: env.VITE_API_URL,
+          target: env.VITE_API_BASE_URL,
           changeOrigin: true,
           rewrite: path => path
         },
         // 🆕 ADD THIS - Proxy /files requests to backend
         '/files': {
-          target: env.VITE_API_URL,
+          target: env.VITE_API_BASE_URL,
           changeOrigin: true,
           rewrite: path => path,
           configure: (proxy, options) => {
@@ -79,33 +80,3 @@ export default defineConfig(({ mode }) => {
     }
   }
 });
-/*
-export default defineConfig(({}) => {
-  const config = {
-    plugins: [
-    vue(),
-    tailwindcss(),
-    vueDevTools(),
-    ],
-  
-    resolve: {
-      alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url))
-      },
-    },
-    server: {
-      proxy: {
-        '/api/v1/': {
-          target: 'http://localhost:8080',
-          changeOrigin: true,
-          rewrite: path => path // Simply pass through the path as is        
-        }      
-      }    
-    }  
-  }
-  
-  console.log('Vite build target:--> ', config.server.path);
-
-  return config;
-});
-*/
