@@ -979,10 +979,13 @@ const restoreSavedData = () => {
     if (savedLocalData) {
       const parsed = JSON.parse(savedLocalData)
       
-      // Only use if saved less than 1 hour ago
+      // ✅ CHECK ENTITY ID MATCHES
       const oneHourAgo = Date.now() - (60 * 60 * 1000)
-      if (parsed.timestamp && parsed.timestamp > oneHourAgo) {
-        console.log('🗃️ Restoring saved local data')
+      if (parsed.timestamp && 
+          parsed.timestamp > oneHourAgo &&
+          parsed.entityId === currentEntityId) {  // ✅ ENTITY CHECK
+        console.log('🗃️ Restoring saved local data for entity:', currentEntityId)
+        
         if (parsed.recentSevas && Array.isArray(parsed.recentSevas)) {
           localData.recentSevas = parsed.recentSevas
         }
@@ -993,6 +996,16 @@ const restoreSavedData = () => {
           localData.upcomingEvents = parsed.upcomingEvents
           upcomingEvents.value = parsed.upcomingEvents
         }
+      } else if (parsed.entityId !== currentEntityId) {
+        console.log('🔄 Clearing old local data from different entity')
+        localStorage.removeItem('dashboard_local_data')
+        // Clear the local data objects
+        localData.recentSevas = []
+        localData.recentDonations = []
+        localData.upcomingEvents = []
+      } else if (!parsed.entityId) {
+        console.log('⚠️ Old data format detected (no entityId), clearing...')
+        localStorage.removeItem('dashboard_local_data')
       }
     }
     
@@ -1879,69 +1892,41 @@ loadingPromises.push(entityPromise);
     
     // DONATION DATA - Load donations first before other data
     console.log('🔄 Loading donation data...')
-    const donationPromise = (async () => {
-      try {
-        // Check if we already have data
-        if (localData.recentDonations.length === 0) {
-          if (donationStore.fetchRecentDonations) {
-            // Use a more reliable approach with retry mechanism
-            try {
-              await donationStore.fetchRecentDonations()
-              
-              // Wait a bit for the data to propagate to the store
-              await new Promise(resolve => setTimeout(resolve, 200))
-              
-              // If no donations were loaded, try again
-              if (!donationStore.recentDonations || donationStore.recentDonations.length === 0) {
-                console.log('⚠️ No donations loaded on first attempt, retrying...')
-                await donationStore.fetchRecentDonations()
-                
-                // Wait again
-                await new Promise(resolve => setTimeout(resolve, 200))
-              }
-              
-              // After loading, immediately copy to local data
-              if (donationStore.recentDonations && donationStore.recentDonations.length > 0) {
-                localData.recentDonations = JSON.parse(JSON.stringify(donationStore.recentDonations))
-                console.log('✅ Successfully loaded', localData.recentDonations.length, 'donations')
-                
-                // Save to localStorage
-                try {
-                  localStorage.setItem('dashboard_local_data', JSON.stringify({
-                    ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
-                    recentDonations: localData.recentDonations,
-                    timestamp: Date.now()
-                  }))
-                } catch (e) {
-                  console.warn('Could not save donations to localStorage', e)
-                }
-              } else {
-                console.warn('⚠️ No donations available after two attempts')
-              }
-            } catch (fetchErr) {
-              console.warn('⚠️ Error in fetchRecentDonations:', fetchErr)
-              
-              // Try alternative loading methods if available
-              if (donationStore.getDonations && typeof donationStore.getDonations === 'function') {
-                try {
-                  const donationsResult = await donationStore.getDonations()
-                  if (donationsResult && Array.isArray(donationsResult) && donationsResult.length > 0) {
-                    localData.recentDonations = JSON.parse(JSON.stringify(donationsResult))
-                    console.log('✅ Loaded donations via alternative method')
-                  }
-                } catch (altErr) {
-                  console.warn('⚠️ Alternative donation loading also failed:', altErr)
-                }
-              }
-            }
+   // Around line 1780-1800 where you load donation data
+const donationPromise = (async () => {
+  try {
+    const currentEntityId = route.params.id;  // ✅ Get current entity
+    
+    if (localData.recentDonations.length === 0) {
+      if (donationStore.fetchRecentDonations) {
+        // ✅ CRITICAL FIX: Pass entity ID
+        await donationStore.fetchRecentDonations(currentEntityId);
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        if (donationStore.recentDonations && donationStore.recentDonations.length > 0) {
+          localData.recentDonations = JSON.parse(JSON.stringify(donationStore.recentDonations));
+          console.log('✅ Successfully loaded', localData.recentDonations.length, 'donations for entity', currentEntityId);
+          
+          // Save to localStorage with entity ID
+          try {
+            localStorage.setItem('dashboard_local_data', JSON.stringify({
+              entityId: currentEntityId,  // ✅ Save with entity ID
+              recentDonations: localData.recentDonations,
+              timestamp: Date.now()
+            }));
+          } catch (e) {
+            console.warn('Could not save donations to localStorage', e);
           }
         }
-        dataLoadingStatus.donations = true
-      } catch (err) {
-        console.warn('⚠️ Error loading donation data:', err)
-        dataLoadingStatus.donations = true
       }
-    })()
+    }
+    dataLoadingStatus.donations = true;
+  } catch (err) {
+    console.warn('⚠️ Error loading donation data:', err);
+    dataLoadingStatus.donations = true;
+  }
+})();
     
     // Add this promise first to prioritize donations loading
     loadingPromises.unshift(donationPromise)

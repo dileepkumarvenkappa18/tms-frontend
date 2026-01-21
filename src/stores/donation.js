@@ -59,6 +59,10 @@ export const useDonationStore = defineStore('donation', () => {
   const normalizeDonationData = (donation) => {
     return {
       id: donation.id || donation.ID || Math.random(),
+      
+      // ✅ CRITICAL: Include user_id and entity_id for tracking
+      user_id: donation.user_id || donation.UserID,
+      entity_id: donation.entity_id || donation.EntityID,
 
       amount: donation.amount || donation.Amount || 0,
 
@@ -75,7 +79,7 @@ export const useDonationStore = defineStore('donation', () => {
       status: donation.status || donation.Status || 'pending',
 
       // Date fields
-      date: donation.donated_at || donation.DonatedAt || donation.date || donation.donation_date,
+      date: donation.donated_at || donation.DonatedAt || donation.date || donation.donation_date || donation.created_at,
       donation_date: donation.donated_at || donation.DonatedAt || donation.donation_date,
       donated_at: donation.donated_at || donation.DonatedAt,
       created_at: donation.created_at || donation.CreatedAt,
@@ -131,20 +135,32 @@ export const useDonationStore = defineStore('donation', () => {
   // ======================
   // ACTIONS
   // ======================
-  async function fetchRecentDonations() {
+  
+  // ✅ UPDATED: Accept entityId parameter
+  async function fetchRecentDonations(entityId = null) {
     loadingRecent.value = true
     error.value = null
+    
     try {
-      const response = await donationService.getMyRecentDonations()
+      console.log(`🔄 Store: Fetching recent donations for entity ${entityId}`)
+      
+      // ✅ Pass entity ID to service
+      const response = await donationService.getMyRecentDonations(entityId)
+      
       if (Array.isArray(response)) {
         recentDonationsData.value = response.map(normalizeDonationData)
+        console.log(`✅ Store: Got ${recentDonationsData.value.length} donations`)
       } else {
         recentDonationsData.value = []
+        console.warn('⚠️ Store: Response is not an array')
       }
+      
       return recentDonationsData.value
     } catch (err) {
+      console.error('❌ Store: Error fetching recent donations:', err)
       error.value = err.message || 'Error fetching recent donations'
       recentDonationsData.value = []
+      
       if (err.response?.status !== 404) {
         throw err
       }
@@ -319,7 +335,14 @@ export const useDonationStore = defineStore('donation', () => {
     error.value = null
     try {
       const response = await donationService.verifyDonation(paymentData)
-      await Promise.all([fetchMyDonations(), fetchRecentDonations()])
+      
+      // ✅ UPDATED: Pass entity ID when refreshing after verification
+      const entityId = donationService.getCurrentEntityId()
+      await Promise.all([
+        fetchMyDonations(), 
+        fetchRecentDonations(entityId)
+      ])
+      
       return response
     } catch (err) {
       error.value = err.message || 'Error verifying donation'

@@ -186,84 +186,159 @@ async getDonationHistory(filters = {}) {
   },
 
   // Get recent donations for the current user - UPDATED: Entity-based
-  async getMyRecentDonations() {
+   async getMyRecentDonations(entityId = null) {
     try {
       console.log('Calling getMyRecentDonations API...')
       
-      // NEW: Get entity ID and include in request
-      const entityId = this.getCurrentEntityId()
+      // Use provided entityId or fall back to getCurrentEntityId
+      const targetEntityId = entityId || this.getCurrentEntityId()
       const tenantId = localStorage.getItem('current_tenant_id')
       
-      console.log(`Fetching my recent donations for entity ID: ${entityId}, tenant ID: ${tenantId}`)
+      console.log(`🔍 Fetching my recent donations for entity ID: ${targetEntityId}, tenant ID: ${tenantId}`)
       
-      // NEW: Build headers with entity context
+      // Build headers with entity context
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
           'X-Tenant-ID': tenantId,
-          'X-Entity-ID': entityId
+          'X-Entity-ID': targetEntityId
         }
       }
       
-      const url = entityId ? `/donations/recent?entity_id=${entityId}` : '/donations/recent'
+      // ✅ CRITICAL: Always include entity_id in URL
+      const url = targetEntityId 
+        ? `/donations/recent?entity_id=${targetEntityId}` 
+        : '/donations/recent'
+      
+      console.log(`📡 Calling: ${url}`)
       const response = await axios.get(url, headers)
       
-      console.log('Recent donations raw response:', response)
-      console.log('Recent donations response data:', response.data)
+      console.log('✅ Recent donations raw response:', response)
+      console.log('✅ Recent donations response data:', response.data)
 
       // Handle the response structure from your backend
       if (response.data && response.data.recent_donations && Array.isArray(response.data.recent_donations)) {
         const recentDonations = response.data.recent_donations.map(donation => ({
           // Map backend field names to frontend expected names
           id: donation.id || donation.ID || Math.random(),
+          user_id: donation.user_id || donation.UserID,
+          entity_id: donation.entity_id || donation.EntityID,
           amount: donation.amount || donation.Amount,
           donation_type: donation.donation_type || donation.DonationType,
           donationType: donation.donation_type || donation.DonationType,
           type: donation.donation_type || donation.DonationType,
           method: donation.method || donation.Method,
           status: donation.status || donation.Status,
-          date: donation.donated_at || donation.DonatedAt || donation.date,
+          date: donation.donated_at || donation.DonatedAt || donation.date || donation.created_at,
           donation_date: donation.donated_at || donation.DonatedAt,
           donated_at: donation.donated_at || donation.DonatedAt,
+          created_at: donation.created_at || donation.CreatedAt,
           note: donation.note || donation.Note || donation.purpose
         }))
         
-        console.log('Mapped recent donations:', recentDonations)
+        console.log(`✅ Mapped ${recentDonations.length} recent donations for entity ${targetEntityId}:`, recentDonations)
         return recentDonations
       } else if (Array.isArray(response.data)) {
         // Handle direct array response
-        return response.data.map(donation => ({
+        const mapped = response.data.map(donation => ({
           id: donation.id || donation.ID || Math.random(),
+          user_id: donation.user_id || donation.UserID,
+          entity_id: donation.entity_id || donation.EntityID,
           amount: donation.amount || donation.Amount,
           donation_type: donation.donation_type || donation.DonationType,
           donationType: donation.donation_type || donation.DonationType,
           type: donation.donation_type || donation.DonationType,
           method: donation.method || donation.Method,
           status: donation.status || donation.Status,
-          date: donation.donated_at || donation.DonatedAt || donation.date,
+          date: donation.donated_at || donation.DonatedAt || donation.date || donation.created_at,
           donation_date: donation.donated_at || donation.DonatedAt,
           donated_at: donation.donated_at || donation.DonatedAt,
+          created_at: donation.created_at || donation.CreatedAt,
           note: donation.note || donation.Note || donation.purpose
         }))
+        console.log(`✅ Mapped ${mapped.length} donations from array response`)
+        return mapped
       } else {
-        console.warn('Unexpected response format for recent donations:', response.data)
+        console.warn('⚠️ Unexpected response format for recent donations:', response.data)
         return []
       }
     } catch (error) {
-      console.error('Error fetching recent donations:', error)
+      console.error('❌ Error fetching recent donations:', error)
       if (error.response?.status === 401) {
         showToast('Please login to view your recent donations', 'error')
         logout()
       } else if (error.response?.status === 404) {
-        console.warn('Recent donations endpoint not found')
+        console.warn('⚠️ Recent donations endpoint not found')
         return []
       } else {
-        showToast('Failed to load recent donations', 'error')
+        console.error('❌ Failed to load recent donations:', error.message)
+        // Don't show toast for silent failures
+        // showToast('Failed to load recent donations', 'error')
       }
       return []
     }
   },
+
+  // ✅ UPDATED: Get recent donations with explicit entity parameter (for dashboard)
+  async getRecentDonations(entityId = null, limit = 5) {
+    try {
+      // Use provided entityId or fall back to getCurrentEntityId
+      const targetEntityId = entityId || this.getCurrentEntityId()
+      const tenantId = localStorage.getItem('current_tenant_id')
+      
+      console.log(`🔍 Fetching recent donations for entity ${targetEntityId}, limit: ${limit}`)
+      
+      // Build entity-aware request
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-Entity-ID': targetEntityId
+        }
+      }
+      
+      // First try to get recent donations from the specific endpoint
+      try {
+        // ✅ CRITICAL: Always include entity_id in URL
+        const url = targetEntityId 
+          ? `/donations/recent?entity_id=${targetEntityId}&limit=${limit}` 
+          : `/donations/recent?limit=${limit}`
+        
+        console.log(`📡 Calling: ${url}`)
+        const recentResponse = await axios.get(url, headers)
+        
+        if (recentResponse.data && recentResponse.data.recent_donations) {
+          console.log(`✅ Got ${recentResponse.data.recent_donations.length} recent donations`)
+          return recentResponse.data.recent_donations.slice(0, limit)
+        }
+      } catch (recentError) {
+        console.warn('⚠️ Recent donations endpoint failed, falling back to general endpoint:', recentError)
+      }
+
+      // Fallback to the general donations endpoint with limit
+      const fallbackUrl = targetEntityId 
+        ? `/donations?entity_id=${targetEntityId}&limit=${limit}&page=1` 
+        : `/donations?limit=${limit}&page=1`
+      
+      console.log(`📡 Fallback calling: ${fallbackUrl}`)
+      const response = await axios.get(fallbackUrl, headers)
+      
+      console.log('✅ Recent donations response:', response.data)
+      return response.data?.data || []
+    } catch (error) {
+      console.error('❌ Error fetching recent donations:', error)
+      if (error.response?.status === 403) {
+        showToast('You do not have permission to view recent donations', 'error')
+      } else {
+        console.error('❌ Failed to load recent donations')
+        // Don't show toast for silent failures
+      }
+      return [] // Return empty array instead of throwing
+    }
+  },
+
 
   // Get donation dashboard stats for entity admin - UPDATED: Entity-based
   async getDonationStats() {
