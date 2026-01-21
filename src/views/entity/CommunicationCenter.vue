@@ -33,6 +33,47 @@
     <p class="text-sm text-gray-500">{{ temple ? `${temple.city}, ${temple.state}` : 'Loading location...' }}</p>
   </div>
 </div>
+
+ <transition name="modal">
+      <div v-if="showLogoModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-98 flex items-center justify-center p-4" @click.self="closeLogoModal">
+        <div class="relative w-full h-full max-w-7xl mx-auto flex flex-col" @click.stop>
+          <!-- Close Button -->
+          <button
+            @click="closeLogoModal"
+            class="absolute top-6 right-6 z-50 text-white hover:text-gray-200 transition-all duration-300 flex items-center gap-2 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20 hover:bg-black/80 hover:scale-105"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <span class="text-sm font-semibold">Close</span>
+          </button>
+          
+          <!-- Temple Name Title -->
+          <div class="absolute top-6 left-6 z-50 bg-black/70 backdrop-blur-md px-6 py-3 rounded-2xl shadow-2xl border border-white/20">
+            <h2 class="text-white text-lg font-semibold">{{ temple?.name }}</h2>
+          </div>
+          
+          <!-- Logo Image -->
+          <div class="flex-1 w-full flex items-center justify-center relative">
+            <img
+              v-if="templeLogo"
+              :src="templeLogo"
+              :alt="temple?.name || 'Temple Logo'"
+              class="max-w-full max-h-[85vh] object-contain rounded-3xl shadow-2xl"
+              @error="handleLogoError"
+            />
+            
+            <!-- No Logo Message -->
+            <div v-else class="text-center text-white">
+              <svg class="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-lg">Temple logo not available</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
 <!-- Video Modal -->
 <transition name="modal">
   <div v-if="showVideoModal" class="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-98 flex items-center justify-center p-4" @click.self="closeVideoModal">
@@ -351,6 +392,7 @@ import MessageHistory from '@/components/communication/MessageHistory.vue'
 // Route and store
 const route = useRoute()
 const templeStore = useTempleStore()
+const showLogoModal = ref(false)
 const temple = ref(null)
 
 // ✅ Computed templeId
@@ -490,6 +532,20 @@ const getFullMediaUrl = (path) => {
   return `${BACKEND_ORIGIN}${cleanPath}`
 }
 
+// Open logo modal
+const openLogoModal = () => {
+  const { logo } = getTempleMedia()
+  if (logo) {
+    showLogoModal.value = true
+  } else {
+    console.log('Temple logo not available')
+  }
+}
+
+// Close logo modal
+const closeLogoModal = () => {
+  showLogoModal.value = false
+}
 // Extract media from temple data
 const extractTempleMedia = (templeData) => {
   if (!templeData) return { logo: null, video: null }

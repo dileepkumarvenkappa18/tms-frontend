@@ -169,6 +169,7 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody v-if="!isLoading && currentDonations.length" class="bg-white divide-y divide-gray-200">
@@ -217,18 +218,26 @@
                 {{ formatStatus(donation.status) }}
               </span>
             </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <button 
+                @click="viewDonationDetails(donation)"
+                class="text-indigo-600 hover:text-indigo-900 font-medium text-sm"
+              >
+                View Details
+              </button>
+            </td>
           </tr>
         </tbody>
         <tbody v-else-if="isLoading" class="bg-white divide-y divide-gray-200">
           <tr v-for="i in 5" :key="i" class="animate-pulse">
-            <td colspan="6" class="px-6 py-4">
+            <td colspan="7" class="px-6 py-4">
               <div class="h-16 bg-gray-200 rounded"></div>
             </td>
           </tr>
         </tbody>
         <tbody v-else>
           <tr>
-            <td colspan="6" class="px-6 py-10 text-center">
+            <td colspan="7" class="px-6 py-10 text-center">
               <div class="text-gray-400 text-lg mb-2">
                 <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -275,12 +284,158 @@
         </button>
       </div>
     </div>
+
+    <!-- Donation Details Modal -->
+    <div v-if="selectedDonation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-xl font-bold text-gray-900">Donation Details</h3>
+          <button @click="selectedDonation = null" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- From Details (Donor Information) -->
+          <div class="space-y-4">
+            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+              <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                From (Donor)
+              </h4>
+              <div class="space-y-2">
+                <div>
+                  <p class="text-xs text-blue-700">Name</p>
+                  <p class="font-semibold text-blue-900">{{ getDonorName(selectedDonation) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-blue-700">Email</p>
+                  <p class="text-sm text-blue-900">{{ getDonorEmail(selectedDonation) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- To Details (Temple/Recipient Bank Information) -->
+          <div class="space-y-4">
+            <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+              <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                To (Received Bank Details)
+              </h4>
+              <div class="space-y-2">
+                <div>
+                  <p class="text-xs text-green-700">Temple/Organization</p>
+                  <p class="font-semibold text-green-900">{{ getTempleName(selectedDonation) }}</p>
+                </div>
+                <div v-if="creatorDetails.bank">
+                  <p class="text-xs text-green-700">Account Holder</p>
+                  <p class="text-sm text-green-900">{{ creatorDetails.bank.account_holder_name || 'N/A' }}</p>
+                </div>
+                <div v-if="creatorDetails.bank">
+                  <p class="text-xs text-green-700">Account Number</p>
+                  <p class="text-sm font-mono text-green-900">{{ creatorDetails.bank.account_number || 'N/A' }}</p>
+                </div>
+                <div v-if="creatorDetails.bank">
+                  <p class="text-xs text-green-700">IFSC Code</p>
+                  <p class="text-sm font-mono text-green-900">{{ creatorDetails.bank.ifsc_code || 'N/A' }}</p>
+                </div>
+                <div v-if="creatorDetails.bank">
+                  <p class="text-xs text-green-700">Bank Name</p>
+                  <p class="text-sm text-green-900">{{ creatorDetails.bank.bank_name || 'N/A' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Details -->
+          <div class="md:col-span-2">
+            <div class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4">
+              <h4 class="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+                Payment Information
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p class="text-xs text-indigo-700">Payment ID</p>
+                  <p class="text-sm font-mono text-indigo-900 break-all">{{ getPaymentId(selectedDonation) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-indigo-700">Order ID</p>
+                  <p class="text-sm font-mono text-indigo-900 break-all">{{ getOrderId(selectedDonation) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-indigo-700">Amount</p>
+                  <p class="text-lg font-bold text-indigo-900">₹{{ formatCurrency(selectedDonation.amount || 0) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Details -->
+          <div class="md:col-span-2">
+            <div class="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+              <h4 class="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Transaction Details
+              </h4>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p class="text-xs text-amber-700">Type</p>
+                  <span :class="getDonationTypeClass(selectedDonation.donationType || selectedDonation.type)" class="inline-block px-2 py-1 text-xs font-medium rounded-full mt-1">
+                    {{ formatDonationType(selectedDonation.donationType || selectedDonation.type) }}
+                  </span>
+                </div>
+                <div>
+                  <p class="text-xs text-amber-700">Status</p>
+                  <span :class="getStatusClass(selectedDonation.status)" class="inline-block px-2 py-1 text-xs font-medium rounded-full mt-1">
+                    {{ formatStatus(selectedDonation.status) }}
+                  </span>
+                </div>
+                <div>
+                  <p class="text-xs text-amber-700">Date</p>
+                  <p class="text-sm text-amber-900">{{ formatDate(selectedDonation.donatedAt || selectedDonation.created_at) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-amber-700">Time</p>
+                  <p class="text-sm text-amber-900">{{ formatTime(selectedDonation.donatedAt || selectedDonation.created_at) }}</p>
+                </div>
+              </div>
+              <div v-if="selectedDonation.purpose || selectedDonation.note" class="mt-3 pt-3 border-t border-amber-300">
+                <p class="text-xs text-amber-700">Purpose</p>
+                <p class="text-sm text-amber-900">{{ selectedDonation.purpose || selectedDonation.note }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6 pt-6 border-t">
+          <button 
+            @click="selectedDonation = null"
+            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useDonationStore } from '@/stores/donation'
+import api from '@/plugins/axios'
 
 const donationStore = useDonationStore()
 
@@ -294,6 +449,7 @@ const totalPages = computed(() => donationStore.totalPages || 1)
 const searchQuery = ref('')
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
+const selectedDonation = ref(null)
 
 const filters = ref({
   dateRange: 'all',
@@ -302,12 +458,23 @@ const filters = ref({
   amountRange: 'all',
 })
 
+// Creator details with bank info (fetched from temple/entity)
+const creatorDetails = ref({
+  id: null,
+  fullName: '',
+  email: '',
+  phone: '',
+  roleName: '',
+  loading: false,
+  error: null,
+  bank: null,
+})
+
 // Helper functions for robust data mapping
 function safeString(val, fallback = '') {
   return typeof val === 'string' && val.trim() !== '' ? val.trim() : fallback;
 }
 
-// Donor name mapping – checks every possible location!
 function getDonorName(donation) {
   const name =
     safeString(donation.fullName) ||
@@ -315,6 +482,7 @@ function getDonorName(donation) {
     safeString(donation.userName) ||
     safeString(donation.donorName) ||
     safeString(donation.user_name) ||
+    safeString(donation.donor_name) ||
     safeString(donation.name);
   return name || 'Anonymous';
 }
@@ -326,10 +494,42 @@ function getDonorEmail(donation) {
     safeString(donation.userEmail) ||
     safeString(donation.donorEmail) ||
     safeString(donation.user_email) ||
+    safeString(donation.donor_email) ||
     safeString(donation.email);
   return email || 'N/A';
 }
 
+function getDonorPhone(donation) {
+  const phone =
+    safeString(donation.phone) ||
+    safeString(donation.donor_phone) ||
+    safeString(donation.donorPhone) ||
+    (donation.donor && safeString(donation.donor.phone)) ||
+    safeString(donation.user_phone);
+  return phone || 'N/A';
+}
+
+function getTempleName(donation) {
+  return safeString(donation.temple_name) ||
+    safeString(donation.templeName) ||
+    safeString(donation.entity_name) ||
+    safeString(donation.entityName) ||
+    'N/A';
+}
+
+function getPaymentId(donation) {
+  return safeString(donation.razorpay_payment_id) ||
+    safeString(donation.payment_id) ||
+    safeString(donation.paymentId) ||
+    'N/A';
+}
+
+function getOrderId(donation) {
+  return safeString(donation.razorpay_order_id) ||
+    safeString(donation.order_id) ||
+    safeString(donation.orderId) ||
+    'N/A';
+}
 function getTransactionId(donation) {
   return safeString(donation.transactionId) ||
     safeString(donation.order_id) ||
@@ -363,6 +563,19 @@ function formatDate(dateString) {
   }
 }
 
+function formatTime(dateString) {
+  if (!dateString) return 'N/A';
+  try {
+    return new Date(dateString).toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch {
+    return 'N/A';
+  }
+}
+
 function formatDonationType(type) {
   if (!type) return 'General';
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
@@ -370,7 +583,6 @@ function formatDonationType(type) {
 
 function formatPaymentMethod(method) {
   if (!method) return 'Online';
-  // Convert backend method names to user-friendly names
   const methodMap = {
     'upi': 'UPI',
     'card': 'Card',
@@ -442,7 +654,53 @@ function clearSearch() {
   searchQuery.value = '';
 }
 
-// Current donations from store (server-side filtered and paginated)
+// View donation details
+const viewDonationDetails = async (donation) => {
+  selectedDonation.value = donation;
+  
+  // Fetch creator/temple bank details if not already loaded
+  if (!creatorDetails.value.bank) {
+    await fetchCreatorBankDetails(donation);
+  }
+};
+
+// Fetch creator bank details from temple/entity
+const fetchCreatorBankDetails = async (donation) => {
+  try {
+    creatorDetails.value.loading = true;
+    
+    // Try to get entity ID from donation
+    const entityId = donation.entity_id || donation.temple_id || donation.entityId || donation.templeId;
+    
+    if (!entityId) {
+      console.warn('No entity ID found in donation');
+      creatorDetails.value.loading = false;
+      return;
+    }
+    
+    const response = await api.get(`/entities/${entityId}/details`);
+    const data = response.data?.data || response.data;
+    
+    if (data && data.creator) {
+      creatorDetails.value = {
+        id: data.creator.id,
+        fullName: data.creator.full_name || 'N/A',
+        email: data.creator.email || 'N/A',
+        phone: data.creator.phone || 'N/A',
+        roleName: data.creator.role || 'N/A',
+        loading: false,
+        error: null,
+        bank: data.creator.bank || null,
+      };
+    }
+  } catch (error) {
+    console.error('Error fetching creator bank details:', error);
+    creatorDetails.value.loading = false;
+    creatorDetails.value.error = 'Failed to load bank details';
+  }
+};
+
+// Current donations from store
 const currentDonations = computed(() => donations.value);
 
 // Pagination controls

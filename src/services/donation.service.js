@@ -72,7 +72,31 @@ export const donationService = {
       throw error
     }
   },
+// Add this method to your donation service
+async getDonationHistory(filters = {}) {
+  try {
+    const params = new URLSearchParams();
+    
+    // Add filters to query params
+    if (filters.page) params.append('page', filters.page);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.type) params.append('type', filters.type);
+    if (filters.method) params.append('method', filters.method);
+    if (filters.search) params.append('search', filters.search);
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
+    if (filters.minAmount) params.append('min', filters.minAmount);
+    if (filters.maxAmount) params.append('max', filters.maxAmount);
 
+    const response = await api.get(`/donations/history?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching donation history:', error);
+    throw error;
+  }
+},
   // Verify payment after successful Razorpay transaction - UNCHANGED
   async verifyDonation(paymentData) {
     try {
