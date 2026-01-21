@@ -814,102 +814,184 @@
       </div>
     </div>
 
-    <!-- Seva Details Modal -->
-    <div
-      v-if="selectedSeva"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
-    >
-      <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 class="text-xl font-bold text-gray-900">Booking Details</h2>
-          <button
-            @click="selectedSeva = null"
-            class="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-          >
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        
-        <div class="p-6">
-          <div class="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">{{ getSevaName(selectedSeva) }}</h3>
-              <span 
-                :class="getStatusClass(getStatus(selectedSeva))" 
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              >
-                <span :class="getStatusDotClass(getStatus(selectedSeva))" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
-                {{ (getStatus(selectedSeva)).charAt(0).toUpperCase() + (getStatus(selectedSeva)).slice(1) }}
-              </span>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <p class="text-sm font-medium text-gray-500">Seva Type</p>
-                <p class="text-base text-gray-900">{{ getSevaType(selectedSeva) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Devotee</p>
-                <p class="text-base text-gray-900">{{ getDevoteeName(selectedSeva) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Contact</p>
-                <p class="text-base text-gray-900">{{ getDevoteePhone(selectedSeva) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Date</p>
-                <p class="text-base text-gray-900">{{ formatBookingDate(selectedSeva) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Time</p>
-                <p class="text-base text-gray-900">{{ formatBookingTime(selectedSeva) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Booking ID</p>
-                <p class="text-base text-gray-900">{{ getId(selectedSeva) || 'Not available' }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Booking Date</p>
-                <p class="text-base text-gray-900">{{ formatDate(getCreatedAt(selectedSeva)) }}</p>
-              </div>
-            </div>
-            
-            <div v-if="getSpecialRequests(selectedSeva)" class="mb-4">
-              <p class="text-sm font-medium text-gray-500">Special Requests</p>
-              <p class="text-base text-gray-900">{{ getSpecialRequests(selectedSeva) }}</p>
-            </div>
-          </div>
-          
-          <!-- Action buttons -->
-          <div v-if="getStatus(selectedSeva) === 'pending' && !isMonitoringUser" class="flex justify-end space-x-3">
-            <button
-              @click="rejectSeva(selectedSeva)"
-              class="px-4 py-2.5 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-all duration-200"
-            >
-              Reject Booking
-            </button>
-            <button
-              @click="approveSeva(selectedSeva)"
-              class="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-sm"
-            >
-              Approve Booking
-            </button>
-          </div>
-          
-          <!-- Read-only message for monitoring users -->
-          <div v-if="getStatus(selectedSeva) === 'pending' && isMonitoringUser" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div class="flex items-center">
-              <svg class="h-5 w-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+   <!-- REPLACE YOUR EXISTING Seva Details Modal (around line 600-700) with this complete version -->
+
+<!-- Seva Details Modal -->
+<div
+  v-if="selectedSeva"
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
+>
+  <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between p-6 border-b border-gray-200">
+      <h2 class="text-xl font-bold text-gray-900">Booking Details</h2>
+      <button
+        @click="selectedSeva = null"
+        class="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+      >
+        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <!-- From Details (Devotee Information) -->
+        <div class="space-y-4">
+          <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+            <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
               </svg>
-              <p class="text-sm text-yellow-800">You have view-only access. Contact an administrator to approve or reject this booking.</p>
+              From (Devotee)
+            </h4>
+            <div class="space-y-2">
+              <div>
+                <p class="text-xs text-blue-700">Name</p>
+                <p class="font-semibold text-blue-900">{{ getDevoteeName(selectedSeva) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-blue-700">Contact</p>
+                <p class="text-sm text-blue-900">{{ getDevoteePhone(selectedSeva) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- To Details (Temple/Recipient Bank Information) -->
+        <div class="space-y-4">
+          <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-semibold text-green-900 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                To (Temple Account)
+              </h4>
+              <div v-if="templeDetails.loading" class="flex items-center">
+                <svg class="animate-spin h-4 w-4 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <div>
+                <p class="text-xs text-green-700">Temple/Organization</p>
+                <p class="font-semibold text-green-900">{{ temple?.name || templeDetails.name || 'N/A' }}</p>
+              </div>
+              <div v-if="templeDetails.bank">
+                <p class="text-xs text-green-700">Account Holder</p>
+                <p class="text-sm text-green-900">{{ templeDetails.bank.account_holder_name || 'N/A' }}</p>
+              </div>
+              <div v-if="templeDetails.bank">
+                <p class="text-xs text-green-700">Account Number</p>
+               <p class="text-sm font-mono text-green-900">
+  {{ maskAccountNumber(templeDetails.bank.account_number) }}
+</p>
+
+              </div>
+              
+              <div v-if="!templeDetails.bank && !templeDetails.loading">
+                <p class="text-xs text-green-700 italic">Bank details not available</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Payment/Booking Details -->
+      <div class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 mb-6">
+        <h4 class="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+          </svg>
+          Payment & Booking Information
+        </h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p class="text-xs text-indigo-700">Seva Name</p>
+            <p class="text-sm font-semibold text-indigo-900">{{ getSevaName(selectedSeva) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-indigo-700">Booking ID</p>
+            <p class="text-sm font-mono text-indigo-900">#{{ getId(selectedSeva) || 'N/A' }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-indigo-700">Amount Paid</p>
+            <p class="text-lg font-bold text-indigo-900">₹{{ getAmountPaid(selectedSeva) }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seva/Transaction Details -->
+      <div class="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 mb-6">
+        <h4 class="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          Seva Details
+        </h4>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p class="text-xs text-amber-700">Type</p>
+            <span class="inline-block px-2 py-1 text-xs font-medium rounded-full mt-1 bg-blue-100 text-blue-800">
+              {{ getSevaType(selectedSeva) }}
+            </span>
+          </div>
+          <div>
+            <p class="text-xs text-amber-700">Status</p>
+            <span :class="getStatusClass(getStatus(selectedSeva))" class="inline-block px-2 py-1 text-xs font-medium rounded-full mt-1">
+              {{ (getStatus(selectedSeva)).charAt(0).toUpperCase() + (getStatus(selectedSeva)).slice(1) }}
+            </span>
+          </div>
+          <div>
+            <p class="text-xs text-amber-700">Date</p>
+            <p class="text-sm text-amber-900">{{ formatBookingDate(selectedSeva) }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-amber-700">Time</p>
+            <p class="text-sm text-amber-900">{{ formatBookingTime(selectedSeva) }}</p>
+          </div>
+        </div>
+        <div v-if="getSpecialRequests(selectedSeva)" class="mt-3 pt-3 border-t border-amber-300">
+          <p class="text-xs text-amber-700">Special Requests</p>
+          <p class="text-sm text-amber-900">{{ getSpecialRequests(selectedSeva) }}</p>
+        </div>
+        <div class="mt-3 pt-3 border-t border-amber-300">
+          <p class="text-xs text-amber-700">Booking Date</p>
+          <p class="text-sm text-amber-900">{{ formatDate(getCreatedAt(selectedSeva)) }}</p>
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div v-if="getStatus(selectedSeva) === 'pending' && !isMonitoringUser" class="flex justify-end space-x-3 pt-4 border-t">
+        <button
+          @click="rejectSeva(selectedSeva)"
+          class="px-4 py-2.5 bg-white border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-all duration-200"
+        >
+          Reject Booking
+        </button>
+        <button
+          @click="approveSeva(selectedSeva)"
+          class="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 shadow-sm"
+        >
+          Approve Booking
+        </button>
+      </div>
+      
+      <!-- Read-only message for monitoring users -->
+      <div v-if="getStatus(selectedSeva) === 'pending' && isMonitoringUser" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+        <div class="flex items-center">
+          <svg class="h-5 w-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p class="text-sm text-yellow-800">You have view-only access. Contact an administrator to approve or reject this booking.</p>
+        </div>
+      </div>
     </div>
+  </div>
+</div>
 
     <!-- Toast Notifications -->
     <div
@@ -1001,6 +1083,18 @@ const sevaSearchFilter = ref('')
 const sevaTypeFilter = ref('')
 const sevaStatusFilter = ref('')
 
+// ========================================
+// NEW: Temple/Entity bank details state
+// ========================================
+const templeDetails = ref({
+  id: null,
+  name: '',
+  loading: false,
+  error: null,
+  bank: null,
+  creator: null
+})
+
 // Hardcoded mapping of seva_id to seva name and type
 const sevaMapping = {
   1: { name: 'Archana Seva', type: 'daily' },
@@ -1015,7 +1109,14 @@ const getUserId = (booking) => booking?.UserID || booking?.user_id || 0
 const getEntityId = (booking) => booking?.EntityID || booking?.entity_id || 0
 const getStatus = (booking) => booking?.Status || booking?.status || 'pending'
 const getSpecialRequests = (booking) => booking?.SpecialRequests || booking?.special_requests || ''
-const getAmountPaid = (booking) => booking?.AmountPaid || booking?.amount_paid || 0
+//const getAmountPaid = (booking) => booking?.AmountPaid || booking?.amount_paid || 0
+const getAmountPaid = (booking) =>
+  booking?.AmountPaid ??
+  booking?.amount_paid ??
+  booking?.Amount ??
+  booking?.amount ??
+  0
+
 const getBookingTime = (booking) => booking?.BookingTime || booking?.booking_time || null
 const getCreatedAt = (booking) => booking?.CreatedAt || booking?.created_at || null
 const getUpdatedAt = (booking) => booking?.UpdatedAt || booking?.updated_at || null
@@ -1036,6 +1137,17 @@ const getSevaName = (booking) => {
   }
   
   return 'Archana Seva'
+}
+const maskAccountNumber = (accountNumber) => {
+  if (!accountNumber) return 'N/A'
+
+  const str = accountNumber.toString()
+  if (str.length <= 4) return str
+
+  const last4 = str.slice(-4)
+  const masked = 'X'.repeat(str.length - 4)
+
+  return masked + last4
 }
 
 // Helper function to get Seva type from a booking
@@ -1246,10 +1358,8 @@ const handleCreateSevaClick = () => {
 }
 
 // Load temple data
-// Load temple data
 const loadTempleData = async () => {
   try {
-    // FIX: getTempleById is async, so we need to await it
     const fetchedTemple = await templeStore.getTempleById(entityId)
     if (fetchedTemple) {
       temple.value = fetchedTemple
@@ -1257,6 +1367,40 @@ const loadTempleData = async () => {
   } catch (error) {
     console.error('Error loading temple data:', error)
     showToast('Failed to load temple details', 'error')
+  }
+}
+
+// ========================================
+// NEW: Fetch temple bank details from entity API
+// ========================================
+const fetchTempleBankDetails = async () => {
+  if (!entityId) {
+    console.warn('No entity ID available')
+    return
+  }
+  
+  try {
+    templeDetails.value.loading = true
+    
+    const response = await api.get(`/entities/${entityId}/details`)
+    const data = response.data?.data || response.data
+    
+    if (data) {
+      templeDetails.value = {
+        id: data.id || entityId,
+        name: data.name || temple.value?.name || 'N/A',
+        loading: false,
+        error: null,
+        bank: data.creator?.bank || data.bank || null,
+        creator: data.creator || null
+      }
+      
+      console.log('Temple bank details loaded:', templeDetails.value)
+    }
+  } catch (error) {
+    console.error('Error fetching temple bank details:', error)
+    templeDetails.value.loading = false
+    templeDetails.value.error = 'Failed to load bank details'
   }
 }
 
@@ -1620,9 +1764,17 @@ const saveSeva = async () => {
   }
 }
 
-const viewSevaDetails = (booking) => {
+// ========================================
+// UPDATED: View seva details with bank details fetching
+// ========================================
+const viewSevaDetails = async (booking) => {
   console.log('Viewing booking details:', booking)
   selectedSeva.value = booking
+  
+  // Fetch temple bank details if not already loaded
+  if (!templeDetails.value.bank) {
+    await fetchTempleBankDetails()
+  }
 }
 
 const closeForm = () => {
@@ -1693,9 +1845,13 @@ watch([() => sevaForm.value.startTime, () => sevaForm.value.endTime], ([newStart
   }
 })
 
+// ========================================
+// UPDATED: onMounted with bank details fetching
+// ========================================
 onMounted(async () => {
   console.log('SevaManagement component mounted for entity:', entityId)
   await loadTempleData()
+  await fetchTempleBankDetails() // ADDED: Fetch bank details on mount
   loadSevas()
   loadSevaCatalog()
 })

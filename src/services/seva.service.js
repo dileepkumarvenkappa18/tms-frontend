@@ -1,4 +1,5 @@
-// src/services/seva.service.js - Updated version with slot management
+
+// src/services/seva.service.js - Updated version with slot management and Razorpay payment
 import axios from 'axios'
 
 class SevaService {
@@ -430,6 +431,89 @@ class SevaService {
         success: false,
         error: error.response?.data?.error || 'Failed to book seva'
       };
+    }
+  }
+
+  // src/services/seva.service.js - Fixed entity_id type conversion
+
+/**
+ * ✅ NEW: Create a seva booking with Razorpay payment order
+ * @param {Object} bookingData - Contains seva_id, amount, entity_id, etc.
+ * @returns {Promise} Response with order_id and razorpay_key
+ */
+async createSevaBookingWithPayment(bookingData) {
+  try {
+    const entityId = this.getCurrentEntityId();
+    const tenantId = localStorage.getItem('current_tenant_id');
+    
+    console.log('Creating seva booking with payment:', bookingData)
+    
+    const headers = {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        'Content-Type': 'application/json',
+        'X-Entity-ID': entityId,
+        'X-Tenant-ID': tenantId
+      }
+    };
+    
+    // ✅ FIX: Convert all ID fields to integers
+    const payload = {
+      seva_id: parseInt(bookingData.seva_id),
+      amount: Number(bookingData.amount),
+      entity_id: parseInt(bookingData.entity_id || bookingData.entityId || entityId),
+      temple_id: parseInt(bookingData.temple_id || bookingData.templeId || entityId),
+      seva_name: bookingData.seva_name,
+      seva_type: bookingData.seva_type
+    };
+    
+    console.log('Payload with correct types:', payload)
+    
+    const response = await axios.post('/sevas/book-with-payment', payload, headers);
+    
+    console.log('Seva booking payment response:', response.data)
+    
+    // Return the response data which should contain order_id and razorpay_key
+    return response.data
+  } catch (error) {
+    console.error('Error creating seva booking with payment:', error)
+    throw error
+  }
+}
+
+  /**
+   * ✅ NEW: Verify seva payment after Razorpay success
+   * @param {Object} paymentData - Contains razorpay_payment_id, razorpay_order_id, razorpay_signature, seva_id
+   * @returns {Promise} Verification result
+   */
+  async verifySevaPayment(paymentData) {
+    try {
+      const entityId = this.getCurrentEntityId();
+      const tenantId = localStorage.getItem('current_tenant_id');
+      
+      console.log('Verifying seva payment:', paymentData)
+      
+      const headers = {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json',
+          'X-Entity-ID': entityId,
+          'X-Tenant-ID': tenantId
+        }
+      };
+      
+      const response = await axios.post('/sevas/verify-payment', {
+        razorpay_payment_id: paymentData.razorpay_payment_id,
+        razorpay_order_id: paymentData.razorpay_order_id,
+        razorpay_signature: paymentData.razorpay_signature,
+        seva_id: paymentData.seva_id
+      }, headers);
+      
+      console.log('Seva payment verification response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Error verifying seva payment:', error)
+      throw error
     }
   }
 

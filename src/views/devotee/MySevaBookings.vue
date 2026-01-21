@@ -1,5 +1,4 @@
 <template>
-  
   <div>
     <!-- Temple Header Bar -->
     <div class="bg-white shadow-lg mb-6">
@@ -70,6 +69,7 @@
             <option value="approved">Approved</option>
             <option value="completed">Completed</option>
             <option value="cancelled">Cancelled</option>
+            <option value="rejected">Rejected</option>
           </select>
         </div>
         <div>
@@ -137,10 +137,10 @@
                 Seva
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Seva Booked Date
+                Booking Date
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Seva Scheduled date
+                Amount
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -156,7 +156,7 @@
                 <div class="flex items-center">
                   <div class="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center">
                     <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                   </div>
                   <div class="ml-4">
@@ -166,12 +166,11 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ formatDate(booking.booking_time || booking.BookingTime) }}</div>
-                <div class="text-xs text-gray-500">{{ formatTime(booking.booking_time || booking.BookingTime) }}</div>
+                <div class="text-sm text-gray-900">{{ formatDate(booking.booking_time || booking.BookingTime || booking.created_at) }}</div>
+                <div class="text-xs text-gray-500">{{ formatTime(booking.booking_time || booking.BookingTime || booking.created_at) }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ getSevaScheduleDate(booking) }}</div>
-                <div class="text-xs text-gray-500">{{ getSevaScheduleTime(booking) }}</div>
+                <div class="text-sm font-semibold text-indigo-600">₹{{ getBookingAmount(booking) }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span 
@@ -200,7 +199,7 @@
     <!-- Empty State -->
     <div v-else class="bg-white p-8 rounded-xl shadow-sm text-center">
       <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 002 2z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
       </svg>
       <h3 class="mt-2 text-lg font-medium text-gray-900">No seva bookings found</h3>
       <p class="mt-1 text-sm text-gray-500">You haven't booked any sevas yet for this temple.</p>
@@ -219,7 +218,7 @@
       v-if="selectedBooking"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm"
     >
-      <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 class="text-xl font-bold text-gray-900">Seva Booking Details</h2>
           <button
@@ -234,74 +233,189 @@
         </div>
         
         <div class="p-6">
-          <div class="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900">
-                {{ selectedBooking.seva_name || (selectedBooking.seva && selectedBooking.seva.name) || `Seva ${selectedBooking.seva_id || selectedBooking.SevaID || ''}` }}
-              </h3>
-              <span 
-                :class="getStatusClass(selectedBooking.status || selectedBooking.Status)" 
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-              >
-                <span :class="getStatusDotClass(selectedBooking.status || selectedBooking.Status)" class="w-1.5 h-1.5 rounded-full mr-1.5"></span>
-                {{ formatStatus(selectedBooking.status || selectedBooking.Status) }}
-              </span>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-              <div>
-                <p class="text-sm font-medium text-gray-500">Seva Type</p>
-                <p class="mt-1 text-base text-gray-900">{{ selectedBooking.seva_type || (selectedBooking.seva && selectedBooking.seva.type) || 'Not specified' }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Amount</p>
-                <p class="mt-1 text-base font-semibold text-indigo-600">
-                  ₹{{ getBookingAmount(selectedBooking) }}
-                </p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Booking Date</p>
-                <p class="mt-1 text-base text-gray-900">{{ formatDate(selectedBooking.booking_time || selectedBooking.BookingTime) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Booking Time</p>
-                <p class="mt-1 text-base text-gray-900">{{ formatTime(selectedBooking.booking_time || selectedBooking.BookingTime) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Seva Schedule Date</p>
-                <p class="mt-1 text-base text-gray-900">{{ getSevaScheduleDate(selectedBooking) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Seva Schedule Time</p>
-                <p class="mt-1 text-base text-gray-900">{{ getSevaScheduleTime(selectedBooking) }}</p>
-              </div>
-              <div>
-                <p class="text-sm font-medium text-gray-500">Booking ID</p>
-                <p class="mt-1 text-base text-gray-900">#{{ selectedBooking.id || selectedBooking.ID }}</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- From Details (Devotee) -->
+            <div class="space-y-4">
+              <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  From (Devotee)
+                </h4>
+                <div class="space-y-2">
+                  <div>
+                    <p class="text-xs text-blue-700">Name</p>
+                    <p class="font-semibold text-blue-900">{{ selectedBooking.user_name || currentUser.name || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-blue-700">Email</p>
+                    <p class="text-sm text-blue-900">{{ selectedBooking.user_email || currentUser.email || 'N/A' }}</p>
+                  </div>
+                  </div>
               </div>
             </div>
 
-            <div class="border-t border-gray-200 pt-4">
-              <p class="text-sm font-medium text-gray-500 mb-2">Description</p>
-              <p class="text-base text-gray-700">
-                {{ selectedBooking.seva_description || (selectedBooking.seva && selectedBooking.seva.description) || 'No description available' }}
-              </p>
+            <!-- To Details (Temple) -->
+            <div class="space-y-4">
+              <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                  </svg>
+                  To (Temple)
+                </h4>
+                <div class="space-y-2">
+                  <div>
+                    <p class="text-xs text-green-700">Temple Name</p>
+                    <p class="font-semibold text-green-900">{{ selectedBooking.temple_name || currentTemple.name || 'N/A' }}</p>
+                  </div>
+                  <div v-if="creatorDetails.bank">
+                    <p class="text-xs text-green-700">Account Holder</p>
+                    <p class="text-sm text-green-900">{{ creatorDetails.bank.account_holder_name || 'N/A' }}</p>
+                  </div>
+                  <div v-if="creatorDetails.bank">
+                    <p class="text-xs text-green-700">Account Number</p>
+                    <p class="text-sm font-mono text-green-900">{{ maskAccountNumber(creatorDetails.bank.account_number) }}</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div v-if="selectedBooking.special_requests || selectedBooking.SpecialRequests" class="border-t border-gray-200 pt-4 mt-4">
-              <p class="text-sm font-medium text-gray-500 mb-2">Special Requests</p>
-              <p class="text-base text-gray-700">{{ selectedBooking.special_requests || selectedBooking.SpecialRequests }}</p>
+            <!-- Payment Details -->
+            <div class="md:col-span-2">
+              <div class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                  </svg>
+                  Payment Information
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p class="text-xs text-indigo-700">Payment ID</p>
+                    <p class="text-sm font-mono text-indigo-900 break-all">{{ selectedBooking.payment_id || selectedBooking.razorpay_payment_id || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-indigo-700">Order ID</p>
+                    <p class="text-sm font-mono text-indigo-900 break-all">{{ selectedBooking.order_id || selectedBooking.razorpay_order_id || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-indigo-700">Amount Paid</p>
+                    <p class="text-lg font-bold text-indigo-900">₹{{ getBookingAmount(selectedBooking) }}</p>
+                  </div>
+                </div>
+                <div v-if="selectedBooking.payment_method" class="mt-3 pt-3 border-t border-indigo-300">
+                  <p class="text-xs text-indigo-700">Payment Method</p>
+                  <p class="text-sm font-medium text-indigo-900">{{ getPaymentMethodLabel(selectedBooking.payment_method) }}</p>
+                </div>
+              </div>
             </div>
+
+            <!-- Seva & Booking Details -->
+            <div class="md:col-span-2">
+              <div class="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-amber-900 mb-3 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  Seva & Booking Details
+                </h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p class="text-xs text-amber-700">Seva Name</p>
+                    <p class="text-sm font-semibold text-amber-900">{{ selectedBooking.seva_name || (selectedBooking.seva && selectedBooking.seva.name) || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-amber-700">Seva Type</p>
+                    <p class="text-sm text-amber-900">{{ selectedBooking.seva_type || (selectedBooking.seva && selectedBooking.seva.type) || 'N/A' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-amber-700">Status</p>
+                    <span :class="getStatusClass(selectedBooking.status || selectedBooking.Status)" class="inline-block px-2 py-1 text-xs font-medium rounded-full mt-1">
+                      {{ formatStatus(selectedBooking.status || selectedBooking.Status) }}
+                    </span>
+                  </div>
+                  <div>
+                    <p class="text-xs text-amber-700">Booking Date</p>
+                    <p class="text-sm text-amber-900">{{ formatDate(selectedBooking.booking_time || selectedBooking.BookingTime || selectedBooking.created_at) }}</p>
+                  </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-amber-300">
+                  <p class="text-xs text-amber-700">Booking Time</p>
+                  <p class="text-sm text-amber-900">{{ formatTime(selectedBooking.booking_time || selectedBooking.BookingTime || selectedBooking.created_at) }}</p>
+                </div>
+                
+              </div>
+            </div>
+
+            <!-- Refund Information (if rejected) -->
+            <div v-if="selectedBooking.status === 'rejected'" class="md:col-span-2">
+              <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-red-900 mb-3 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Rejection & Refund Information
+                </h4>
+                <div class="space-y-3">
+                  <div v-if="selectedBooking.rejection_reason">
+                    <p class="text-xs text-red-700">Rejection Reason</p>
+                    <p class="text-sm text-red-900">{{ selectedBooking.rejection_reason }}</p>
+                  </div>
+                  <div v-if="selectedBooking.rejected_at">
+                    <p class="text-xs text-red-700">Rejected On</p>
+                    <p class="text-sm text-red-900">{{ formatDate(selectedBooking.rejected_at) }} at {{ formatTime(selectedBooking.rejected_at) }}</p>
+                  </div>
+                  <div v-if="selectedBooking.refund_status" class="pt-3 border-t border-red-300">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="text-xs text-red-700">Refund Status</p>
+                        <p class="text-sm font-semibold text-red-900">{{ selectedBooking.refund_status.toUpperCase() }}</p>
+                      </div>
+                      <span :class="[
+                        'px-3 py-1 rounded-full text-xs font-medium',
+                        selectedBooking.refund_status === 'completed' ? 'bg-green-100 text-green-800' :
+                        selectedBooking.refund_status === 'processing' ? 'bg-amber-100 text-amber-800' :
+                        'bg-gray-100 text-gray-800'
+                      ]">
+                        {{ selectedBooking.refund_status }}
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="selectedBooking.refund_initiated_at">
+                    <p class="text-xs text-red-700">Refund Initiated</p>
+                    <p class="text-sm text-red-900">{{ formatDate(selectedBooking.refund_initiated_at) }}</p>
+                  </div>
+                  <div v-if="selectedBooking.refund_amount">
+                    <p class="text-xs text-red-700">Refund Amount</p>
+                    <p class="text-lg font-bold text-red-900">₹{{ Number(selectedBooking.refund_amount).toLocaleString() }}</p>
+                  </div>
+                  <div v-if="selectedBooking.refund_reference_id">
+                    <p class="text-xs text-red-700">Refund Reference ID</p>
+                    <p class="text-sm font-mono text-red-900">{{ selectedBooking.refund_reference_id }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          
           </div>
           
           <!-- Modal Footer -->
-          <div class="flex justify-end border-t border-gray-200 pt-6">
+          <div class="flex gap-3 mt-6 pt-6 border-t">
             <button 
               type="button"
               @click="selectedBooking = null"
-              class="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
+              class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
               Close
+            </button>
+            <button 
+              v-if="selectedBooking.status === 'approved' || selectedBooking.status === 'completed'"
+              class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Download Receipt
             </button>
           </div>
         </div>
@@ -315,8 +429,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSevaStore } from '@/stores/seva'
 import { useToast } from '@/composables/useToast'
-import BaseModal from '@/components/common/BaseModal.vue'
-import { sevaService } from '@/services/seva.service'
 import api from '@/plugins/axios'
 
 const route = useRoute()
@@ -336,116 +448,106 @@ const selectedBooking = ref(null)
 
 // Temple and User info
 const currentTemple = ref({
+  id: null,
   name: '',
   city: '',
   state: ''
 })
 
 const currentUser = ref({
+  id: null,
   name: '',
-  email: ''
+  email: '',
+  phone: ''
+})
+
+// Creator details with bank info
+const creatorDetails = ref({
+  id: null,
+  fullName: '',
+  email: '',
+  phone: '',
+  bank: null,
 })
 
 // Get current entity ID from route
 const currentEntityId = computed(() => route.params.id)
 
-// Fetch temple information
+// Fetch temple information with creator details
 const fetchTempleInfo = async () => {
   try {
-    console.log('Fetching temple information...')
-    
-    // Try localStorage first for quick load
     const storedTempleName = localStorage.getItem('selectedTempleName')
     if (storedTempleName) {
       currentTemple.value.name = storedTempleName
-      console.log('Temple name from localStorage:', storedTempleName)
     }
     
-    // Get entity ID
-    const entityId = currentEntityId.value ||
-                     localStorage.getItem('selectedEntityId') || 
-                     localStorage.getItem('current_entity_id') ||
-                     localStorage.getItem('current_tenant_id')
+    let entityId = currentEntityId.value ||
+                   localStorage.getItem('selectedEntityId') || 
+                   localStorage.getItem('current_entity_id')
+    
+    if (!entityId) {
+      const match = window.location.pathname.match(/\/entity\/(\d+)\//)
+      if (match && match[1]) {
+        entityId = match[1]
+      }
+    }
     
     if (!entityId) {
       console.warn('No entity ID found')
       return
     }
     
-    console.log('Fetching temple details for entity ID:', entityId)
+    const response = await api.get(`/entities/${entityId}/details`)
+    const data = response.data?.data || response.data
     
-    // Fetch from API
-    try {
-      const response = await api.get(`/entities/${entityId}`)
-      console.log('Temple API response:', response)
-      
-      const templeData = response.data?.data || response.data || response
-      
-      if (templeData) {
-        currentTemple.value = {
-          name: templeData.name || templeData.Name || storedTempleName || 'Temple',
-          city: templeData.city || templeData.City || '',
-          state: templeData.state || templeData.State || ''
-        }
-        
-        // Save to localStorage
-        if (currentTemple.value.name) {
-          localStorage.setItem('selectedTempleName', currentTemple.value.name)
-        }
-        
-        console.log('Temple info loaded:', currentTemple.value)
+    if (data) {
+      currentTemple.value = {
+        id: data.id,
+        name: data.name || storedTempleName || 'Temple',
+        city: data.city || '',
+        state: data.state || ''
       }
-    } catch (apiError) {
-      console.warn('API fetch failed, using localStorage data:', apiError)
-      currentTemple.value.name = storedTempleName || 'Temple'
+      
+      // Get creator details with bank info
+      if (data.creator) {
+        creatorDetails.value = {
+          id: data.creator.id,
+          fullName: data.creator.full_name || 'N/A',
+          email: data.creator.email || 'N/A',
+          phone: data.creator.phone || 'N/A',
+          bank: data.creator.bank || null,
+        }
+      }
+      
+      localStorage.setItem('selectedTempleName', currentTemple.value.name)
+      localStorage.setItem('selectedEntityId', currentTemple.value.id)
     }
   } catch (error) {
     console.error('Error fetching temple info:', error)
-    currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
   }
 }
 
 // Fetch user information
 const fetchUserInfo = () => {
   try {
-    // Try to get user info from localStorage
-    const userName = localStorage.getItem('user_name') || localStorage.getItem('userName')
-    const userEmail = localStorage.getItem('user_email') || localStorage.getItem('userEmail')
-    
-    // Try to parse user_data if available
-    try {
-      const userData = localStorage.getItem('user_data')
-      if (userData) {
-        const parsed = JSON.parse(userData)
-        currentUser.value = {
-          name: parsed.name || parsed.Name || userName || 'Devotee',
-          email: parsed.email || parsed.Email || userEmail || ''
-        }
-        return
+    const userData = localStorage.getItem('user_data')
+    if (userData) {
+      const parsed = JSON.parse(userData)
+      currentUser.value = {
+        id: parsed.id,
+        name: parsed.fullName || parsed.full_name || parsed.name || 'Devotee',
+        email: parsed.email || '',
+        phone: parsed.phone || ''
       }
-    } catch (parseError) {
-      console.warn('Error parsing user_data:', parseError)
     }
-    
-    // Fallback to individual localStorage items
-    currentUser.value = {
-      name: userName || 'Devotee',
-      email: userEmail || ''
-    }
-    
-    console.log('User info loaded:', currentUser.value)
   } catch (error) {
     console.error('Error fetching user info:', error)
-    currentUser.value = {
-      name: 'Devotee',
-      email: ''
-    }
   }
 }
 
 // Format helpers
 const formatDate = (dateTime) => {
-  if (!dateTime) return ''
+  if (!dateTime) return 'N/A'
   
   try {
     const date = new Date(dateTime)
@@ -455,24 +557,22 @@ const formatDate = (dateTime) => {
       year: 'numeric'
     })
   } catch (error) {
-    console.error('Error formatting date:', error)
-    return ''
+    return 'N/A'
   }
 }
 
 const formatTime = (dateTime) => {
-  if (!dateTime) return ''
+  if (!dateTime) return 'N/A'
   
   try {
     const date = new Date(dateTime)
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString('en-IN', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
     })
   } catch (error) {
-    console.error('Error formatting time:', error)
-    return ''
+    return 'N/A'
   }
 }
 
@@ -481,49 +581,24 @@ const formatStatus = (status) => {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
 }
 
-// Get seva schedule date and time
-const getSevaScheduleDate = (booking) => {
-  if (booking.seva && booking.seva.date) {
-    return formatDate(booking.seva.date)
-  }
-  
-  if (booking.schedule_time || booking.ScheduleTime) {
-    return formatDate(booking.schedule_time || booking.ScheduleTime)
-  }
-  
-  if (booking.time_slot_date || booking.TimeSlotDate) {
-    return formatDate(booking.time_slot_date || booking.TimeSlotDate)
-  }
-  
-  return 'Not scheduled'
+const maskAccountNumber = (accountNumber) => {
+  if (!accountNumber) return 'N/A'
+  const accStr = accountNumber.toString()
+  if (accStr.length <= 4) return accStr
+  const lastFour = accStr.slice(-4)
+  const masked = 'X'.repeat(accStr.length - 4)
+  return masked + lastFour
 }
 
-const getSevaScheduleTime = (booking) => {
-  if (booking.seva) {
-    if (booking.seva.start_time && booking.seva.end_time) {
-      return `${booking.seva.start_time} - ${booking.seva.end_time}`
-    }
-    if (booking.seva.start_time) {
-      return booking.seva.start_time
-    }
-    if (booking.seva.time) {
-      return booking.seva.time
-    }
+const getPaymentMethodLabel = (method) => {
+  const labels = {
+    'upi': 'UPI',
+    'online': 'Online Payment',
+    'razorpay': 'Razorpay',
+    'bank': 'Bank Transfer',
+    'card': 'Card'
   }
-  
-  if (booking.schedule_time || booking.ScheduleTime) {
-    return formatTime(booking.schedule_time || booking.ScheduleTime)
-  }
-  
-  if (booking.time_slot || booking.TimeSlot) {
-    return booking.time_slot || booking.TimeSlot
-  }
-  
-  if (booking.time_slot_time || booking.TimeSlotTime) {
-    return formatTime(booking.time_slot_time || booking.TimeSlotTime)
-  }
-  
-  return 'Not scheduled'
+  return labels[method?.toLowerCase()] || method || 'Online'
 }
 
 // Status styles
@@ -541,33 +616,15 @@ const getStatusClass = (status) => {
   return statusMap[status.toLowerCase()] || 'bg-gray-100 text-gray-800'
 }
 
-const getStatusDotClass = (status) => {
-  if (!status) return 'bg-gray-400'
-  
-  const dotMap = {
-    pending: 'bg-yellow-400',
-    approved: 'bg-green-400',
-    completed: 'bg-blue-400',
-    cancelled: 'bg-red-400',
-    rejected: 'bg-red-400'
-  }
-  
-  return dotMap[status.toLowerCase()] || 'bg-gray-400'
-}
-
-// Helper to get booking amount - checks multiple possible fields
+// Helper to get booking amount
 const getBookingAmount = (booking) => {
-  if (!booking) return 0
+  if (!booking) return '0'
   
-  // Check various possible amount fields (uppercase and lowercase)
   const amount = booking.amount || 
                  booking.Amount || 
                  booking.price || 
                  booking.Price || 
-                 booking.amount_paid || 
-                 booking.AmountPaid ||
                  (booking.seva && booking.seva.price) ||
-                 (booking.seva && booking.seva.Price) ||
                  0
   
   return parseFloat(amount).toLocaleString('en-IN')
@@ -577,20 +634,12 @@ const getBookingAmount = (booking) => {
 const filteredBookings = computed(() => {
   let result = sevaStore.recentSevas || []
   
-  console.log('All seva bookings before entity filtering:', result)
-  console.log('Current entity ID:', currentEntityId.value)
-  
-  // First filter by current entity ID
+  // Filter by current entity ID
   result = result.filter(booking => {
     const bookingEntityId = booking.entity_id || booking.EntityID || booking.seva?.entity_id
     const currentEntity = parseInt(currentEntityId.value)
-    
-    console.log(`Booking entity ID: ${bookingEntityId}, Current entity: ${currentEntity}`)
-    
     return parseInt(bookingEntityId) === currentEntity
   })
-  
-  console.log('Bookings after entity filtering:', result)
   
   // Filter by status
   if (filters.value.status !== 'all') {
@@ -611,7 +660,7 @@ const filteredBookings = computed(() => {
     const startOfYear = new Date(now.getFullYear(), 0, 1)
     
     result = result.filter(booking => {
-      const bookingDate = new Date(booking.booking_time || booking.BookingTime || new Date())
+      const bookingDate = new Date(booking.booking_time || booking.BookingTime || booking.created_at || new Date())
       
       switch (filters.value.dateRange) {
         case 'today':
@@ -634,11 +683,8 @@ const filteredBookings = computed(() => {
     result = result.filter(booking => {
       const sevaName = (booking.seva_name || (booking.seva && booking.seva.name) || '').toLowerCase()
       const sevaType = (booking.seva_type || (booking.seva && booking.seva.type) || '').toLowerCase()
-      const specialRequests = (booking.special_requests || booking.SpecialRequests || '').toLowerCase()
       
-      return sevaName.includes(search) || 
-             sevaType.includes(search) || 
-             specialRequests.includes(search)
+      return sevaName.includes(search) || sevaType.includes(search)
     })
   }
   
@@ -651,28 +697,19 @@ const fetchSevaBookings = async () => {
   error.value = null
   
   try {
-    console.log('Fetching seva bookings for entity:', currentEntityId.value)
-    
-    // First fetch the seva catalog to get seva details
+    // Fetch the seva catalog to get seva details
     await sevaStore.fetchSevas({ entity_id: currentEntityId.value })
-    console.log('Seva catalog fetched:', sevaStore.sevas)
     
-    // Pass entity ID to the store method
+    // Fetch bookings
     await sevaStore.fetchRecentSevas(currentEntityId.value)
-    console.log('Recent sevas before merge:', sevaStore.recentSevas)
     
     // Merge seva details with bookings
     if (sevaStore.recentSevas && sevaStore.recentSevas.length > 0) {
       sevaStore.recentSevas = sevaStore.recentSevas.map(booking => {
         const sevaId = booking.seva_id || booking.SevaID
-        console.log('Looking for seva with ID:', sevaId)
-        
-        const sevaDetails = sevaStore.sevas.find(s => {
-          console.log('Comparing with seva:', s.id, s.ID)
-          return parseInt(s.id) === parseInt(sevaId) || parseInt(s.ID) === parseInt(sevaId)
-        })
-        
-        console.log('Found seva details:', sevaDetails)
+        const sevaDetails = sevaStore.sevas.find(s => 
+          parseInt(s.id) === parseInt(sevaId) || parseInt(s.ID) === parseInt(sevaId)
+        )
         
         if (sevaDetails) {
           return {
@@ -686,8 +723,6 @@ const fetchSevaBookings = async () => {
         return booking
       })
     }
-    
-    console.log("Fetched seva bookings with seva details merged:", sevaStore.recentSevas)
   } catch (err) {
     console.error('Error fetching seva bookings:', err)
     error.value = err.message || 'Failed to load seva bookings'
@@ -697,16 +732,12 @@ const fetchSevaBookings = async () => {
 }
 
 const viewBookingDetails = (booking) => {
-  console.log('=== VIEW BOOKING DETAILS CLICKED ===')
-  console.log('Booking data:', booking)
   selectedBooking.value = booking
-  console.log('selectedBooking.value set to:', selectedBooking.value)
 }
 
-// Watch for route changes to refetch data
+// Watch for route changes
 watch(() => route.params.id, (newEntityId, oldEntityId) => {
   if (newEntityId && newEntityId !== oldEntityId) {
-    console.log('Entity changed from', oldEntityId, 'to', newEntityId)
     fetchTempleInfo()
     fetchSevaBookings()
   }
@@ -714,24 +745,8 @@ watch(() => route.params.id, (newEntityId, oldEntityId) => {
 
 // Lifecycle hooks
 onMounted(async () => {
-  console.log('SevaBookings component mounted')
-  
-  // Load user info first (synchronous, from localStorage)
   fetchUserInfo()
-  
-  // Then load temple and seva bookings data
   await fetchTempleInfo()
   await fetchSevaBookings()
-  
-  // Log store state for debugging
-  console.log("Final sevaStore state:", {
-    recentSevas: sevaStore.recentSevas,
-    sevaCatalog: sevaStore.sevaCatalog,
-    loadingRecentSevas: sevaStore.loadingRecentSevas,
-    loadingCatalog: sevaStore.loadingCatalog,
-    currentEntityId: currentEntityId.value,
-    currentTemple: currentTemple.value,
-    currentUser: currentUser.value
-  })
 })
 </script>

@@ -181,7 +181,7 @@
                   Duration: {{ seva.duration }} minutes
                 </div>
                 
-                <!-- ✅ UPDATED: Show slot information from backend -->
+                <!-- Show slot information from backend -->
                 <div class="flex items-center justify-between text-sm">
                   <div class="flex items-center text-gray-600">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,8 +232,8 @@
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 ]"
               >
-                {{ bookingInProgress[seva.id] ? 'Booking...' :
-                   bookedSevas[seva.id] ? 'Seva Booked ' : 
+                {{ bookingInProgress[seva.id] ? 'Processing...' :
+                   bookedSevas[seva.id] ? 'Seva Booked ✓' : 
                    getRemainingSlots(seva) > 0 ? 'Book Now' : 'Fully Booked' }}
               </button>
             </div>
@@ -257,6 +257,17 @@ const router = useRouter()
 const sevaStore = useSevaStore()
 const toast = useToast()
 
+// Load Razorpay script
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 // Reactive data
 const initialLoading = ref(true)
 const loading = ref(false)
@@ -279,20 +290,23 @@ const currentUser = ref({
   email: ''
 })
 
+// User context for entity association
+const userContext = ref(null)
+
 // Get current entity ID from route
 const currentEntityId = computed(() => route.params.id)
 
-// ✅ UPDATED: Get available slots from backend data
+// Get available slots from backend data
 const getAvailableSlots = (seva) => {
   return seva.available_slots || 0
 }
 
-// ✅ UPDATED: Get booked slots from backend data
+// Get booked slots from backend data
 const getBookedSlots = (seva) => {
   return seva.booked_slots || 0
 }
 
-// ✅ UPDATED: Get remaining slots from backend data
+// Get remaining slots from backend data
 const getRemainingSlots = (seva) => {
   return seva.remaining_slots || 0
 }
@@ -392,6 +406,92 @@ const fetchUserInfo = () => {
   }
 }
 
+// Get user context with entity/temple ID
+const getUserContext = async () => {
+  try {
+    console.log('Getting user context for entity association...')
+    // You may need to implement this in your seva service
+    // For now, we'll use localStorage data
+    const entityId = localStorage.getItem('selectedEntityId') || 
+                     localStorage.getItem('current_entity_id') ||
+                     localStorage.getItem('current_tenant_id')
+    
+    if (entityId) {
+      userContext.value = {
+        entity_id: entityId,
+        temple_id: entityId,
+        temple_name: currentTemple.value.name
+      }
+      console.log('User context set:', userContext.value)
+    }
+  } catch (error) {
+    console.error('Error getting user context:', error)
+  }
+}
+
+// Debug function to analyze response structure
+const debugSevaBookingResponse = (response) => {
+  console.log('=== SEVA BOOKING RESPONSE DEBUG ===')
+  console.log('Full response object:', response)
+  console.log('Response type:', typeof response)
+  console.log('Response keys:', Object.keys(response || {}))
+  
+  if (response.data) {
+    console.log('response.data:', response.data)
+    console.log('response.data keys:', Object.keys(response.data || {}))
+  }
+  
+  console.log('JSON stringified response:', JSON.stringify(response, null, 2))
+  console.log('=== END DEBUG ===')
+}
+
+// Comprehensive response parsing for Razorpay
+const parseRazorpayResponse = (response) => {
+  const possibleDataSources = [
+    response,
+    response.data,
+    response.result,
+    response.payload,
+    response.order,
+    response.razorpay
+  ].filter(source => source && typeof source === 'object')
+  
+  let order_id, razorpay_key, amount
+  
+  for (const source of possibleDataSources) {
+    order_id = order_id || 
+      source.order_id || 
+      source.OrderID || 
+      source.orderId || 
+      source.razorpay_order_id ||
+      source.RazorpayOrderID ||
+      source.orderID ||
+      source.id
+    
+    razorpay_key = razorpay_key || 
+      source.razorpay_key || 
+      source.RazorpayKey || 
+      source.razorpayKey || 
+      source.key || 
+      source.Key ||
+      source.api_key ||
+      source.ApiKey ||
+      source.razorpay_api_key ||
+      source.RazorpayApiKey
+    
+    amount = amount || 
+      source.amount || 
+      source.Amount || 
+      source.total || 
+      source.Total ||
+      source.payment_amount ||
+      source.PaymentAmount
+  }
+  
+  return { order_id, razorpay_key, amount }
+}
+
+
 // Computed properties
 const today = computed(() => {
   const date = new Date()
@@ -447,7 +547,7 @@ const clearFilters = () => {
   priceRange.value = ''
 }
 
-// Direct booking function
+// Direct booking function with Razorpay payment
 const directBookSeva = async (seva) => {
   // Don't do anything if already booked, in progress, or fully booked
   if (bookedSevas[seva.id] || 
@@ -460,36 +560,146 @@ const directBookSeva = async (seva) => {
   bookingInProgress[seva.id] = true
   
   try {
-    console.log('Sending booking request:', { seva_id: seva.id })
-    
-    // Pass only the seva ID to the service
-    const response = await sevaService.bookSeva(seva.id)
-    console.log('Booking response:', response)
-    
-    if (response.success) {
-      // Mark this seva as booked with consistent ID type
-      const sevaId = seva.id.toString()
-      bookedSevas[sevaId] = true
-      
-      toast.success('Seva booking request submitted! Awaiting approval.')
-      
-      // Refresh sevas to get updated slot counts from backend
-      await fetchSevas()
-      
-      // Optionally refresh user bookings to get updated data
-      await fetchUserBookings()
-    } else {
-      toast.error(response.error || 'Failed to book seva')
+    // Ensure we have user context
+    if (!userContext.value) {
+      await getUserContext()
     }
+
+    // Load Razorpay script
+    const scriptLoaded = await loadRazorpayScript();
+    if (!scriptLoaded) {
+      toast.error("Razorpay SDK failed to load. Please check your internet connection.");
+      return;
+    }
+
+    // Prepare booking data
+    const bookingData = {
+      seva_id: seva.id,
+      amount: Number(seva.price),
+      seva_name: seva.name,
+      seva_type: seva.seva_type
+    }
+
+    // Add entity/temple ID if available from user context
+    if (userContext.value) {
+      if (userContext.value.entity_id) {
+        bookingData.entityId = userContext.value.entity_id
+        bookingData.entity_id = userContext.value.entity_id
+      } else if (userContext.value.temple_id) {
+        bookingData.templeId = userContext.value.temple_id
+        bookingData.temple_id = userContext.value.temple_id
+        bookingData.entityId = userContext.value.temple_id
+        bookingData.entity_id = userContext.value.temple_id
+      }
+      
+      console.log('Booking data with entity context:', bookingData)
+    } else {
+      console.warn('No user context available - booking may not be associated with correct temple')
+    }
+
+    console.log('Creating seva booking with payment:', bookingData)
+
+    // Call your backend API to create Razorpay order
+    // You'll need to add this endpoint to your sevaService
+    const response = await sevaService.createSevaBookingWithPayment(bookingData)
+
+    // Debug the response structure
+    debugSevaBookingResponse(response)
+
+    // Parse response using comprehensive handler
+    const { order_id, razorpay_key, amount } = parseRazorpayResponse(response)
+
+    console.log('Extracted values:', { order_id, razorpay_key, amount })
+
+    if (!order_id || !razorpay_key) {
+      console.error('Missing required fields in response:', response)
+      
+      const missingFields = []
+      if (!order_id) missingFields.push('order_id/OrderID/orderId')
+      if (!razorpay_key) missingFields.push('razorpay_key/RazorpayKey/key')
+      
+      const errorMsg = `Server response missing required fields: ${missingFields.join(', ')}.
+      
+Available response fields: ${Object.keys(response || {}).join(', ')}
+${response.data ? 'Data fields: ' + Object.keys(response.data).join(', ') : ''}
+
+Please check backend implementation or contact support.`
+      
+      toast.error(errorMsg)
+      throw new Error(`Server response missing required fields: ${missingFields.join(', ')}`)
+    }
+
+    // Open Razorpay payment modal
+    const options = {
+      key: razorpay_key,
+      amount: (amount || seva.price) * 100, // Razorpay expects paise
+      currency: "INR",
+      name: currentTemple.value.name || "Temple Seva",
+      description: `${seva.name} - ${seva.seva_type}`,
+      order_id: order_id,
+      handler: async function (razorpayResponse) {
+        try {
+          console.log('Payment successful, verifying...', razorpayResponse)
+          
+          // Verify payment with your backend
+          await sevaService.verifySevaPayment({
+            razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+            razorpay_order_id: razorpayResponse.razorpay_order_id,
+            razorpay_signature: razorpayResponse.razorpay_signature,
+            seva_id: seva.id
+          });
+
+          toast.success("Seva booking successful! Payment confirmed.");
+          
+          // Mark this seva as booked
+          const sevaId = seva.id.toString()
+          bookedSevas[sevaId] = true
+          
+          // Refresh sevas to get updated slot counts
+          await fetchSevas();
+          
+          // Refresh user bookings
+          await fetchUserBookings();
+        } catch (verifyError) {
+          console.error("Verification failed:", verifyError);
+          toast.error("Payment verification failed. Please contact support if amount was deducted.");
+        }
+      },
+      prefill: {
+        name: currentUser.value.name || "Devotee",
+        email: currentUser.value.email || "devotee@example.com",
+      },
+      theme: {
+        color: "#6366f1",
+      },
+      modal: {
+        ondismiss: function() {
+          console.log('Payment modal dismissed')
+          bookingInProgress[seva.id] = false
+        }
+      }
+    };
+
+    console.log('Opening Razorpay with options:', options)
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+    
   } catch (error) {
-    console.error('Booking failed:', error)
+    console.error('Seva Booking Flow Error:', error)
     console.error('Error details:', error.response?.data || 'No response data')
     
-    const errorMessage = error.response?.data?.error || 'Booking failed. Please try again.'
-    toast.error(errorMessage)
+    const errorMessage = error.response?.data?.error || 
+                        error.response?.data?.message || 
+                        error.message || 
+                        'Something went wrong while processing your seva booking'
+    
+    toast.error("Error: " + errorMessage)
   } finally {
-    // Clear booking in progress state
-    bookingInProgress[seva.id] = false
+    // Don't clear booking in progress here if Razorpay modal is open
+    // It will be cleared in the modal dismiss handler
+    if (!window.Razorpay) {
+      bookingInProgress[seva.id] = false
+    }
   }
 }
 
@@ -569,6 +779,9 @@ onMounted(async () => {
     
     // Load temple info (quick, uses localStorage first)
     await fetchTempleInfo()
+    
+    // Get user context for entity association
+    await getUserContext()
     
     // Show the page immediately after temple info loads
     initialLoading.value = false

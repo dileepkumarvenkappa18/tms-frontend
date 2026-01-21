@@ -352,7 +352,10 @@
           <!-- Payment Details - Shows based on payment method -->
           <div class="md:col-span-2">
             <!-- UPI Payment Details -->
-            <div v-if="selectedDonation.method === 'upi' || selectedDonation.paymentMethod === 'upi' || selectedDonation.method === 'online' || selectedDonation.paymentMethod === 'online'" 
+            <div
+v-if="['upi','online','netbanking','card','wallet'].includes(
+  (selectedDonation.method || selectedDonation.paymentMethod || '').toLowerCase()
+)"
                  class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4">
               <h4 class="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -901,16 +904,18 @@ const getPaymentMethodClass = (method) => {
 }
 
 const getPaymentMethodLabel = (method) => {
-  const methodLower = (method || 'N/A').toLowerCase()
+  const m = (method || '').toLowerCase()
   const labels = {
-    'upi': 'UPI',
-    'online': 'Online Payment',
-    'bank': 'Bank Transfer',
-    'card': 'Card',
-    'cash': 'Cash'
+    upi: 'UPI',
+    online: 'Online (Razorpay)',
+    netbanking: 'Net Banking',
+    card: 'Card',
+    wallet: 'Wallet',
+    bank: 'Bank Transfer'
   }
-  return labels[methodLower] || method || 'N/A'
+  return labels[m] || method || 'N/A'
 }
+
 
 const resetFilters = () => {
   filters.value = {
