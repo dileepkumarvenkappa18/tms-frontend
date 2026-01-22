@@ -525,7 +525,19 @@ const routes = [
           breadcrumb: 'Edit Profile',
           role: 'devotee'
         }
+      },
+            {
+        path: 'profile',
+        name: 'DevoteeProfile',
+        component: UserProfileView,
+        meta: { 
+          title: 'My Profile',
+          breadcrumb: 'My Profile',
+          requiresAuth: true,
+          allowedRoles: ['devotee']
+        }
       }
+
     ]
   },
 
@@ -568,6 +580,17 @@ const routes = [
         meta: { 
           title: 'Edit Profile',
           breadcrumb: 'Edit Profile'
+        }
+      },
+      {
+        path: 'profile',
+        name: 'DevoteeProfile',
+        component: UserProfileView,
+        meta: { 
+          title: 'My Profile',
+          breadcrumb: 'My Profile',
+          requiresAuth: true,
+          allowedRoles: ['devotee']
         }
       },
       {

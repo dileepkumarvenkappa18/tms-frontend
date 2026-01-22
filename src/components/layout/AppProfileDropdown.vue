@@ -295,29 +295,40 @@ const getProfileLink = () => {
     case 'superadmin':
     case 'super_admin':
       return '/superadmin/profile'
+    
     case 'tenant':
     case 'templeadmin':
       return '/tenant/profile'
+    
     case 'entity_admin':
       return entityId ? `/entity/${entityId}/profile` : '/profile'
+    
     case 'devotee':
-  // ✅ UPDATED: Route devotee to /profiles/user/:user_id endpoint
-  const userId = currentUser.value?.id || currentUser.value?.userId || authStore.userId;
-  console.log('👤 Devotee profile - userId:', userId); // Debug log
-  return userId ? `/profiles/user/${userId}` : '/profile';
-
-case 'volunteer':
-  return entityId ? `/entity/${entityId}/volunteer/profile` : '/profile';
-
-    // ✅ NEW: Handle standard_user and monitoring_user
+      // ✅ FIXED: Route to devotee profile correctly
+      const devoteeEntityId = route.params.id || 
+                              route.params.entityId || 
+                              localStorage.getItem('current_entity_id') || 
+                              localStorage.getItem('selected_entity_id')
+      
+      console.log('👤 Devotee profile - entityId:', devoteeEntityId) // Debug log
+      
+      if (devoteeEntityId) {
+        return `/entity/${devoteeEntityId}/devotee/profile`
+      }
+      return '/devotee/profile'
+    
+    case 'volunteer':
+      return entityId ? `/entity/${entityId}/volunteer/profile` : '/profile'
+    
+    // ✅ Handle standard_user and monitoring_user
     case 'standard_user':
     case 'standarduser':
     case 'monitoring_user':
     case 'monitoringuser':
-      // These users access entity dashboards, so profile should be entity-based
       const currentTenantId = localStorage.getItem('current_tenant_id') || 
                               localStorage.getItem('selected_tenant_id')
       return currentTenantId ? `/entity/${currentTenantId}/profile` : '/profile'
+    
     default:
       return '/profile'
   }

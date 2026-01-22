@@ -126,30 +126,7 @@
         </div>
       </div>
 
-      <!-- Account Information -->
-      <div class="bg-white shadow-md rounded-lg p-6">
-        <h2 class="text-xl font-semibold mb-4 border-b pb-2">Account Information</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="flex items-center">
-            <span class="font-medium w-32">Member Since:</span>
-            <span>{{ formatDate(profile.created_at) }}</span>
-          </div>
-          <div class="flex items-center">
-            <span class="font-medium w-32">Last Updated:</span>
-            <span>{{ formatDate(profile.updated_at) }}</span>
-          </div>
-          <div class="flex items-center">
-            <span class="font-medium w-32">Profile ID:</span>
-            <span class="font-mono text-sm">{{ profile.id || 'N/A' }}</span>
-          </div>
-          <div class="flex items-center">
-            <span class="font-medium w-32">Status:</span>
-            <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-              Active
-            </span>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- Empty State for New Users -->
       <div v-if="isEmptyProfile" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
