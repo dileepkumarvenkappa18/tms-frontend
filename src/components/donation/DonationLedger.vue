@@ -340,7 +340,7 @@
                 </div>
                 <div v-if="creatorDetails.bank">
                   <p class="text-xs text-green-700">Account Number</p>
-                  <p class="text-sm font-mono text-green-900">{{ creatorDetails.bank.account_number || 'N/A' }}</p>
+                  <p class="text-sm font-mono text-green-900">{{ creatorDetails.bank.account_number?.slice(-4).padStart(12, '*') || 'N/A' }}</p>
                 </div>
                 <div v-if="creatorDetails.bank">
                   <p class="text-xs text-green-700">IFSC Code</p>
