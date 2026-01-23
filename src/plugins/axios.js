@@ -22,8 +22,14 @@ if (import.meta.env.DEV) {
   console.log('API Configuration:', {
     baseURL,
     environment: import.meta.env.MODE
-  })
+  })  
+
 }
+
+console.log("VITE_API_BASE_URL: ", import.meta.env.VITE_API_BASE_URL)
+//console.log("VITE_CLOUDFLARE_CAPTCHA_KEY: ", import.meta.env.VITE_CLOUDFLARE_CAPTCHA_KEY)
+//console.log("VITE_RAZORPAY_KEY_ID: ", import.meta.env.VITE_RAZORPAY_KEY_ID)
+//console.log("VITE_ENABLE_TURNSTILE: ", import.meta.env.VITE_ENABLE_TURNSTILE)
 
 // Request interceptor - Add auth token and tenant ID
 api.interceptors.request.use(
