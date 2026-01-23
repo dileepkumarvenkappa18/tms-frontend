@@ -624,12 +624,13 @@ async createTemple(templeData) {
       }
 
       if (Array.isArray(templeData.documents?.additional)) {
-        templeData.documents.additional.forEach((file, index) => {
-          if (file instanceof File) {
-            formData.append(`additional_docs_${index}`, file);
-          }
-        });
-      }
+  templeData.documents.additional.forEach((file) => {
+    if (file instanceof File) {
+      formData.append('additional_docs', file);  // ✅ SAME NAME FOR ALL
+      console.log('📄 Added additional document:', file.name);
+    }
+  });
+}
 
       // ================= 🆕 LOGO & VIDEO =================
       if (templeData.logo instanceof File) {
@@ -733,14 +734,14 @@ async updateTemple(id, updates) {
       if (updates.documents?.property instanceof File) {
         formData.append('property_docs', updates.documents.property);
       }
-      if (Array.isArray(updates.documents?.additional)) {
-        updates.documents.additional.forEach((file, index) => {
-          if (file instanceof File) {
-            formData.append(`additional_docs_${index}`, file);
-          }
-        });
-      }
-
+     if (Array.isArray(updates.documents?.additional)) {
+  updates.documents.additional.forEach((file) => {
+    if (file instanceof File) {
+      formData.append('additional_docs', file);  // ✅ SAME NAME FOR ALL
+      console.log('📄 Added additional document:', file.name);
+    }
+  });
+}
       // ================= 🆕 LOGO & VIDEO =================
       if (updates.logo instanceof File) {
         formData.append('temple_logo', updates.logo);
