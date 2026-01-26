@@ -873,16 +873,17 @@ const buildDocUrl = (doc, appId, action = 'view') => {
   console.log("buildDocUrl - direct (raw):", direct);
 
   if (!direct) {
-    // Fallback API
-    if (doc.id && appId) {
-      const apiUrl = `http://localhost:8080/api/v1/entities/${encodeURIComponent(
-        appId
-      )}/documents/${encodeURIComponent(doc.id)}/${action}`;
-      console.log("buildDocUrl - API fallback:", apiUrl);
-      return apiUrl;
-    }
-    return "";
+  // Fallback API (environment-safe)
+  if (doc.id && appId) {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+    const apiUrl = `${API_BASE_URL}/entities/${encodeURIComponent(
+      appId
+    )}/documents/${encodeURIComponent(doc.id)}/${action}`;
+    console.log("buildDocUrl - API fallback:", apiUrl);
+    return apiUrl;
   }
+  return "";
+}
 
   // ----------------------------
   // 1. Remove unwanted "/files/"

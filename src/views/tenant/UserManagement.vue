@@ -142,22 +142,19 @@ const toast = ref({
 
 // Helper to get current tenant ID - FIXED to prioritize localStorage value
 const getCurrentTenantId = () => {
-  // Use stored tenant ID from local storage first (most reliable)
-  const storedTenantId = localStorage.getItem('current_tenant_id');
-  if (storedTenantId) {
-    console.log(`Using tenant ID from localStorage: ${storedTenantId}`);
-    return storedTenantId;
-  }
-  
-  // Then try from auth store
+  // 1️⃣ Auth store (source of truth)
   if (authStore.currentTenantId) {
-    console.log(`Using tenant ID from auth store: ${authStore.currentTenantId}`);
     return authStore.currentTenantId;
   }
-  
-  // Default to 1 if not found
-  console.warn('Could not determine tenant ID, defaulting to 1');
-  return '1';
+
+  // 2️⃣ Local storage fallback
+  const storedTenantId = localStorage.getItem('current_tenant_id');
+  if (storedTenantId) {
+    return Number(storedTenantId);
+  }
+
+  // 3️⃣ Hard fail instead of silent bug
+  throw new Error('Tenant ID not found. User must re-login.');
 };
 
 // Fetch users on component mount

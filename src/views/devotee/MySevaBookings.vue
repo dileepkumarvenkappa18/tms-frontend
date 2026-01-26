@@ -476,57 +476,92 @@ const currentEntityId = computed(() => route.params.id)
 // Fetch temple information with creator details
 const fetchTempleInfo = async () => {
   try {
+    console.log('🏛️ Fetching temple information...')
+
     const storedTempleName = localStorage.getItem('selectedTempleName')
     if (storedTempleName) {
       currentTemple.value.name = storedTempleName
     }
-    
-    let entityId = currentEntityId.value ||
-                   localStorage.getItem('selectedEntityId') || 
-                   localStorage.getItem('current_entity_id')
-    
-    if (!entityId) {
-      const match = window.location.pathname.match(/\/entity\/(\d+)\//)
-      if (match && match[1]) {
-        entityId = match[1]
-      }
+
+    let entityId = null
+    const match = window.location.pathname.match(/\/entity\/(\d+)\//)
+    if (match && match[1]) {
+      entityId = match[1]
     }
-    
+
     if (!entityId) {
-      console.warn('No entity ID found')
+      console.warn('⚠️ Entity ID not found in URL')
       return
     }
-    
+
+    console.log('✅ Using entity ID:', entityId)
+
     const response = await api.get(`/entities/${entityId}/details`)
     const data = response.data?.data || response.data
-    
-    if (data) {
-      currentTemple.value = {
-        id: data.id,
-        name: data.name || storedTempleName || 'Temple',
-        city: data.city || '',
-        state: data.state || ''
-      }
+
+    console.log('🔍 Temple API Response:', data)
+
+    if (!data || !data.id) {
+      console.warn('⚠️ No temple data received')
+      return
+    }
+
+    currentTemple.value = {
+      id: data.id,
+      name: data.name || storedTempleName || 'Temple',
+      city: data.city || '',
+      state: data.state || '',
+      status: data.status || '',
+      createdBy: data.created_by || null,
+    }
+
+    if (data.creator) {
+      console.log('✅ Creator found in response')
       
-      // Get creator details with bank info
-      if (data.creator) {
-        creatorDetails.value = {
-          id: data.creator.id,
-          fullName: data.creator.full_name || 'N/A',
-          email: data.creator.email || 'N/A',
-          phone: data.creator.phone || 'N/A',
-          bank: data.creator.bank || null,
+      // Map bank details - handle both nested and flat structures
+      let bankDetails = null
+      if (data.creator.bank) {
+        // Nested structure: creator.bank object exists
+        bankDetails = data.creator.bank
+      } else if (data.creator.account_number) {
+        // Flat structure: bank details directly in creator
+        bankDetails = {
+          account_holder_name: data.creator.account_holder_name,
+          account_number: data.creator.account_number,
+          ifsc_code: data.creator.ifsc_code,
+          account_type: data.creator.account_type,
+          upi_id: data.creator.upi_id,
+          bank_name: data.creator.bank_name || 'N/A',
+          branch_name: data.creator.branch_name || 'N/A'
         }
       }
-      
-      localStorage.setItem('selectedTempleName', currentTemple.value.name)
-      localStorage.setItem('selectedEntityId', currentTemple.value.id)
+      console.log('✅ Creator details loaded:', {
+        name: creatorDetails.value.fullName,
+        bank: creatorDetails.value.bank ? 'Available' : 'Not available'
+      })
+
+      creatorDetails.value = {
+        id: data.creator.id,
+        fullName: data.creator.name || data.creator.full_name || 'N/A',
+        email: data.creator.email || 'N/A',
+        phone: data.creator.phone || 'N/A',
+        roleName: data.creator.role || 'N/A',
+        loading: false,
+        error: null,
+        temple: data.creator.temple || null,
+        bank: bankDetails,
+      }
     }
+
+    localStorage.setItem('selectedTempleName', currentTemple.value.name)
+    localStorage.setItem('selectedEntityId', currentTemple.value.id)
+
+    console.log('✅ Temple details loaded:', currentTemple.value.name)
   } catch (error) {
-    console.error('Error fetching temple info:', error)
+    console.error('❌ Failed to fetch temple details:', error)
+    currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
   }
 }
-
 // Fetch user information
 const fetchUserInfo = () => {
   try {

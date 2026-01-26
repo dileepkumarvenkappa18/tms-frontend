@@ -329,7 +329,16 @@
                 </svg>
                 To (Received Bank Details)
               </h4>
-              <div class="space-y-2">
+              <div v-if="creatorDetails.loading" class="flex items-center justify-center py-4">
+                <svg class="animate-spin h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <div v-else-if="creatorDetails.error" class="text-red-600 text-sm">
+                {{ creatorDetails.error }}
+              </div>
+              <div v-else class="space-y-2">
                 <div>
                   <p class="text-xs text-green-700">Temple/Organization</p>
                   <p class="font-semibold text-green-900">{{ getTempleName(selectedDonation) }}</p>
@@ -340,7 +349,7 @@
                 </div>
                 <div v-if="creatorDetails.bank">
                   <p class="text-xs text-green-700">Account Number</p>
-                  <p class="text-sm font-mono text-green-900">{{ creatorDetails.bank.account_number?.slice(-4).padStart(12, '*') || 'N/A' }}</p>
+                  <p class="text-sm font-mono text-green-900">{{ maskAccountNumber(creatorDetails.bank.account_number) }}</p>
                 </div>
                 <div v-if="creatorDetails.bank">
                   <p class="text-xs text-green-700">IFSC Code</p>
@@ -349,6 +358,10 @@
                 <div v-if="creatorDetails.bank">
                   <p class="text-xs text-green-700">Bank Name</p>
                   <p class="text-sm text-green-900">{{ creatorDetails.bank.bank_name || 'N/A' }}</p>
+                </div>
+                <div v-if="creatorDetails.bank && creatorDetails.bank.upi_id">
+                  <p class="text-xs text-green-700">UPI ID</p>
+                  <p class="text-sm font-mono text-green-900">{{ creatorDetails.bank.upi_id }}</p>
                 </div>
               </div>
             </div>
@@ -530,6 +543,7 @@ function getOrderId(donation) {
     safeString(donation.orderId) ||
     'N/A';
 }
+
 function getTransactionId(donation) {
   return safeString(donation.transactionId) ||
     safeString(donation.order_id) ||
@@ -650,6 +664,12 @@ function getDisplayRange() {
   return `${start}-${end}`;
 }
 
+function maskAccountNumber(accountNumber) {
+  if (!accountNumber) return 'N/A';
+  const last4 = accountNumber.slice(-4);
+  return last4.padStart(12, '*');
+}
+
 function clearSearch() {
   searchQuery.value = '';
 }
@@ -658,16 +678,27 @@ function clearSearch() {
 const viewDonationDetails = async (donation) => {
   selectedDonation.value = donation;
   
-  // Fetch creator/temple bank details if not already loaded
-  if (!creatorDetails.value.bank) {
-    await fetchCreatorBankDetails(donation);
-  }
+  // Reset previous creator details
+  creatorDetails.value = {
+    id: null,
+    fullName: '',
+    email: '',
+    phone: '',
+    roleName: '',
+    loading: false,
+    error: null,
+    bank: null,
+  };
+  
+  // Fetch creator/temple bank details
+  await fetchCreatorBankDetails(donation);
 };
 
 // Fetch creator bank details from temple/entity
 const fetchCreatorBankDetails = async (donation) => {
   try {
     creatorDetails.value.loading = true;
+    creatorDetails.value.error = null;
     
     // Try to get entity ID from donation
     const entityId = donation.entity_id || donation.temple_id || donation.entityId || donation.templeId;
@@ -675,6 +706,7 @@ const fetchCreatorBankDetails = async (donation) => {
     if (!entityId) {
       console.warn('No entity ID found in donation');
       creatorDetails.value.loading = false;
+      creatorDetails.value.error = 'Entity information not available';
       return;
     }
     
@@ -682,16 +714,29 @@ const fetchCreatorBankDetails = async (donation) => {
     const data = response.data?.data || response.data;
     
     if (data && data.creator) {
+      // Bank details are directly in the creator object
+      const creator = data.creator;
+      
       creatorDetails.value = {
-        id: data.creator.id,
-        fullName: data.creator.full_name || 'N/A',
-        email: data.creator.email || 'N/A',
-        phone: data.creator.phone || 'N/A',
-        roleName: data.creator.role || 'N/A',
+        id: data.id,
+        fullName: creator.name || data.name || 'N/A',
+        email: data.email || 'N/A',
+        phone: data.phone || 'N/A',
+        roleName: 'Temple Administrator',
         loading: false,
         error: null,
-        bank: data.creator.bank || null,
+        bank: {
+          account_holder_name: creator.account_holder_name || null,
+          account_number: creator.account_number || null,
+          ifsc_code: creator.ifsc_code || null,
+          account_type: creator.account_type || null,
+          bank_name: creator.ifsc_code ? getBankNameFromIFSC(creator.ifsc_code) : null,
+          upi_id: creator.upi_id || null,
+        },
       };
+    } else {
+      creatorDetails.value.loading = false;
+      creatorDetails.value.error = 'Bank details not available';
     }
   } catch (error) {
     console.error('Error fetching creator bank details:', error);
@@ -699,6 +744,27 @@ const fetchCreatorBankDetails = async (donation) => {
     creatorDetails.value.error = 'Failed to load bank details';
   }
 };
+
+// Helper function to extract bank name from IFSC code
+function getBankNameFromIFSC(ifscCode) {
+  if (!ifscCode || ifscCode.length < 4) return null;
+  
+  const bankCodes = {
+    'HDFC': 'HDFC Bank',
+    'ICIC': 'ICICI Bank',
+    'SBIN': 'State Bank of India',
+    'AXIS': 'Axis Bank',
+    'PUNB': 'Punjab National Bank',
+    'BARB': 'Bank of Baroda',
+    'CNRB': 'Canara Bank',
+    'UBIN': 'Union Bank of India',
+    'IDIB': 'Indian Bank',
+    'IOBA': 'Indian Overseas Bank',
+  };
+  
+  const code = ifscCode.substring(0, 4).toUpperCase();
+  return bankCodes[code] || `${code} Bank`;
+}
 
 // Current donations from store
 const currentDonations = computed(() => donations.value);

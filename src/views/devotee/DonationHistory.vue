@@ -1038,29 +1038,39 @@ const fetchTempleInfo = async () => {
 
     if (data.creator) {
       console.log('✅ Creator found in response')
+      
+      // Map bank details - handle both nested and flat structures
+      let bankDetails = null
+      if (data.creator.bank) {
+        // Nested structure: creator.bank object exists
+        bankDetails = data.creator.bank
+      } else if (data.creator.account_number) {
+        // Flat structure: bank details directly in creator
+        bankDetails = {
+          account_holder_name: data.creator.account_holder_name,
+          account_number: data.creator.account_number,
+          ifsc_code: data.creator.ifsc_code,
+          account_type: data.creator.account_type,
+          upi_id: data.creator.upi_id,
+          bank_name: data.creator.bank_name || 'N/A',
+          branch_name: data.creator.branch_name || 'N/A'
+        }
+      }
+      console.log('✅ Creator details loaded:', {
+        name: creatorDetails.value.fullName,
+        bank: creatorDetails.value.bank ? 'Available' : 'Not available'
+      })
+
       creatorDetails.value = {
         id: data.creator.id,
-        fullName: data.creator.full_name || 'N/A',
+        fullName: data.creator.name || data.creator.full_name || 'N/A',
         email: data.creator.email || 'N/A',
         phone: data.creator.phone || 'N/A',
         roleName: data.creator.role || 'N/A',
         loading: false,
         error: null,
         temple: data.creator.temple || null,
-        bank: data.creator.bank || null,
-      }
-      
-      console.log('✅ Creator details loaded:', {
-        name: creatorDetails.value.fullName,
-        bank: creatorDetails.value.bank ? 'Available' : 'Not available'
-      })
-
-      if (creatorDetails.value.bank) {
-        console.log('🏦 Bank details:', {
-          account_holder: creatorDetails.value.bank.account_holder_name,
-          account_number: creatorDetails.value.bank.account_number,
-          ifsc: creatorDetails.value.bank.ifsc_code
-        })
+        bank: bankDetails,
       }
     }
 

@@ -1371,7 +1371,7 @@ const loadTempleData = async () => {
 }
 
 // ========================================
-// NEW: Fetch temple bank details from entity API
+// FIXED: Fetch temple bank details from entity API
 // ========================================
 const fetchTempleBankDetails = async () => {
   if (!entityId) {
@@ -1381,21 +1381,35 @@ const fetchTempleBankDetails = async () => {
   
   try {
     templeDetails.value.loading = true
+    templeDetails.value.error = null
     
     const response = await api.get(`/entities/${entityId}/details`)
     const data = response.data?.data || response.data
     
-    if (data) {
+    if (data && data.creator) {
+      // Bank details are directly in the creator object
+      const creator = data.creator
+      
       templeDetails.value = {
         id: data.id || entityId,
         name: data.name || temple.value?.name || 'N/A',
         loading: false,
         error: null,
-        bank: data.creator?.bank || data.bank || null,
-        creator: data.creator || null
+        bank: {
+          account_holder_name: creator.account_holder_name || null,
+          account_number: creator.account_number || null,
+          ifsc_code: creator.ifsc_code || null,
+          account_type: creator.account_type || null,
+          bank_name: creator.ifsc_code ? getBankNameFromIFSC(creator.ifsc_code) : null,
+          upi_id: creator.upi_id || null,
+        },
+        creator: creator
       }
       
       console.log('Temple bank details loaded:', templeDetails.value)
+    } else {
+      templeDetails.value.loading = false
+      templeDetails.value.error = 'Bank details not available'
     }
   } catch (error) {
     console.error('Error fetching temple bank details:', error)
@@ -1403,6 +1417,28 @@ const fetchTempleBankDetails = async () => {
     templeDetails.value.error = 'Failed to load bank details'
   }
 }
+
+// Helper function to extract bank name from IFSC code
+function getBankNameFromIFSC(ifscCode) {
+  if (!ifscCode || ifscCode.length < 4) return null
+  
+  const bankCodes = {
+    'HDFC': 'HDFC Bank',
+    'ICIC': 'ICICI Bank',
+    'SBIN': 'State Bank of India',
+    'AXIS': 'Axis Bank',
+    'PUNB': 'Punjab National Bank',
+    'BARB': 'Bank of Baroda',
+    'CNRB': 'Canara Bank',
+    'UBIN': 'Union Bank of India',
+    'IDIB': 'Indian Bank',
+    'IOBA': 'Indian Overseas Bank',
+  }
+  
+  const code = ifscCode.substring(0, 4).toUpperCase()
+  return bankCodes[code] || `${code} Bank`
+}
+
 
 const formatDate = (dateString) => {
   if (!dateString || dateString === '') return 'No Date Set'
