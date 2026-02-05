@@ -1062,26 +1062,11 @@ const fixToAbsoluteUrl = (direct) => {
 }
 
 function convertToHttps(url) {
-    console.log("url: ",url)
     const parsedUrl = new URL(url);
     //parsedUrl.protocol = 'https:';  // Set protocol to https
     parsedUrl.protocol = window.location.protocol
     return parsedUrl.href;  // Return the modified URL
 }
-
-/*
-const viewRemote = (rawUrl, title) => {
-  const url = fixToAbsoluteUrl(rawUrl)
-  if (!url) {
-    showToast('Document URL not available', 'error')
-    return
-  }
-  currentDocumentType.value = ''
-  currentDocumentUrl.value = url
-  currentDocumentTitle.value = title || 'Document'
-  showDocumentViewer.value = true
-}
-*/
 
 const viewRemote = async (rawUrl, title) => {
   const url = fixToAbsoluteUrl(rawUrl)
@@ -1641,7 +1626,6 @@ const fetchTempleData = async () => {
     // -------- DOCUMENT URLS --------
     const getFirstUrl = (obj, keys) => {
       const raw = safeGet(obj, keys)
-      console.log("---> raw:", raw)
       return fixToAbsoluteUrl(raw)
     }
 
