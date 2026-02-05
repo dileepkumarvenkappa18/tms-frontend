@@ -1049,60 +1049,27 @@ const pickDownloadName = (preferred, url, disposition) => {
   )
 }
 
-// needs to be fixed..
 const fixToAbsoluteUrl = (direct) => {
-  console.log("direct: ", direct)
+  // Remove protocol + domain if present
+  const urlPath = direct.replace(/^https?:\/\/[^/]+/, '');
 
-  if (!direct) return ''
-  let url = String(direct)
+  // Remove leading slash
+  const cleanPath = urlPath.replace(/^\/+/, '');
 
-  if (url.includes('/files/')) {
-    url = url.replace(/\/files\//g, '/')
-  }
-  console.log("url 1: ", url)
-
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    if (url.includes('://localhost:8080/') && !/\/(uploads|api|public)\//.test(url)) {
-      const parts = url.split('://localhost:8080/')
-      if (parts.length === 2) {
-        const path = parts[1]
-        if (!path.startsWith('uploads/')) {
-          url = `${parts[0]}://localhost:8080/uploads/${path}`
-        }
-      }
-    }
-    return url
-  }
-  console.log("url 2: ", url)
-
-  let path
-  if (url.startsWith('/uploads/')) path = url
-  else if (url.startsWith('uploads/')) path = `/${url}`
-  else if (url.startsWith('/')) path = `/uploads${url}`
-  else path = `/uploads/${url}`
-
-  console.log("path: ", path)
-  /*
-  const apiUrl = window.location.protocol === 'https:' 
-    ? `https://${API_URL.replace(/^https?:\/\//, '')}` 
-    : `${API_URL.replace(/^https?:\/\//, '')}`;
-  */
-
-  console.log("apiUrl: ", API_URL)
-  //const fullUrl = `$VITE_API_BASE_URL${path}`;
-  const fullUrl = convertToHttps(`${API_URL}${path}`)
-
-  console.log("fullUrl: ", fullUrl)
-  return fullUrl
+  // Remove "uploads/" or "files/" prefix
+  //return cleanPath.replace(/^(uploads|files)\//, '');
+  return `/uploads/${cleanPath.replace(/^(uploads|files)\//, '')}`
 }
- 
+
 function convertToHttps(url) {
+    console.log("url: ",url)
     const parsedUrl = new URL(url);
     //parsedUrl.protocol = 'https:';  // Set protocol to https
     parsedUrl.protocol = window.location.protocol
     return parsedUrl.href;  // Return the modified URL
 }
 
+/*
 const viewRemote = (rawUrl, title) => {
   const url = fixToAbsoluteUrl(rawUrl)
   if (!url) {
@@ -1114,6 +1081,36 @@ const viewRemote = (rawUrl, title) => {
   currentDocumentTitle.value = title || 'Document'
   showDocumentViewer.value = true
 }
+*/
+
+const viewRemote = async (rawUrl, title) => {
+  const url = fixToAbsoluteUrl(rawUrl)
+  if (!url) {
+    showToast('Document URL not available', 'error')
+    return
+  }
+
+  try {
+    const tenantId = localStorage.getItem('current_tenant_id')
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || ''
+    const response = await fetch(url, {      
+        headers: { ...(token? {Authorization: `Bearer ${token}`,'X-Tenant-ID': tenantId} : {}), Accept: '*/*' },
+    })
+
+    if (!response.ok) throw new Error('Failed to load document')
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+
+    currentDocumentType.value = blob.type
+    currentDocumentUrl.value = objectUrl
+    currentDocumentTitle.value = title || 'Document'
+    showDocumentViewer.value = true
+  } catch (err) {
+    showToast('Unable to load document', 'error')
+  }
+}
+
 
 const viewLocalFile = (file, title, key) => {
   if (!file) {
@@ -1644,6 +1641,7 @@ const fetchTempleData = async () => {
     // -------- DOCUMENT URLS --------
     const getFirstUrl = (obj, keys) => {
       const raw = safeGet(obj, keys)
+      console.log("---> raw:", raw)
       return fixToAbsoluteUrl(raw)
     }
 

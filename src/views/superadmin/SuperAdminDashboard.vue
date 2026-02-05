@@ -33,27 +33,51 @@
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <!-- Loading state -->
+          <div v-if="documentViewerLoading" class="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-gray-500">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
+            <p>Loading document...</p>
+          </div>
+          
+          <!-- PDF Viewer using object tag with blob URL -->
           <object 
-            v-if="isDocumentPdf && currentDocumentUrl" 
-            :data="currentDocumentUrl" 
+            v-else-if="isDocumentPdf && currentDocumentBlobUrl" 
+            :data="currentDocumentBlobUrl" 
             type="application/pdf"
             class="w-full h-[calc(100vh-120px)] border border-gray-300 rounded"
-            :key="`pdf-${currentDocumentUrl}`"
+            :key="`pdf-${currentDocumentBlobUrl}`"
           >
             <iframe 
-              :src="currentDocumentUrl" 
+              :src="currentDocumentBlobUrl" 
               class="w-full h-[calc(100vh-120px)] border border-gray-300 rounded"
             ></iframe>
           </object>
+          
+          <!-- Image Viewer with blob URL -->
           <img 
-            v-else-if="currentDocumentUrl && !isDocumentPdf"
-            :src="currentDocumentUrl" 
+            v-else-if="currentDocumentBlobUrl && !isDocumentPdf"
+            :src="currentDocumentBlobUrl" 
             :alt="currentDocumentTitle" 
             class="max-w-full h-auto mx-auto rounded"
-            :key="`img-${currentDocumentUrl}`"
+            :key="`img-${currentDocumentBlobUrl}`"
             @error="handleImageError"
           />
-          <div v-else-if="!currentDocumentUrl" class="flex items-center justify-center h-[calc(100vh-120px)] text-gray-500">
+          
+          <!-- Fallback for non-PDF docs -->
+          <div v-else-if="!documentViewerLoading && currentDocumentUrl" class="flex flex-col items-center justify-center h-[calc(100vh-120px)] text-gray-500">
+            <svg class="w-16 h-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <p class="mb-2">Document preview not available</p>
+            <button 
+              @click="downloadFromViewer"
+              class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Download to view
+            </button>
+          </div>
+          
+          <div v-else-if="!documentViewerLoading && !currentDocumentUrl" class="flex items-center justify-center h-[calc(100vh-120px)] text-gray-500">
             <p>Loading document...</p>
           </div>
         </div>
@@ -572,11 +596,13 @@ const selectedApplication = ref(null)
 // Document viewer state
 const showDocumentViewer = ref(false)
 const currentDocumentUrl = ref('')
+const currentDocumentBlobUrl = ref('')
 const currentDocumentTitle = ref('')
 const currentDocumentType = ref('')
 const downloadingFromViewer = ref(false)
 const currentViewingDoc = ref(null)
 const rejectionNotes = ref('')
+const documentViewerLoading = ref(false)
 
 // Debug mode and API status tracking
 const debugMode = ref(false)
@@ -708,13 +734,23 @@ const normalizeTempleDocuments = (temple) => {
   // Helper to clean URLs
   const cleanUrl = (url) => {
     if (!url) return ''
+
     let cleaned = url.trim()
-    cleaned = cleaned.replace(/\/files\//g, '/')
-    if (/uploads\/\d+\//.test(cleaned)) {
-      console.log("normalizeTempleDocuments - removing WRONG folder:", cleaned)
-      cleaned = cleaned.replace(/uploads\/\d+\//, 'uploads/')
+
+    // Remove protocol + host, keep pathname
+    try {
+      const parsed = new URL(cleaned)
+      cleaned = parsed.pathname
+    } catch {
+      // Already a path, do nothing
     }
-    cleaned = cleaned.replace(/^\/+/, '')
+
+    // Optional: if you still want this rule
+    cleaned = cleaned.replace(/\/files\//g, '/')
+
+    // Ensure exactly one leading slash
+    cleaned = '/' + cleaned.replace(/^\/+/, '')
+
     return cleaned
   }
 
@@ -855,7 +891,7 @@ const normalizeTempleDocuments = (temple) => {
 }
 
 // Clean and stable buildDocUrl - FINAL VERSION
-// Clean and stable buildDocUrl - FINAL VERSION
+// Always returns normalized path like: /uploads/number/filename
 const buildDocUrl = (doc, appId, action = 'view') => {
   console.log("buildDocUrl - doc:", doc);
   console.log("buildDocUrl - appId:", appId);
@@ -873,44 +909,36 @@ const buildDocUrl = (doc, appId, action = 'view') => {
   console.log("buildDocUrl - direct (raw):", direct);
 
   if (!direct) {
-  // Fallback API (environment-safe)
-  if (doc.id && appId) {
-    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-    const apiUrl = `${API_BASE_URL}/entities/${encodeURIComponent(
-      appId
-    )}/documents/${encodeURIComponent(doc.id)}/${action}`;
-    console.log("buildDocUrl - API fallback:", apiUrl);
-    return apiUrl;
+    // Fallback API (environment-safe)
+    if (doc.id && appId) {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      const apiUrl = `${API_BASE_URL}/entities/${encodeURIComponent(
+        appId
+      )}/documents/${encodeURIComponent(doc.id)}/${action}`;
+      console.log("buildDocUrl - API fallback:", apiUrl);
+      return apiUrl;
+    }
+    return "";
   }
-  return "";
-}
 
-  // ----------------------------
-  // 1. Remove unwanted "/files/"
-  // ----------------------------
+  // Step 1: If URL has protocol (http:// or https://), extract just the pathname
+  if (direct.startsWith("http://") || direct.startsWith("https://")) {
+    try {
+      const parsed = new URL(direct);
+      direct = parsed.pathname;
+      console.log("buildDocUrl - extracted pathname:", direct);
+    } catch (e) {
+      console.warn("buildDocUrl - failed to parse URL:", e);
+    }
+  }
+
+  // Step 2: Remove /files/ from path
   direct = direct.replace(/\/files\//g, "/");
 
-  // --------------------------------------------------------
-  // 2. Remove WRONG nested folder "/uploads/<id>/" if exists
-  // --------------------------------------------------------
-  if (/uploads\/\d+\//.test(direct)) {
-    console.log("buildDocUrl - removing WRONG temple folder:", direct);
-    direct = direct.replace(/uploads\/\d+\//, "uploads/");
-  }
-
-  if (direct.startsWith("http://") || direct.startsWith("https://")) {
-    let finalUrl = direct;
-    if (action === 'download') {
-      const separator = finalUrl.includes('?') ? '&' : '?';
-      finalUrl = `${finalUrl}${separator}download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`;
-    }
-    console.log("buildDocUrl - absolute URL returned:", finalUrl);
-    return finalUrl;
-  }
-
+  // Step 3: Normalize - ensure path starts with uploads/ and preserve temple ID folder
   let cleanPath = direct.replace(/^\/+/, ""); // remove leading slashes
-
-  // If path starts with uploads/... keep it
+  
+  // Ensure uploads/ prefix is present
   if (!cleanPath.startsWith("uploads/")) {
     cleanPath = `uploads/${cleanPath}`;
   }
@@ -918,15 +946,18 @@ const buildDocUrl = (doc, appId, action = 'view') => {
   // Fix double uploads
   cleanPath = cleanPath.replace(/uploads\/uploads\//g, "uploads/");
 
-  let finalUrl = `${window.location.protocol}//${window.location.host}/${cleanPath}`;
-  console.log("buildDocUrl - window.location.protocol:", window.location.protocol);
-
-  // Add download parameters if action is download
-  if (action === 'download') {
-    finalUrl = `${finalUrl}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`;
-  }
+  // Step 4: Build final normalized path with leading slash
+  const normalizedPath = '/' + cleanPath;
   
-  console.log("buildDocUrl - cleanpath:", cleanPath);
+  console.log("buildDocUrl - normalized path:", normalizedPath);
+
+  // For view action, return just the path (relative)
+  if (action === 'view') {
+    return normalizedPath;
+  }
+
+  // For download action, construct full URL with download params
+  const finalUrl = `${window.location.origin}${normalizedPath}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`;
   console.log("buildDocUrl - FINAL URL:", finalUrl);
 
   return finalUrl;
@@ -1002,7 +1033,7 @@ const pickDownloadName = (doc, url, disposition) => {
   )
 }
 
-// Document viewer functions
+// Document viewer functions - fetch with auth headers and create blob URL
 const viewDocument = async (doc) => {
   console.log('viewDocument called with doc:', doc)
   if (!selectedApplication.value) {
@@ -1021,27 +1052,67 @@ const viewDocument = async (doc) => {
     currentViewingDoc.value = doc
     currentDocumentType.value = doc.type || ''
     currentDocumentTitle.value = doc.name || doc.filename || 'Document'
+    currentDocumentUrl.value = url
     
-    // Clear URL first to force re-render
-    currentDocumentUrl.value = ''
+    // Clear previous blob URL
+    if (currentDocumentBlobUrl.value) {
+      URL.revokeObjectURL(currentDocumentBlobUrl.value)
+      currentDocumentBlobUrl.value = ''
+    }
     
-    // Use nextTick to ensure DOM is ready
-    nextTick(() => {
-      currentDocumentUrl.value = url
-      showDocumentViewer.value = true
+    // Set loading state
+    documentViewerLoading.value = true
+    
+    // Fetch document with authorization header
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || ''
+    const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`
+    
+    console.log('viewDocument - fetching document from:', fullUrl)
+    
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        'Accept': doc.type || '*/*'
+      },
+      credentials: 'include'
     })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+    
+    // Get content type from response or use document type
+    const contentType = response.headers.get('Content-Type') || doc.type || 'application/octet-stream'
+    
+    // Create blob from response
+    const blob = await response.blob()
+    const blobWithType = new Blob([blob], { type: contentType })
+    
+    // Create blob URL
+    currentDocumentBlobUrl.value = URL.createObjectURL(blobWithType)
+    console.log('viewDocument - created blob URL:', currentDocumentBlobUrl.value)
+    
+    // Show document viewer
+    showDocumentViewer.value = true
   } catch (error) {
     console.error('Error viewing document:', error)
-    toast.error('Failed to open document for viewing.')
+    toast.error('Failed to load document. Please try again.')
+    // Fallback: show the document viewer anyway with the regular URL
+    showDocumentViewer.value = true
+  } finally {
+    documentViewerLoading.value = false
   }
 }
 
 const closeDocumentViewer = () => {
   showDocumentViewer.value = false
   currentDocumentUrl.value = ''
+  currentDocumentBlobUrl.value = ''
   currentDocumentTitle.value = ''
   currentDocumentType.value = ''
   currentViewingDoc.value = null
+  documentViewerLoading.value = false
 }
 
 const downloadFromViewer = async () => {

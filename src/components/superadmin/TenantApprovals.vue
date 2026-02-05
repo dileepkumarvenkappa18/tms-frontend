@@ -491,11 +491,11 @@ export default {
     
     // ==================== MEDIA HELPER FUNCTIONS ====================
     
-    const getLogoUrl = (tenant) => {
+    const getLogoUrl = (tenant) => {    
       if (!tenant) return null
       
       // Check temple_details first
-      if (tenant.temple_details?.logo_url) {
+      if (tenant.temple_details?.logo_url) {      
         return tenant.temple_details.logo_url
       }
       

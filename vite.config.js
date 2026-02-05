@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
       VitePWA({
       registerType: 'autoUpdate', // This helps to automatically update the service worker
       manifest: {
-        name: 'My PWA Vue App',
+        name: 'TMS App',
         short_name: 'VuePWA',
         theme_color: '#42b883',
         // Other manifest options...
@@ -54,13 +54,8 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: path => path
         },
-        '/uploads': {
-          target: env.VITE_API_BASE_URL,
-          changeOrigin: true,
-          rewrite: path => path
-        },
         // 🆕 ADD THIS - Proxy /files requests to backend
-        '/files': {
+        '/uploads': {
           target: env.VITE_API_BASE_URL,
           changeOrigin: true,
           rewrite: path => path,
