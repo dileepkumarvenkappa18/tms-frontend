@@ -1079,7 +1079,7 @@ const viewRemote = async (rawUrl, title) => {
     const tenantId = localStorage.getItem('current_tenant_id')
     const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || ''
     const response = await fetch(url, {      
-        headers: { ...(token? {Authorization: `Bearer ${token}`,'X-Tenant-ID': tenantId} : {}), Accept: '*/*' },
+        headers: { ...(token? {Authorization: `Bearer ${token}`} : {}), Accept: '*/*' },
     })
 
     if (!response.ok) throw new Error('Failed to load document')
