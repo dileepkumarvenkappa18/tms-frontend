@@ -184,8 +184,8 @@
                   </div>
                   
 
-                  <!-- Edit Button -->
-                  <div class="mt-4">
+                  <!-- Edit Button (Only for SuperAdmin and TempleAdmin) -->
+                  <div v-if="canEditTemple" class="mt-4">
                     <button
                       @click="$router.push(`/tenant/entities/${temple.id}/edit`)"
                       class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
@@ -245,8 +245,9 @@
 
               <!-- Action Buttons -->
               <div class="flex flex-wrap gap-3">
+                <!-- Edit Button (Only for SuperAdmin and TempleAdmin, and not rejected) -->
                 <button
-                  v-if="!isRejected"
+                  v-if="!isRejected && canEditTemple"
                   @click="$router.push(`/tenant/entities/${temple.id}/edit`)"
                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
                 >
@@ -301,6 +302,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTempleStore } from '@/stores/temple'
+import { useAuthStore } from '@/stores/auth' // Import auth store for user role
 import AppBreadcrumb from '@/components/layout/AppBreadcrumb.vue'
 import BaseLoader from '@/components/common/BaseLoader.vue'
 import BaseAlert from '@/components/common/BaseAlert.vue'
@@ -309,10 +311,21 @@ import TempleApprovalStatus from '@/components/temple/TempleApprovalStatus.vue'
 const route = useRoute()
 const router = useRouter()
 const templeStore = useTempleStore()
+const authStore = useAuthStore() // Add auth store
 
 const loading = ref(true)
 const error = ref(null)
 const temple = ref(null)
+
+// Role-based permission check
+const canEditTemple = computed(() => {
+  const userRole = authStore.user?.role || authStore.userRole || ''
+  const normalizedRole = userRole.toString().toLowerCase()
+  
+  // Only SuperAdmin and TempleAdmin can edit
+  // Block StandardUser and MonitoringUser
+  return normalizedRole === 'superadmin' || normalizedRole === 'templeadmin'
+})
 
 // Media computed properties
 const templeLogo = computed(() => {
@@ -597,6 +610,8 @@ const fetchTempleData = async () => {
       console.log('🔍 All Temple Fields:', Object.keys(temple.value))
       console.log('📅 Date Fields:', availableDateFields.value)
       console.log('✅ Approval Date:', approvedDate.value)
+      console.log('👤 User Role:', authStore.user?.role)
+      console.log('🔐 Can Edit:', canEditTemple.value)
     } else {
       error.value = 'Temple not found'
     }

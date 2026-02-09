@@ -1151,115 +1151,52 @@ const isDocumentPdf = computed(() => {
 
 // UPDATED: Force-download implementation with Blob first, then graceful fallbacks
 const downloadDocument = async (doc) => {
-  console.log('downloadDocument called with doc:', doc)
   if (!selectedApplication.value) return
-  const appId = selectedApplication.value.id
 
-  // Build download URL with explicit download parameter
-  const baseUrl = buildDocUrl(doc, appId, 'download')
-  const downloadUrl = baseUrl
-    ? (baseUrl.includes('?')
-        ? `${baseUrl}&download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`
-        : `${baseUrl}?download=true&filename=${encodeURIComponent(doc.name || doc.filename || 'document')}`)
-    : ''
-  
-  console.log('downloadDocument - built download URL:', downloadUrl)
-
-  if (!downloadUrl) {
-    toast.error('Download URL not available for this document.')
+  const url = buildDocUrl(doc, selectedApplication.value.id, 'view') // just the file URL
+  if (!url) {
+    toast.error('Download URL not available')
     return
   }
 
   const docKey = doc.id || doc.name
   isDownloadingId.value = docKey
 
-  // Method 1: Authenticated fetch -> Blob -> forced download
   try {
-    console.log('downloadDocument - trying fetch blob method')
     const token = localStorage.getItem('auth_token') || localStorage.getItem('authToken') || ''
-    const resp = await fetch(API_URL + downloadUrl, {
-      method: 'GET',
-      headers: {
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        'Accept': '*/*'
-      },
-      credentials: 'include' // harmless if same-origin; ensures cookies if needed
+
+    const resp = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include'
     })
 
-    if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status}`)
-    }
-
-    const disposition = resp.headers.get('Content-Disposition') || resp.headers.get('content-disposition') || ''
-    const contentType = resp.headers.get('Content-Type') || resp.headers.get('content-type') || (doc?.type || inferMimeFromUrlOrName(downloadUrl, doc?.name || doc?.filename) || 'application/octet-stream')
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
     const blob = await resp.blob()
-    const finalBlob = blob.type ? blob : new Blob([blob], { type: contentType })
+    const fileName =
+      doc.name ||
+      doc.filename ||
+      url.split('/').pop() ||
+      'document'
 
-    const fileName = pickDownloadName(doc, downloadUrl, disposition)
-    const blobUrl = URL.createObjectURL(finalBlob)
-
+    const blobUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.style.display = 'none'
     a.href = blobUrl
     a.download = fileName
     document.body.appendChild(a)
     a.click()
-    setTimeout(() => {
-      URL.revokeObjectURL(blobUrl)
-      a.remove()
-    }, 0)
+    a.remove()
+    URL.revokeObjectURL(blobUrl)
 
-    toast.success('Download ready')
-    isDownloadingId.value = null
-    return
+    toast.success('Downloaded')
   } catch (e) {
-    console.warn('downloadDocument - fetch blob method failed, falling back:', e)
-  }
-
-  // Method 2: Direct navigation (may rely on server attachment headers)
-  try {
-    console.log('downloadDocument - falling back to window.location')
-    window.location.href = downloadUrl
-    setTimeout(() => { isDownloadingId.value = null }, 2000)
-    toast.info('Attempting direct download')
-    return
-  } catch (e2) {
-    console.warn('downloadDocument - window.location failed, trying iframe:', e2)
-  }
-
-  // Method 3: Hidden iframe (older browsers)
-  try {
-    console.log('downloadDocument - trying iframe method')
-    const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
-    iframe.src = downloadUrl
-    document.body.appendChild(iframe)
-    setTimeout(() => {
-      if (document.body.contains(iframe)) document.body.removeChild(iframe)
-    }, 5000)
-    toast.info('Download initiated via alternative method')
-    isDownloadingId.value = null
-    return
-  } catch (e3) {
-    console.warn('downloadDocument - iframe method failed, last resort new tab:', e3)
-  }
-
-  // Method 4: Last resort - open in new tab and let user Save As
-  try {
-    const w = window.open(downloadUrl, '_blank', 'noopener,noreferrer')
-    if (!w) {
-      toast.warning('Please allow pop-ups and try again')
-    } else {
-      toast.info('Document opened in new tab - use "Save As" to download')
-    }
-  } catch (finalError) {
-    console.error('All download methods failed:', finalError)
-    toast.error('Unable to download document. Please contact support.')
+    console.error('Download failed:', e)
+    toast.error('Download failed')
   } finally {
     isDownloadingId.value = null
   }
 }
+
 
 // Stats loader
 const loadDashboardStats = async () => {
