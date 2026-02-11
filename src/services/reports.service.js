@@ -18,7 +18,7 @@ class ReportsService {
       
       // Try the new endpoint first
       try {
-        const response = await api.get('/superadmin/tenant-details');
+        const response = await api.get('/tenant-details');
         console.log('✅ Tenant details fetched successfully');
         return response.data;
       } catch (error) {
@@ -48,7 +48,7 @@ class ReportsService {
       
       // Try the new specific tenant endpoint
       try {
-        const response = await api.get(`/superadmin/tenant-details/${tenantId}`);
+        const response = await api.get(`/tenant-details/${tenantId}`);
         console.log('✅ Specific tenant details fetched successfully');
         return response.data;
       } catch (error) {
@@ -56,8 +56,7 @@ class ReportsService {
         
         // Fallback to entities endpoint with tenant filter
         const response = await api.get(`/entities`, {
-          params: { tenant_id: tenantId },
-          headers: { 'X-Tenant-ID': tenantId }
+          params: { tenant_id: tenantId }
         });
         
         return {
@@ -379,6 +378,15 @@ async downloadUserDetailsReport(params) {
 async getActivitiesReport(params) {
   const { entityId, entityIds, type, dateRange = 'weekly', startDate, endDate, isSuperAdmin, tenantId, singleTemple } = params
   
+  console.log('📊 getActivitiesReport called with:', {
+    entityId,
+    entityIds,
+    type,
+    isSuperAdmin,
+    tenantId,
+    singleTemple
+  });
+  
   if ((!entityId && !entityIds) || !type) {
     throw new Error('Entity ID (or IDs) and type are required')
   }
@@ -396,17 +404,18 @@ async getActivitiesReport(params) {
   let url;
   let response;
   
-  // Choose the right API endpoint based on user role
+  // CRITICAL: Check isSuperAdmin parameter FIRST
   if (isSuperAdmin) {
+    console.log('🔑 SuperAdmin preview detected');
+    
     try {
       // ⭐ SINGLE TEMPLE: Use direct entity endpoint
-      if (singleTemple && entityId) {
+      if (singleTemple && entityId && entityId !== 'all') {
         url = `/entities/${entityId}/reports/activities?${queryParams}`
         console.log('📊 Single temple API call (direct entity endpoint):', {
           url,
           templeId: entityId,
-          type,
-          note: 'Using /entities/{id} for single temple'
+          type
         })
       }
       // MULTI-TENANT: Multiple tenants selected
@@ -415,12 +424,17 @@ async getActivitiesReport(params) {
         console.log('📊 Multi-tenant API call:', { url, tenantCount: entityIds.length })
       }
       // ALL TEMPLES for single tenant
-      else if (tenantId) {
+      else if (tenantId && (entityId === 'all' || !entityId)) {
         url = `/superadmin/tenants/${tenantId}/reports/activities?${queryParams}`
         console.log('📊 All temples for tenant:', { url, tenantId })
+      } 
+      // Fallback for superadmin with specific entity
+      else if (entityId && entityId !== 'all') {
+        url = `/entities/${entityId}/reports/activities?${queryParams}`
+        console.log('📊 SuperAdmin single entity fallback:', url)
       } else {
-        url = `/superadmin/tenants/${entityId}/reports/activities?${queryParams}`
-        console.log('📊 All temples fallback:', { url, entityId })
+        url = `/superadmin/tenants/${tenantId || entityId}/reports/activities?${queryParams}`
+        console.log('📊 SuperAdmin tenant fallback:', url)
       }
       
       console.log('📊 Making primary activities API request:', url)
@@ -429,28 +443,25 @@ async getActivitiesReport(params) {
     } catch (error) {
       console.log('Primary API endpoint failed, trying fallback:', error.message)
       
-      // FALLBACK 1: Alternative patterns
+      // FALLBACK logic remains the same...
       try {
         if (singleTemple && entityId) {
           url = `/superadmin/activities/report?${queryParams}&entity_id=${entityId}`
           if (tenantId) {
             url += `&tenant_id=${tenantId}`
           }
-          console.log('📊 Fallback 1 (single temple):', url)
         } else if (entityIds && entityIds.length > 1) {
           url = `/superadmin/activities/report?${queryParams}&tenants=${entityIds.join(',')}`
-          console.log('📊 Fallback 1 (multi-tenant):', url)
         } else {
           url = `/superadmin/activities/report?${queryParams}&tenant_id=${tenantId || entityId}`
-          console.log('📊 Fallback 1 (all temples):', url)
         }
         
+        console.log('📊 Fallback 1:', url)
         response = await api.get(url)
         
       } catch (error2) {
         console.log('Second fallback failed, trying third pattern:', error2.message)
         
-        // FALLBACK 2: Last resort
         if (singleTemple && entityId && tenantId) {
           url = `/superadmin/tenants/${tenantId}/reports/activities?${queryParams}&entity_id=${entityId}`
         } else if (entityIds && entityIds.length > 1) {
@@ -464,8 +475,15 @@ async getActivitiesReport(params) {
       }
     }
   } else {
-    // Regular entity endpoint
-    url = `/entities/${entityId}/reports/activities?${queryParams}`
+    // Regular tenant user
+    console.log('👤 Standard user preview');
+    
+    if (entityId === 'all') {
+      url = `/entities/all/reports/activities?${queryParams}`
+    } else {
+      url = `/entities/${entityId}/reports/activities?${queryParams}`
+    }
+    
     console.log('📊 Making activities API request:', url)
     response = await api.get(url)
   }
@@ -479,6 +497,16 @@ async getActivitiesReport(params) {
  */
 async downloadActivitiesReport(params) {
   const { entityId, entityIds, type, format, dateRange = 'weekly', startDate, endDate, isSuperAdmin, tenantId, singleTemple } = params
+  
+  console.log('📥 downloadActivitiesReport called with:', {
+    entityId,
+    entityIds,
+    type,
+    format,
+    isSuperAdmin,
+    tenantId,
+    singleTemple
+  });
   
   if ((!entityId && !entityIds) || !type || !format) {
     throw new Error('Entity ID (or IDs), type, and format are required')
@@ -497,10 +525,12 @@ async downloadActivitiesReport(params) {
 
   let url;
   
-  // Choose the right API endpoint based on user role
+  // CRITICAL: Check isSuperAdmin FIRST, not user role detection
   if (isSuperAdmin) {
+    console.log('🔑 SuperAdmin download detected');
+    
     // ⭐ SINGLE TEMPLE: Use direct entity endpoint
-    if (singleTemple && entityId) {
+    if (singleTemple && entityId && entityId !== 'all') {
       url = `/entities/${entityId}/reports/activities?${queryParams}`
       console.log('📥 Single temple download (direct entity endpoint):', {
         url,
@@ -511,17 +541,35 @@ async downloadActivitiesReport(params) {
     // MULTI-TENANT
     else if (entityIds && entityIds.length > 1) {
       url = `/superadmin/reports/activities?${queryParams}&tenants=${entityIds.join(',')}`
+      console.log('📥 Multi-tenant download:', url)
     }
     // ALL TEMPLES for single tenant
-    else if (tenantId) {
+    else if (tenantId && (entityId === 'all' || !entityId)) {
       url = `/superadmin/tenants/${tenantId}/reports/activities?${queryParams}`
+      console.log('📥 All temples for tenant download:', url)
+    } 
+    // Fallback for superadmin
+    else if (entityId && entityId !== 'all') {
+      url = `/entities/${entityId}/reports/activities?${queryParams}`
+      console.log('📥 SuperAdmin single entity fallback:', url)
     } else {
-      url = `/superadmin/tenants/${entityId}/reports/activities?${queryParams}`
+      url = `/superadmin/tenants/${tenantId || entityId}/reports/activities?${queryParams}`
+      console.log('📥 SuperAdmin tenant fallback:', url)
     }
   } else {
-    // Regular entity endpoint
-    url = `/entities/${entityId}/reports/activities?${queryParams}`
+    // Standard/tenant user
+    console.log('👤 Standard user download');
+    
+    if (entityId === 'all') {
+      url = `/entities/all/reports/activities?${queryParams}`
+      console.log('📥 All temples for tenant user:', url)
+    } else {
+      url = `/entities/${entityId}/reports/activities?${queryParams}`
+      console.log('📥 Single temple for tenant user:', url)
+    }
   }
+
+  console.log('🔄 Final download URL:', url);
 
   try {
     return await this.downloadReport(url, { format }, `${type}_report`, async () => {
@@ -529,7 +577,7 @@ async downloadActivitiesReport(params) {
       if (isSuperAdmin) {
         const alternatives = [];
         
-        if (singleTemple && entityId) {
+        if (singleTemple && entityId && entityId !== 'all') {
           // Single temple alternatives
           alternatives.push(
             `/superadmin/activities/report?${queryParams}&entity_id=${entityId}${tenantId ? `&tenant_id=${tenantId}` : ''}`,
@@ -549,6 +597,7 @@ async downloadActivitiesReport(params) {
           )
         }
         
+        console.log('🔄 Fallback URLs:', alternatives);
         return alternatives;
       }
       return null; // No alternatives for regular users
@@ -798,18 +847,6 @@ async downloadTempleRegisteredReport(params) {
     'Cache-Control': 'no-cache'
   };
 
-  // For tenant users, add tenant ID header
-  if (!isSuperAdmin && entityId) {
-    headers['X-Tenant-ID'] = entityId.toString();
-  }
-
-  // For superadmins with multiple tenants, use first tenant in header
-  if (isSuperAdmin && entityIds && entityIds.length > 0) {
-    headers['X-Tenant-ID'] = entityIds[0].toString();
-  } else if (isSuperAdmin && entityId) {
-    headers['X-Tenant-ID'] = entityId.toString();
-  }
-  
   // Log headers for debugging
   console.log('🔑 Using headers:', JSON.stringify(headers));
 

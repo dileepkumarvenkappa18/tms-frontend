@@ -69,8 +69,7 @@ async getTempleForDevotee(entityId) {
     try {
       const response = await api.get(`/temples/${entityId}?_=${timestamp}`, {
         headers: {
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       });
       
@@ -82,8 +81,7 @@ async getTempleForDevotee(entityId) {
       // Fallback to entities endpoint
       const response = await api.get(`/entities/${entityId}?_=${timestamp}`, {
         headers: {
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       });
       

@@ -256,8 +256,9 @@ export function useAuth() {
       isLoading.value = false
     }
   }
-
+  
   const logout = async () => {
+    
     const { showToast } = useToast()
     
     try {
@@ -283,8 +284,9 @@ export function useAuth() {
       
       showToast('Logged out successfully', 'success')
       return { success: true, redirectPath: '/login' }
-    }
+    }      
   }
+
 
   const forgotPassword = async (email) => {
     const { showToast } = useToast()
@@ -496,7 +498,6 @@ export function useAuth() {
     // Methods
     login,
     register,
-    logout,
     forgotPassword,
     resetPassword,
     initializeAuth,

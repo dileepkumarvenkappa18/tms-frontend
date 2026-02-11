@@ -34,8 +34,6 @@ const eventService = {
       const headers = {        
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json'
-          //'X-Tenant-ID': tenantId,
-          //'X-Entity-ID': entityId        
       };      
       
       console.log(`Requesting events from: ${url} with headers:`, headers);
@@ -60,11 +58,7 @@ const eventService = {
         'Content-Type': 'application/json'
       };
       
-      // Only add tenant and entity headers if they have values
-      if (tenantId) {
-        headersObj['X-Tenant-ID'] = tenantId;
-      }
-      
+      // Only add entity header if it has value
       if (entityId) {
         headersObj['X-Entity-ID'] = entityId;
       }
@@ -148,11 +142,6 @@ const eventService = {
       const headersObj = {};
       if (entityId) {
         headersObj['X-Entity-ID'] = entityId;
-      }
-      
-      const tenantId = localStorage.getItem('current_tenant_id');
-      if (tenantId) {
-        headersObj['X-Tenant-ID'] = tenantId;
       }
       
       const headers = Object.keys(headersObj).length > 0 ? { headers: headersObj } : {};

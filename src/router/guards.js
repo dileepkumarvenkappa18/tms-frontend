@@ -183,7 +183,7 @@ export function setupRouteGuards(router) {
     
     const isAuthenticated = authStore.isAuthenticated;
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-    const userRole = authStore.userRole?.toLowerCase() || '';
+const userRole = (authStore.user?.role || authStore.userRole || '').toLowerCase();
     
     console.log('🔐 Route Guard Check:', {
       isAuthenticated,

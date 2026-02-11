@@ -774,7 +774,10 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
-// ✅ MOST IMPORTANT FIX: Special redirect guard for standard/monitoring users
+/**
+ * ✅ MOST IMPORTANT FIX: Special redirect guard for standard/monitoring users
+ * Reverted to original for debugging
+ */
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   

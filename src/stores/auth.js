@@ -137,10 +137,12 @@ export const useAuthStore = defineStore('auth', () => {
     return role === 'volunteer'
   })
   
-  const isSuperAdmin = computed(() => {
-    const role = userRole.value?.toLowerCase() || ''
-    return role === 'superadmin' || role === 'super_admin'
-  })
+  // In auth store
+const isSuperAdmin = computed(() => {
+  return user.value?.roleId === 1 || 
+         user.value?.role === 'superadmin' || 
+         user.value?.role === 'super_admin';
+});
   
   const isStandardUser = computed(() => {
     const role = userRole.value?.toLowerCase() || ''
@@ -265,13 +267,13 @@ export const useAuthStore = defineStore('auth', () => {
     
     // Reset API headers
     delete api.defaults.headers.common['Authorization']
-    delete api.defaults.headers.common['X-Tenant-ID']
     
     console.log('Application state reset complete')
   }
 
-  // Logout action
-  const logout = async () => {
+  // Logout action - DEBUG: Commented out for debugging
+  
+  const logout = async () => {    
     try {
       if (token.value) {
         try {
@@ -294,8 +296,9 @@ export const useAuthStore = defineStore('auth', () => {
       
       // Force a complete page reload to clear any Vue Router state
       window.location.href = window.location.origin + '/login'
-    }
+    }      
   }
+  
   
   // Initialize auth state
   const initialize = async () => {
@@ -312,10 +315,6 @@ export const useAuthStore = defineStore('auth', () => {
           assignedTenantId.value = tokenData.assigned_tenant_id
           localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id)
           console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id)
-          
-          // Set tenant header for assigned_tenant_id
-          api.defaults.headers.common['X-Tenant-ID'] = tokenData.assigned_tenant_id
-          console.log('✅ Set X-Tenant-ID header from token:', tokenData.assigned_tenant_id)
         }
       } catch (e) {
         console.error('Failed to parse token for assigned tenant ID:', e)
@@ -325,6 +324,12 @@ export const useAuthStore = defineStore('auth', () => {
       if (storedUser && storedUser !== 'undefined') {
         try {
           user.value = JSON.parse(storedUser)
+           // ⭐ ADD THIS: Attach assignedTenantId to user object
+        if (assignedTenantId.value && !user.value.assignedTenantId) {
+          user.value.assignedTenantId = assignedTenantId.value
+          // Update localStorage with the enhanced user object
+          localStorage.setItem('user_data', JSON.stringify(user.value))
+        }
           api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
           console.log('Auth initialized with stored user:', user.value)
           console.log('User role computed as:', userRole.value) 
@@ -333,16 +338,11 @@ export const useAuthStore = defineStore('auth', () => {
           // Refresh token timestamp
           localStorage.setItem('token_last_refreshed', new Date().getTime())
           
-          // Set tenant header if applicable (fallback to stored value)
-          if (assignedTenantId.value) {
-            // Already set from token parsing above
-          } else {
-            const tenantId = localStorage.getItem('current_tenant_id')
-            if (tenantId) {
-              api.defaults.headers.common['X-Tenant-ID'] = tenantId
-              currentTenantId.value = tenantId
-              console.log('Set X-Tenant-ID header from localStorage:', tenantId)
-            }
+          // Store current tenant ID from localStorage if available
+          const tenantId = localStorage.getItem('current_tenant_id')
+          if (tenantId) {
+            currentTenantId.value = tenantId
+            console.log('Set current tenant ID from localStorage:', tenantId)
           }
           
           return true
@@ -426,11 +426,8 @@ export const useAuthStore = defineStore('auth', () => {
         if (tokenData.assigned_tenant_id) {
           assignedTenantId.value = tokenData.assigned_tenant_id
           localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id)
+          userData.assignedTenantId = tokenData.assigned_tenant_id
           console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id)
-          
-          // Set tenant header for API calls when using assigned tenant ID
-          api.defaults.headers.common['X-Tenant-ID'] = tokenData.assigned_tenant_id
-          console.log('✅ Set X-Tenant-ID header from token:', tokenData.assigned_tenant_id)
         }
       } catch (e) {
         console.error('Failed to parse token for assigned tenant ID:', e)
@@ -447,15 +444,12 @@ export const useAuthStore = defineStore('auth', () => {
       api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`
       console.log('🔑 Set Authorization header with token')
       
-      // For tenant users, store and set tenant ID (only if not already set from token)
+      // For tenant users, store tenant ID (only if not already set from token)
       if (!assignedTenantId.value && (userData.roleId === 2)) {
         const tenantId = userData.id
         currentTenantId.value = tenantId
         localStorage.setItem('current_tenant_id', tenantId)
-        
-        // Set tenant header for API calls
-        api.defaults.headers.common['X-Tenant-ID'] = tenantId
-        console.log('🏛️ Set X-Tenant-ID header from user data:', tenantId)
+        console.log('🏛️ Set tenant ID from user data:', tenantId)
       }
       
       // Use the getDashboardPath function with assigned tenant ID awareness
@@ -614,9 +608,6 @@ export const useAuthStore = defineStore('auth', () => {
       
       // Update store state
       currentTenantId.value = tenantId
-      
-      // Set headers for API calls
-      api.defaults.headers.common['X-Tenant-ID'] = tenantId
       
       // Determine redirect path based on role
       const role = (userRole.value || '').toLowerCase()

@@ -41,10 +41,8 @@ export const getTemples = async (tenantId) => {
     const currentPath = window.location.pathname
     console.log('📍 Current path:', currentPath)
 
-    // Set the tenant ID header if provided
-    if (tenantId) {
-      api.defaults.headers.common['X-Tenant-ID'] = tenantId
-    }
+    // Tenant ID is passed via URL parameter, not header
+    console.log(`🔑 Using tenant ID: ${tenantId || 'none'}`)
 
     // Get auth store to check user role
     const authStore = useAuthStore()
@@ -190,9 +188,6 @@ export const createOrUpdateTenantUser = async (tenantId, userData) => {
   try {
     console.log(`📡 Creating/updating user for tenant ${tenantId}:`, userData);
     
-    // Set X-Tenant-ID header to match the route parameter
-    api.defaults.headers.common['X-Tenant-ID'] = tenantId;
-    
     // Format data with capitalized field names to match Go struct
     const formattedData = {
       Name: userData.name,
@@ -230,9 +225,6 @@ export const createOrUpdateTenantUser = async (tenantId, userData) => {
 export const updateTenantUser = async (tenantId, userData) => {
   try {
     console.log(`📡 Updating user ${userData.id} for tenant ${tenantId}:`, userData);
-    
-    // Set X-Tenant-ID header to match the route parameter
-    api.defaults.headers.common['X-Tenant-ID'] = tenantId;
     
     // Check if this is only a status update (just id and status fields)
     const isStatusUpdate = userData.hasOwnProperty('status') && 
@@ -284,9 +276,6 @@ export const updateTenantUser = async (tenantId, userData) => {
 export const updateUserStatus = async (tenantId, userId, status) => {
   try {
     console.log(`📡 Updating status to ${status} for user ${userId} in tenant ${tenantId}`);
-    
-    // Set X-Tenant-ID header to match the route parameter
-    api.defaults.headers.common['X-Tenant-ID'] = tenantId;
     
     // Use the existing endpoint with a simple status object
     const response = await api.put(

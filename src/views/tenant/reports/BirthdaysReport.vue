@@ -197,6 +197,7 @@
               </div>
               
               <!-- Devotee Status Filter (only show for general devotee list) -->
+               <!--
               <div v-if="activeReportType === 'devotees'">
                 <label class="block text-gray-700 font-medium mb-2">Devotee Status</label>
                 <div class="relative">
@@ -211,9 +212,9 @@
                     <option value="new">New Members</option>
                   </select>
                 </div>
-              </div>
+              </div> 
               
-              <!-- Status Info for Active/Inactive buttons -->
+             
               <div v-else-if="activeReportType === 'statusActive' || activeReportType === 'statusInactive'">
                 <label class="block text-gray-700 font-medium mb-2">Status Filter</label>
                 <div class="bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
@@ -222,6 +223,7 @@
                   </span>
                 </div>
               </div>
+              -->
             </div>
           </div>
 
@@ -469,11 +471,6 @@ const effectiveTenantId = computed(() => {
   const currentTenantId = localStorage.getItem('current_tenant_id');
   if (currentTenantId) {
     return currentTenantId;
-  }
-  
-  if (api.defaults.headers.common['X-Tenant-ID']) {
-    const headerTenantId = api.defaults.headers.common['X-Tenant-ID'];
-    return headerTenantId.toString();
   }
   
   if (userStore.user?.id) {

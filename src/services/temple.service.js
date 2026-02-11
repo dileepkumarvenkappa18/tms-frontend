@@ -19,12 +19,10 @@ async getTemples(searchParams = {}) {
       currentPath.match(/\/tenant\/\d+\/dashboard/) !== null ||
       currentPath === '/tenant/dashboard'  // Add this line to catch the redirect path
     
-    // Get the tenant ID from headers, local storage, or URL
+    // Get the tenant ID from local storage or URL
     const tenantId = 
-      searchParams.headers?.['X-Tenant-ID'] || 
       localStorage.getItem('current_tenant_id') || 
-      currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1] ||
-      localStorage.getItem('X-Tenant-ID')
+      currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
     
     console.log(`👤 Is standard user check: ${isStandardUserPath}`)
     console.log(`🔑 Using tenant ID: ${tenantId || 'none'}`)
@@ -82,16 +80,15 @@ async getTemples(searchParams = {}) {
       
       try {
         // First attempt with by-creator endpoint
-        console.log('🔍 Trying /entities/by-creator endpoint...')
-        response = await api.get(`/entities/by-creator?_=${timestamp}`)
+        console.log('🔍 Trying /entities/by-creator?tenant_id= endpoint...')
+        response = await api.get(`/entities/by-creator?tenant_id=${tenantId}&&_=${timestamp}`)
         console.log('✅ by-creator endpoint successful')
       } catch (err) {
         console.log('⚠️ by-creator endpoint failed, trying tenant-created endpoint...', err.message)
         
         try {
           // Second attempt with tenant-created endpoint
-          const tenantId = searchParams.headers?.['X-Tenant-ID'] || 
-                          localStorage.getItem('current_tenant_id') ||
+          const tenantId = localStorage.getItem('current_tenant_id') ||
                           currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
           
           if (tenantId) {
@@ -181,8 +178,7 @@ async getTemples(searchParams = {}) {
     }
 
     // Apply filtering if needed (for non-SuperAdmin flows)
-    const tenantIdFromHeader = searchParams.headers?.['X-Tenant-ID'] || 
-                              searchParams.tenantId || 
+    const tenantIdFromHeader = searchParams.tenantId || 
                               localStorage.getItem('current_tenant_id') || 
                               currentPath.match(/\/tenant\/(\d+)\/dashboard/)?.[1]
     
@@ -302,13 +298,9 @@ async getSuperAdminTemplesStrict(tenantId) {
       return [];
     }
     
-    // Make a direct API call with the tenant ID
+    // Make a direct API call
     const timestamp = Date.now();
-    const response = await api.get(`/entities?_=${timestamp}`, {
-      headers: {
-        'X-Tenant-ID': tenantId
-      }
-    });
+    const response = await api.get(`/entities?_=${timestamp}`);
     
     console.log('📥 STRICT: API response:', response);
     
@@ -360,10 +352,9 @@ async getTemplesDirectByTenant(tenantId) {
     let endpoint = '';
     let success = false;
     
-    // Add these headers to all requests
+    // Add auth header to all requests
     const headers = {
-      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-      'X-Tenant-ID': tenantId
+      'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
     };
     
     // First try: entities/by-creator
@@ -475,6 +466,7 @@ async getTemplesForStandardUser() {
       console.warn('⚠️ Error fetching assigned entity:', err.message)
     }
     
+    /*
     // 2. Get temples for the tenant
     if (tenantId) {
       try {
@@ -533,7 +525,7 @@ async getTemplesForStandardUser() {
     } catch (err) {
       console.warn('⚠️ Error fetching superadmin temples:', err.message)
     }
-    
+    */
     // Convert map values to array
     const allTemples = Array.from(templeMap.values())
     console.log(`🏛️ Total unique temples found: ${allTemples.length}`)
@@ -777,11 +769,8 @@ async toggleTempleStatus(templeId, isActive) {
   try {
     console.log(`📡 Toggling temple status for ID: ${templeId} to ${isActive ? 'active' : 'inactive'}`);
     
-    // Get tenant ID from multiple sources
-    const tenantId = 
-      localStorage.getItem('current_tenant_id') || 
-      localStorage.getItem('X-Tenant-ID') ||
-      localStorage.getItem('tenant_id');
+    // Get tenant ID from local storage
+    const tenantId = localStorage.getItem('current_tenant_id');
     
     // Include tenant context in headers
     const headers = {
@@ -789,7 +778,6 @@ async toggleTempleStatus(templeId, isActive) {
     };
     
     if (tenantId) {
-      headers['X-Tenant-ID'] = tenantId;
       console.log(`🔑 Including tenant ID in request: ${tenantId}`);
     }
 

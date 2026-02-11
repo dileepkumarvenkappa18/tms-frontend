@@ -1,4 +1,3 @@
-
 // src/services/seva.service.js - Updated version with slot management and Razorpay payment
 import axios from 'axios'
 
@@ -26,7 +25,6 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       };
@@ -90,7 +88,6 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       };
@@ -145,7 +142,6 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       };
@@ -192,7 +188,6 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       };
@@ -255,8 +250,7 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       };
       
@@ -308,8 +302,7 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       };
 
@@ -353,7 +346,6 @@ class SevaService {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
           'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId,
           'X-Force-Delete': 'true'
         }
       };
@@ -412,8 +404,7 @@ class SevaService {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       };
       
@@ -452,8 +443,7 @@ async createSevaBookingWithPayment(bookingData) {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
         'Content-Type': 'application/json',
-        'X-Entity-ID': entityId,
-        'X-Tenant-ID': tenantId
+        'X-Entity-ID': entityId
       }
     };
     
@@ -497,8 +487,7 @@ async createSevaBookingWithPayment(bookingData) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       };
       
@@ -537,8 +526,7 @@ async createSevaBookingWithPayment(bookingData) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': resolvedEntityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': resolvedEntityId
         }
       };
       
@@ -588,8 +576,7 @@ async createSevaBookingWithPayment(bookingData) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': resolvedEntityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': resolvedEntityId
         }
       };
       
@@ -627,8 +614,7 @@ async createSevaBookingWithPayment(bookingData) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       };
       
@@ -665,8 +651,7 @@ async createSevaBookingWithPayment(bookingData) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Entity-ID': entityId,
-          'X-Tenant-ID': tenantId
+          'X-Entity-ID': entityId
         }
       };
       

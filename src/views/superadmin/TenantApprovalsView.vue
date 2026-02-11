@@ -678,7 +678,7 @@ export default {
         console.log('Temple details missing, fetching...')
         
         try {
-          const response = await fetch(API_URL + `/superadmin/tenant-details/${tenantId}`, {
+          const response = await fetch(API_URL + `/tenant-details/${tenantId}`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             }
@@ -764,7 +764,7 @@ export default {
                   
                   try {
                     const tenantId = tenant.id || tenant.ID
-                    const detailsResponse = await fetch(API_URL + `/superadmin/tenant-details/${tenantId}`, {
+                    const detailsResponse = await fetch(API_URL + `/tenant-details/${tenantId}`, {
                       headers: {
                         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                       }
@@ -828,7 +828,7 @@ export default {
                     
                     if (tenantId && (!tenant.temple_details || Object.keys(tenant.temple_details || {}).length === 0)) {
                       try {
-                        const detailsResponse = await fetch(API_URL + `/superadmin/tenant-details/${tenantId}`, {
+                        const detailsResponse = await fetch(API_URL + `/tenant-details/${tenantId}`, {
                           headers: {
                             'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                           }

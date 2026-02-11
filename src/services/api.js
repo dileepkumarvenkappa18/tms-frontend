@@ -44,15 +44,6 @@ axiosInstance.interceptors.request.use(
       console.warn('No authentication token for:', config.url)
     }
 
-    try {
-      const authStore = useAuthStore()
-      if (authStore.user?.entityId && !config.url.includes('/superadmin/')) {
-        config.headers['X-Tenant-ID'] = authStore.user.entityId
-      }
-    } catch (e) {
-      console.warn('Could not set X-Tenant-ID:', e)
-    }
-
     config.metadata = { startTime: new Date() }
     return config
   },

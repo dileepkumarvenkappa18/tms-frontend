@@ -418,9 +418,20 @@ const reportColumnDefinitions = {
 // Check if user is super admin
 const isSuperAdmin = computed(() => {
   const role = userStore.user?.role || userStore.user?.roleName;
-  return role === 'super_admin' || role === 'superadmin';
+  const roleId = userStore.user?.roleId;
+  
+  // Check by role name
+  if (role === 'super_admin' || role === 'superadmin') {
+    return true;
+  }
+  
+  // Check by roleId (1 = superadmin in your system)
+  if (roleId === 1) {
+    return true;
+  }
+  
+  return false;
 });
-
 // Check for tenants parameter from superadmin
 const fromSuperadmin = computed(() => {
   return route.query.from === 'superadmin' || isSuperAdmin.value;
@@ -449,11 +460,6 @@ const effectiveTenantId = computed(() => {
   const currentTenantId = localStorage.getItem('current_tenant_id');
   if (currentTenantId) {
     return currentTenantId;
-  }
-  
-  if (api.defaults.headers.common['X-Tenant-ID']) {
-    const headerTenantId = api.defaults.headers.common['X-Tenant-ID'];
-    return headerTenantId.toString();
   }
   
   return null;
@@ -692,12 +698,13 @@ const clearError = () => {
 
 const loadReportPreview = async () => {
   try {
-    if (!effectiveTenantId.value && !fromSuperadmin.value) {
+    if (!effectiveTenantId.value && !fromSuperadmin.value && !isSuperAdmin.value) {
       throw new Error('No valid tenant ID available');
     }
 
     console.log('User type - fromSuperadmin:', fromSuperadmin.value);
     console.log('User role:', userStore.user?.role || userStore.user?.roleName);
+    console.log('isSuperAdmin:', isSuperAdmin.value);
 
     let params = {
       type: activityType.value,
@@ -707,40 +714,33 @@ const loadReportPreview = async () => {
       includeTempleName: shouldShowTempleName.value
     };
     
-    // FIXED: Handle SuperAdmin separately
-    if (fromSuperadmin.value || isSuperAdmin.value) {
-      console.log('SuperAdmin mode - fetching all reports');
-      
-      if (tenantIds.value.length > 1) {
-        // Multiple tenants selected
-        params.entityIds = tenantIds.value;
-        params.entityId = 'multiple';
-        params.isSuperAdmin = true;
-      } else if (tenantIds.value.length === 1) {
-        // Single tenant selected from superadmin
-        params.tenantId = tenantIds.value[0];
-        params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-        params.isSuperAdmin = true;
-      } else {
-        // SuperAdmin viewing all without tenant filter
-        params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-        params.isSuperAdmin = true;
-      }
-    } else {
-      // FIXED: Standard/Monitoring user - always use /entities/all/reports for "all" selection
-      console.log('Standard/Monitoring user - Single temple mode:', selectedTemple.value);
+    // FIXED: Superadmin should use superadmin endpoints
+    if (isSuperAdmin.value) {
+      console.log('SuperAdmin mode - using superadmin endpoints');
+      params.isSuperAdmin = true;
       
       if (selectedTemple.value === 'all') {
-        // Use the working /entities/all/reports endpoint
-        console.log('Standard/Monitoring user - All temples mode');
+        // SuperAdmin viewing all temples
+        params.entityId = 'all';
+      } else {
+        // SuperAdmin viewing specific temple
+        params.entityId = selectedTemple.value;
+      }
+      
+      // Include tenant context if available
+      if (effectiveTenantId.value) {
+        params.tenantId = effectiveTenantId.value;
+      }
+    } else {
+      // Standard/Monitoring user
+      console.log('Standard user mode');
+      
+      if (selectedTemple.value === 'all') {
         params.entityId = 'all';
         params.tenantId = effectiveTenantId.value;
       } else {
-        // FIXED: For single temple, use tenant-scoped endpoint
-        console.log('Standard/Monitoring user - Single temple mode:', selectedTemple.value);
         params.entityId = selectedTemple.value;
         params.tenantId = effectiveTenantId.value;
-        // Add temple_id to filter by specific temple within tenant scope
         params.temple_Id = selectedTemple.value;
       }
     }
@@ -930,7 +930,7 @@ const fetchTemplesForTenant = async (tenantId) => {
 
 const downloadReport = async () => {
   try {
-    if (!effectiveTenantId.value && !fromSuperadmin.value && !isSuperAdmin.value) {
+    if (!effectiveTenantId.value && !isSuperAdmin.value) {
       throw new Error('No valid tenant ID available for download');
     }
 
@@ -943,24 +943,22 @@ const downloadReport = async () => {
       includeTempleName: shouldShowTempleName.value
     };
     
-    // FIXED: Handle SuperAdmin downloads
-    if (fromSuperadmin.value || isSuperAdmin.value) {
+    // FIXED: Superadmin downloads
+    if (isSuperAdmin.value) {
       console.log('SuperAdmin download');
+      params.isSuperAdmin = true;
       
-      if (tenantIds.value.length > 1) {
-        params.entityIds = tenantIds.value;
-        params.entityId = 'multiple';
-        params.isSuperAdmin = true;
-      } else if (tenantIds.value.length === 1) {
-        params.tenantId = tenantIds.value[0];
-        params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-        params.isSuperAdmin = true;
+      if (selectedTemple.value === 'all') {
+        params.entityId = 'all';
       } else {
-        params.entityId = selectedTemple.value === 'all' ? 'all' : selectedTemple.value;
-        params.isSuperAdmin = true;
+        params.entityId = selectedTemple.value;
+      }
+      
+      if (effectiveTenantId.value) {
+        params.tenantId = effectiveTenantId.value;
       }
     } else {
-      // Standard/Monitoring user download
+      // Standard user download
       if (selectedTemple.value === 'all') {
         params.entityId = 'all';
         params.tenantId = effectiveTenantId.value;
@@ -976,15 +974,12 @@ const downloadReport = async () => {
     
     if (result && result.success) {
       showToast(`${getActivityTypeLabel(activityType.value)} downloaded successfully as ${getFormatLabel(selectedFormat.value)}`, 'success');
-    } else {
-      throw new Error(result?.message || 'Failed to download report');
     }
   } catch (error) {
     console.error('Error downloading report:', error);
     showToast(`Failed to download report: ${error.message}`, 'error');
   }
 };
-
 onMounted(async () => {
   console.log('TempleActivitiesReport mounted');
   console.log('fromSuperadmin:', fromSuperadmin.value);
@@ -992,7 +987,6 @@ onMounted(async () => {
   console.log('Effective tenant ID:', effectiveTenantId.value);
   console.log('Route params:', route.params);
   console.log('User store:', userStore.user);
-  console.log('Current X-Tenant-ID header:', api.defaults.headers.common['X-Tenant-ID']);
   
   if (!effectiveTenantId.value && !fromSuperadmin.value && !isSuperAdmin.value) {
     error.value = 'No valid tenant ID found. Please check your access permissions.';

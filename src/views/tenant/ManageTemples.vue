@@ -366,7 +366,6 @@ const fetchTenantTemples = async () => {
     const response = await fetch(API_URL + url, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        'X-Tenant-ID': tenantId,
         'Content-Type': 'application/json'
       }
     });

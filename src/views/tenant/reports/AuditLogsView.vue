@@ -121,7 +121,7 @@
           </optgroup>
         </select>
       </div> 
-
+<!--
        Status Filter --
       <div class="mb-4">
         <label class="block text-gray-700 font-medium mb-2">Status</label>
@@ -140,6 +140,7 @@
           </button>
         </div>
       </div> 
+    -->
 
       <!-- Date Range -->
       <div class="mb-4">

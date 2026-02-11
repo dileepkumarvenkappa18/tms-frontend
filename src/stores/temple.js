@@ -87,13 +87,8 @@ video: null,
       
       console.log(`🏛️ Fetching temples for tenant ID ${tenantId || 'unknown'}...`)
       
-      // Add headers for tenant ID if provided
+      // Tenant ID is passed via URL parameters, not headers
       const options = {}
-      if (tenantId) {
-        options.headers = {
-          'X-Tenant-ID': tenantId
-        }
-      }
       
       // Add cache busting to ensure fresh data
       const timestamp = Date.now()
@@ -136,13 +131,10 @@ video: null,
       // Store the tenant ID in localStorage to ensure it's available for filtering
       localStorage.setItem('current_tenant_id', tenantId);
       
-      // Set headers for the API request to include tenant ID
+      // Set options for the API request - tenant ID passed via URL
       const options = {
         tenantId: tenantId,
         superAdmin: true,
-        headers: {
-          'X-Tenant-ID': tenantId
-        },
         timestamp: Date.now() // Add timestamp for cache busting
       };
       

@@ -735,10 +735,10 @@ const fetchLogoFromAPI = async () => {
       return
     }
     
-    // Try Method 1: Fetch from /superadmin/tenant-details/:id
-    console.log('🔄 Method 1: Fetching from /superadmin/tenant-details/' + targetTenantId)
+    // Try Method 1: Fetch from /tenant-details/:id
+    console.log('🔄 Method 1: Fetching from /tenant-details/' + targetTenantId)
     try {
-      const response1 = await api.get(`/superadmin/tenant-details/${targetTenantId}`)
+      const response1 = await api.get(`/tenant-details/${targetTenantId}`)
       console.log('📦 Response 1 (tenant-details):', response1)
       
       const tenantData = response1?.data?.data || response1?.data || response1

@@ -298,7 +298,9 @@ const formats = [
 ];
 
 // Check for tenants parameter from superadmin
-const fromSuperadmin = computed(() => route.query.from === 'superadmin');
+const fromSuperadmin = computed(() => {
+  return (userStore.user?.role || userStore.userRole) === 'superadmin';
+});
 
 const tenantIds = computed(() => {
   if (route.query.tenants) {
@@ -330,13 +332,7 @@ const effectiveTenantId = computed(() => {
     return currentTenantId;
   }
   
-  // Priority 5: Extract from axios default headers
-  if (api.defaults.headers.common['X-Tenant-ID']) {
-    const headerTenantId = api.defaults.headers.common['X-Tenant-ID'];
-    return headerTenantId.toString();
-  }
-  
-  // Priority 6: User ID as fallback (based on your working activities report)
+  // Priority 5: User ID as fallback (based on your working activities report)
   if (userStore.user?.id) {
     return userStore.user.id.toString();
   }
@@ -438,7 +434,7 @@ const buildReportParams = () => {
     if (!effectiveTenantId.value) {
       throw new Error('No valid tenant ID available for report generation');
     }
-
+    const isSuperAdmin = (userStore.user?.role || userStore.userRole) === 'superadmin';
     const params = {
       dateRange: activeFilter.value || 'weekly',
       format: selectedFormat.value || 'pdf',
@@ -655,7 +651,6 @@ onMounted(async () => {
   console.log('Effective tenant ID:', effectiveTenantId.value);
   console.log('Route params:', route.params);
   console.log('User store:', userStore.user);
-  console.log('Current X-Tenant-ID header:', api.defaults.headers.common['X-Tenant-ID']);
   
   initializeDates();
   

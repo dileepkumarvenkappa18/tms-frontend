@@ -730,7 +730,6 @@ const buildTenantHeaders = (tenantId) => {
   if (!tenantId) return {};
   
   return {
-    'X-Tenant-ID': String(tenantId),
     'X-Entity-ID': String(tenantId),
   };
 };

@@ -37,12 +37,11 @@ export const donationService = {
 
       console.log('Sending donation payload:', payload)
 
-      // NEW: Include proper headers with current tenant and entity ID
+      // Include proper headers with entity ID
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -138,12 +137,11 @@ async getDonationHistory(filters = {}) {
       
       console.log(`Fetching my donations for entity ID: ${entityId}, tenant ID: ${tenantId}`)
       
-      // NEW: Build URL and headers with entity filtering
+      // Build URL and headers with entity filtering
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -201,7 +199,6 @@ async getDonationHistory(filters = {}) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': targetEntityId
         }
       }
@@ -294,7 +291,6 @@ async getDonationHistory(filters = {}) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': targetEntityId
         }
       }
@@ -348,12 +344,11 @@ async getDonationHistory(filters = {}) {
       
       console.log(`Fetching donation stats for entity ID: ${entityId}, tenant ID: ${tenantId}`)
       
-      // NEW: Include entity context in headers
+      // Include entity context in headers
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -383,12 +378,11 @@ async getDonationHistory(filters = {}) {
       const entityId = this.getCurrentEntityId()
       const tenantId = localStorage.getItem('current_tenant_id')
       
-      // NEW: Build entity-aware request
+      // Build entity-aware request
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -446,12 +440,11 @@ async getDonationHistory(filters = {}) {
         ...(filters.dateRange && filters.dateRange !== 'all' ? { dateRange: filters.dateRange } : {}),
       }
 
-      // NEW: Include entity headers
+      // Include entity headers
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -488,7 +481,6 @@ async getDonationHistory(filters = {}) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -522,7 +514,6 @@ async getDonationHistory(filters = {}) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -556,7 +547,6 @@ async getDonationHistory(filters = {}) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -590,7 +580,6 @@ async getDonationHistory(filters = {}) {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }
@@ -635,7 +624,6 @@ async getDonationHistory(filters = {}) {
       const headers = {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-          'X-Tenant-ID': tenantId,
           'X-Entity-ID': entityId
         }
       }

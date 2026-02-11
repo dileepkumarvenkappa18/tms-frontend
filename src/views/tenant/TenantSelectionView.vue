@@ -252,7 +252,6 @@ const proceedToTenantDashboard = async () => {
     const token = localStorage.getItem('auth_token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.defaults.headers.common['X-Tenant-ID'] = selectedTenantId.value;
     }
 
     const selectedTenant = tenants.value.find(t => Number(t.id) === Number(selectedTenantId.value));

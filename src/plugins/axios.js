@@ -42,12 +42,7 @@ api.interceptors.request.use(
     const isAuthEndpoint = config.url.includes('/auth/') || config.url.includes('/v1/auth/')
     
     if (!isAuthEndpoint) {
-      const tenantId = localStorage.getItem('current_tenant_id')
       const entityId = localStorage.getItem('current_entity_id')
-
-      if (tenantId) {
-        config.headers['X-Tenant-ID'] = tenantId
-      }
 
       // Try to extract entity ID from request URL if missing or mismatched
       const match = config.url?.match(/\/entities\/(\d+)/)
@@ -60,7 +55,6 @@ api.interceptors.request.use(
 
       if (import.meta.env.DEV) {
         console.log('🔹Request Headers ->', {
-          'X-Tenant-ID': config.headers['X-Tenant-ID'],
           'X-Entity-ID': config.headers['X-Entity-ID']
         })
       }
@@ -124,20 +118,19 @@ api.interceptors.response.use(
       if (error.response.status === 401) {
         const isLoginAttempt = error.config?.url?.includes('/auth/login') || 
                              error.config?.url?.includes('/v1/auth/login')
-        
+      
         if (!isLoginAttempt) {
           // Clear authentication data
           localStorage.removeItem('auth_token')
           localStorage.removeItem('user_data')
           localStorage.removeItem('current_tenant_id')
           delete api.defaults.headers.common['Authorization']
-          delete api.defaults.headers.common['X-Tenant-ID']
           
           // Redirect to login if not already there
           if (!window.location.pathname.includes('/login')) {
             window.location.href = '/login?error=session_expired'
           }
-        }
+        }      
       }
     }
     
