@@ -1499,7 +1499,14 @@ const handleSubmit = async () => {
     }
     
     console.log(`🚀 Submitting temple update with ${hasNewFiles ? 'NEW FILES' : 'NO NEW FILES'}`)
-    
+    // ✅ Safety: tell backend to preserve old media if user didn't change it
+if (!form.media.logo && mediaUrls.logo) {
+  formData.append('preserve_logo', 'true')
+}
+if (!form.media.video && mediaUrls.video) {
+  formData.append('preserve_video', 'true')
+}
+
     const response = await templeService.updateTemple(templeId.value, formData)
     
     console.log('✅ Temple update response:', response)
@@ -1647,22 +1654,29 @@ const fetchTempleData = async () => {
     ])
 
     // -------- ADDITIONAL DOCUMENT URLS --------
-    const additionalDocsData =
-      d.additionalDocuments ||
-      d.additional_documents ||
-      d.additionalDocs ||
-      d.additional_docs ||
-      d.additionalDocsUrls ||
-      d.additional_docs_urls ||
-      []
+    // -------- ADDITIONAL DOCUMENT URLS (FIXED) --------
+const additionalDocsData =
+  d.additional_docs_urls ||
+  d.additionalDocsUrls ||
+  d.additional_docs ||
+  d.additionalDocs ||
+  []
 
-    if (Array.isArray(additionalDocsData)) {
-      documentUrls.additional = additionalDocsData
-        .map(u => typeof u === 'string' ? fixToAbsoluteUrl(u) : '')
-        .filter(Boolean)
-    } else {
-      documentUrls.additional = []
-    }
+if (Array.isArray(additionalDocsData)) {
+  documentUrls.additional = additionalDocsData
+    .map(u => typeof u === 'string' ? fixToAbsoluteUrl(u) : '')
+    .filter(Boolean)
+
+  // ✅ extract file names for UI
+  existingFiles.additional = documentUrls.additional.map(u => getFilenameFromUrl(u))
+} else {
+  documentUrls.additional = []
+  existingFiles.additional = []
+}
+
+console.log('📎 Additional Docs URLs:', documentUrls.additional)
+console.log('📎 Additional Docs Names:', existingFiles.additional)
+
 
     if (!existingFiles.additional.length && documentUrls.additional.length) {
       existingFiles.additional = documentUrls.additional.map(u => getFilenameFromUrl(u))

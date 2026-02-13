@@ -324,30 +324,51 @@
           </div>
 
           <!-- To Details (Temple/Recipient Information) -->
-          <div class="space-y-4">
-            <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-              <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-                To (Temple)
-              </h4>
-              <div class="space-y-2">
-                <div>
-                  <p class="text-xs text-green-700">Temple Name</p>
-                  <p class="font-semibold text-green-900">{{ selectedDonation.entityName || currentTemple.name || 'N/A' }}</p>
-                </div>
-                <div v-if="creatorDetails.bank">
-                  <p class="text-xs text-green-700">Account Holder</p>
-                  <p class="text-sm text-green-900">{{ creatorDetails.bank.account_holder_name || 'N/A' }}</p>
-                </div>
-                <div v-if="creatorDetails.bank">
-                  <p class="text-xs text-green-700">Account Number</p>
-                  <p class="text-sm font-mono text-green-900">{{ maskAccountNumber(creatorDetails.bank.account_number) }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- To Details (ACTUAL RECIPIENT Information) -->
+<div class="space-y-4">
+  <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+    <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+      </svg>
+      To (Actual Recipient)
+    </h4>
+    <div class="space-y-2">
+      <div>
+        <p class="text-xs text-green-700">Temple Name</p>
+        <p class="font-semibold text-green-900">{{ selectedDonation.entityName || currentTemple.name || 'N/A' }}</p>
+      </div>
+      
+      <!-- ✅ Show ACTUAL recipient from donation record -->
+      <div v-if="selectedDonation.account_holder_name">
+        <p class="text-xs text-green-700">Payment Received By</p>
+        <p class="text-sm font-semibold text-green-900">{{ selectedDonation.account_holder_name }}</p>
+      </div>
+      
+      <div v-if="selectedDonation.account_number">
+        <p class="text-xs text-green-700">Account/UPI ID</p>
+        <p class="text-sm font-mono text-green-900">{{ selectedDonation.account_number }}</p>
+      </div>
+      
+      <div v-if="selectedDonation.upi_id">
+        <p class="text-xs text-green-700">UPI ID</p>
+        <p class="text-sm font-mono text-green-900">{{ selectedDonation.upi_id }}</p>
+      </div>
+
+      <!-- ℹ️ Show expected vs actual if different -->
+      <div v-if="selectedDonation.account_holder_name && 
+                 creatorDetails.bank && 
+                 selectedDonation.account_holder_name !== creatorDetails.bank.account_holder_name"
+           class="mt-3 pt-3 border-t border-yellow-300 bg-yellow-50 rounded p-2">
+        <p class="text-xs font-semibold text-yellow-900">⚠️ Payment Routing Notice:</p>
+        <p class="text-xs text-yellow-800">
+          Payment was processed through {{ selectedDonation.account_holder_name }} 
+          for {{ creatorDetails.bank.account_holder_name }}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
 
           <!-- Payment Details - Shows based on payment method -->
           <div class="md:col-span-2">

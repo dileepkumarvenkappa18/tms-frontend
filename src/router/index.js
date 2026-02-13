@@ -205,6 +205,19 @@ const routes = [
       layout: 'DashboardLayout'
     }
   },
+  // ✅ ADD THIS ENTIRE BLOCK HERE
+{
+  path: '/test-payment',
+  name: 'TestPayment',
+  component: () => import('@/views/TestPayment.vue'),
+  meta: {
+    requiresAuth: true,
+    title: 'Test Live Payment',
+    breadcrumb: 'Test Payment',
+    layout: 'DashboardLayout',
+    allowedRoles: ['superadmin', 'templeadmin', 'devotee', 'standarduser'] // Who can test
+  }
+},
 
   // ✅ CRITICAL FIX: Tenant Selection route - MOVED TO TOP PRIORITY
   {
