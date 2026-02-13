@@ -72,6 +72,18 @@ export default defineConfig(({ mode }) => {
           }
         }
       }
-    }
+    },
+
+    build: {
+    // Other build options
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: false,
+      },
+    },
+  },
+
   }
 });
