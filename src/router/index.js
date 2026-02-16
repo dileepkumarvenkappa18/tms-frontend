@@ -304,15 +304,18 @@ const routes = [
       },
       // Tenant-specific dashboard route
       {
-        path: ':tenantId/dashboard',
-        name: 'TenantSpecificDashboard',
-        component: TenantDashboard,
-        props: true,
-        meta: { 
-          title: 'Tenant Dashboard',
-          breadcrumb: 'Dashboard'
-        }
-      },
+  path: ':tenantId/dashboard',
+  name: 'TenantSpecificDashboard',
+  component: TenantDashboard,
+  props: true,
+  meta: { 
+    title: 'Tenant Dashboard',
+    breadcrumb: 'Dashboard',
+    requiresAuth: true,
+    allowedRoles: ['tenant', 'templeadmin']   
+  }
+}
+,
       // Report routes
       {
         path: 'reports/temple-register',
@@ -363,19 +366,6 @@ const routes = [
   },
 
   // Direct route for tenant-specific dashboard
-  {
-    path: '/tenant/:tenantId/dashboard',
-    name: 'TenantDirectDashboard',
-    component: TenantDashboard,
-    props: true,
-    meta: { 
-      requiresAuth: true,
-      allowedRoles: ['tenant', 'templeadmin'],
-      title: 'Tenant Dashboard',
-      breadcrumb: 'Dashboard',
-      layout: 'DashboardLayout'
-    }
-  },
 
   // Entity (Temple Admin) Routes - Phase 5
   // Replace your Entity Routes section with this complete version:

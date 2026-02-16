@@ -175,7 +175,7 @@ const handleLogin = async () => {
       console.log('🚀 Navigating to:', targetPath)
       
       // Use router.push for proper Vue Router navigation
-      await router.push(targetPath)
+      await router.replace(targetPath)
       
       console.log('✅ Navigation completed successfully')
       
