@@ -85,7 +85,6 @@ testCases.forEach((testCase, index) => {
   console.log(`   Actual: ${result}`)
   console.log(`   ✅ ${result === testCase.expected ? 'PASS' : 'FAIL'}`)
 })
-
 // Test path validation
 console.log('\n🔍 Testing Path Validation')
 console.log('==========================')

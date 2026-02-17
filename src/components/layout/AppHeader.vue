@@ -306,10 +306,58 @@ const getHomeLink = () => {
       return '/'
   }
 }
-
 const goBack = () => {
-  router.back()
+  const dashboardPath = getHomeLink()
+  const currentPath = route.path
+
+  const blockedRoutes = ['/login', '/register', '/forgot-password', '/', '/terms', '/privacy']
+
+  let navHistory = JSON.parse(sessionStorage.getItem('nav_history') || '[]')
+
+  // Remove duplicates of current path
+  while (navHistory.length && navHistory[navHistory.length - 1] === currentPath) {
+    navHistory.pop()
+  }
+
+  // If we have previous in-app history
+  if (navHistory.length > 0) {
+    const previousPath = navHistory[navHistory.length - 1]
+
+    // ❌ Block public pages
+    if (blockedRoutes.includes(previousPath)) {
+      router.push(dashboardPath)
+      sessionStorage.setItem('nav_history', JSON.stringify([dashboardPath]))
+      return
+    }
+
+    // ✅ If already on dashboard root, stop here
+    if (currentPath === dashboardPath) {
+      router.push(dashboardPath)
+      sessionStorage.setItem('nav_history', JSON.stringify([dashboardPath]))
+      return
+    }
+
+    // ✅ Normal back navigation inside dashboard
+    navHistory.pop()
+    sessionStorage.setItem('nav_history', JSON.stringify(navHistory))
+    router.push(previousPath)
+  } 
+  else {
+    // No history → stay on dashboard
+    router.push(dashboardPath)
+    sessionStorage.setItem('nav_history', JSON.stringify([dashboardPath]))
+  }
 }
+
+router.afterEach((to) => {
+  const history = JSON.parse(sessionStorage.getItem('nav_history') || '[]')
+
+  if (history[history.length - 1] !== to.path) {
+    history.push(to.path)
+  }
+
+  sessionStorage.setItem('nav_history', JSON.stringify(history))
+})
 
 const navigateToDevotees = () => {
   const entityId = route.params.entityId

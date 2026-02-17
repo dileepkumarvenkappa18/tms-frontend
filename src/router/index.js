@@ -234,12 +234,13 @@ const routes = [
 
   // Tenant Routes
   {
-    path: '/tenant',
-    component: DashboardLayout,
-    meta: { 
-      requiresAuth: true,
-      allowedRoles: ['tenant', 'templeadmin']
-    },
+  path: '/tenant',
+  component: DashboardLayout,
+  meta: { 
+    requiresAuth: true,
+    allowedRoles: ['tenant', 'templeadmin'],
+    layout: 'DashboardLayout'     // ✅ ADD THIS
+  },
     children: [
       {
         path: 'dashboard',
@@ -303,7 +304,7 @@ const routes = [
         }
       },
       // Tenant-specific dashboard route
-      {
+     {
   path: ':tenantId/dashboard',
   name: 'TenantSpecificDashboard',
   component: TenantDashboard,
@@ -312,10 +313,11 @@ const routes = [
     title: 'Tenant Dashboard',
     breadcrumb: 'Dashboard',
     requiresAuth: true,
-    allowedRoles: ['tenant', 'templeadmin']   
+    allowedRoles: ['tenant', 'templeadmin'],
+    layout: 'DashboardLayout'   // ✅ ADD THIS
   }
-}
-,
+},
+
       // Report routes
       {
         path: 'reports/temple-register',
@@ -705,14 +707,16 @@ const routes = [
 
   // SuperAdmin Routes
   {
-    path: '/superadmin',
-    component: DashboardLayout,
-    meta: { 
-      requiresAuth: true,
-      allowedRoles: ['superadmin', 'super_admin']
-    },
-    children: superadminRoutes
+  path: '/superadmin',
+  component: DashboardLayout,
+  meta: { 
+    requiresAuth: true,
+    allowedRoles: ['superadmin', 'super_admin'],
+    layout: 'DashboardLayout'
   },
+  children: superadminRoutes
+},
+
 
   // Convenience Redirects
   {
@@ -754,61 +758,6 @@ const router = createRouter({
     }
   }
 })
-
-// ✅ FIXED: Simplified and more robust route guards
-router.beforeEach((to, from, next) => {
-  // Set page title
-  if (to.meta.title) {
-    document.title = to.meta.title
-  }
-
-  console.log('🚀 Route navigation:', {
-    to: to.path,
-    name: to.name,
-    requiresAuth: to.meta.requiresAuth,
-    allowedRoles: to.meta.allowedRoles
-  })
-
-  // Check if route requires authentication
-  if (to.meta.requiresAuth) {
-    return requireAuth(to, from, next)
-  }
-  
-  next()
-})
-
-/**
- * ✅ MOST IMPORTANT FIX: Special redirect guard for standard/monitoring users
- * Reverted to original for debugging
- */
-router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
-  
-  // Only run for authenticated users
-  if (!authStore.isAuthenticated || !authStore.user) {
-    next()
-    return
-  }
-
-  const userRole = (authStore.user.role || '').toLowerCase().trim()
-  
-  console.log('🛡️ SPECIAL ROLE CHECK:', {
-    userRole,
-    currentPath: to.path,
-    needsTenantSelection: authStore.needsTenantSelection
-  })
-
-  // Force standard_user and monitoring_user to tenant selection
-  if (authStore.needsTenantSelection && to.path !== '/tenant-selection') {
-    console.log('⚠️ REDIRECTING special user to tenant selection')
-    next('/tenant-selection')
-    return
-  }
-
-  next()
-})
-
-
 // Route helpers for components
 export function useRouteHelpers() {
   return {
@@ -935,29 +884,23 @@ export function useRouteHelpers() {
 
 import { getRoleBasedRedirectPath } from '@/utils/redirectHelpers'
 
-// Enhanced role-based redirect system for authenticated users
+// Prevent back navigation to auth pages after login
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-
-  // Handle authenticated users visiting the root path
-  if (authStore.isAuthenticated && to.path === '/') {
-    console.log('🎯 Authenticated user visiting root path, determining redirect...')
+  
+  // If user is authenticated and trying to go back to auth pages
+  if (authStore.isAuthenticated) {
+    const authPages = ['/login', '/register', '/forgot-password', '/']
     
-    const userRole = authStore.userRole
-    const user = authStore.user
-    
-    console.log('👤 User role:', userRole)
-    console.log('👤 User data:', user)
-    
-    // Get redirect path based on role
-    const redirectPath = getRoleBasedRedirectPath(userRole, user)
-    
-    console.log('🔄 Redirecting to:', redirectPath)
-    return next(redirectPath)
+    if (authPages.includes(to.path)) {
+      // Redirect to appropriate dashboard instead
+      const dashboardPath = authStore.getDashboardPath(authStore.userRole)
+      next(dashboardPath)
+      return
+    }
   }
-
+  
   next()
 })
-
 
 export default router

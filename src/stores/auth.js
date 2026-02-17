@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref(null)
   const currentTenantId = ref(localStorage.getItem('current_tenant_id') || null)
   const assignedTenantId = ref(localStorage.getItem('assigned_tenant_id') || null)
+  const isInitialized = ref(false)
   
   // Getters
   const isAuthenticated = computed(() => !!token.value && !!user.value)
@@ -92,25 +93,27 @@ export const useAuthStore = defineStore('auth', () => {
       console.log(`✅ ${role} with no assigned tenant -> tenant selection`)
       return '/tenant-selection'
     }
-    
     if (role === 'superadmin' || role === 'super_admin') {
-      console.log('✅ Super admin -> /superadmin/dashboard')
-      return '/superadmin/dashboard'
-    }
-    
-    // Handle other roles
-    const entityId = user.value?.entityId || user.value?.current_entity?.id
-    
-    if (role === 'templeadmin' || role === 'tenant') {
-      const tenantId = user.value?.id || currentTenantId.value
-      return tenantId ? `/tenant/${tenantId}/dashboard` : '/tenant/dashboard'
-    } else if (role === 'devotee') {
-      // Always redirect devotees to temple selection first
-      return '/devotee/temple-selection'
-    } else if (role === 'volunteer') {
-      return entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
-    }
-    
+  console.log('✅ Super admin -> /superadmin/dashboard')
+  return '/superadmin/dashboard'
+}
+
+// Handle other roles
+const entityId = user.value?.entityId || user.value?.current_entity?.id
+
+if (role === 'templeadmin' || role === 'tenant') {
+  // ✅ Prefer stored tenant id (fixes back/refresh losing context)
+  const tenantId = currentTenantId.value || user.value?.id
+  return tenantId ? `/tenant/${tenantId}/dashboard` : '/tenant/dashboard'
+} 
+else if (role === 'devotee') {
+  // Always redirect devotees to temple selection first
+  return '/devotee/temple-selection'
+} 
+else if (role === 'volunteer') {
+  return entityId ? `/entity/${entityId}/volunteer/dashboard` : '/volunteer/temple-selection'
+}
+
     console.log('⚠️ Unknown role, defaulting to home')
     return '/'
   }
@@ -187,34 +190,25 @@ const isSuperAdmin = computed(() => {
   }
 
   const checkAuth = () => {
-    const token = localStorage.getItem('auth_token')
-    
-    if (token) {
-      isAuthenticated.value = true
-      
-      // Try to restore user data if available
-      const storedUserId = localStorage.getItem('user_id')
-      const storedUserRole = localStorage.getItem('user_role')
-      
-      if (!user.value && storedUserId) {
-        // If user data is missing but we have an ID, create minimal user object
-        user.value = {
-          id: storedUserId,
-          role: storedUserRole || 'unknown'
-        }
-      }
-      
-      // Set authorization header for API calls
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      console.log('Auth check: Authenticated with token')
-      return true
-    } else {
-      isAuthenticated.value = false
-      user.value = null
-      console.log('Auth check: Not authenticated (no token)')
-      return false
+  const storedToken = localStorage.getItem('auth_token')
+
+  if (storedToken) {
+    token.value = storedToken
+
+    const storedUser = localStorage.getItem('user_data')
+    if (storedUser && storedUser !== 'undefined') {
+      user.value = JSON.parse(storedUser)
     }
+
+    api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
+    return true
   }
+
+  user.value = null
+  token.value = null
+  return false
+}
+
 
   const normalizedRole = computed(() => {
     // If user has a role object with roleName property
@@ -301,63 +295,73 @@ const isSuperAdmin = computed(() => {
   
   
   // Initialize auth state
-  const initialize = async () => {
-    console.log('Initializing auth store...')
-    
-    const storedToken = localStorage.getItem('auth_token')
-    if (storedToken) {
-      token.value = storedToken
+ const initialize = async () => {
+  console.log('Initializing auth store...')
 
-      // Extract assigned tenant ID from token
-      try {
-        const tokenData = parseJwt(storedToken)
-        if (tokenData.assigned_tenant_id) {
-          assignedTenantId.value = tokenData.assigned_tenant_id
-          localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id)
-          console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id)
-        }
-      } catch (e) {
-        console.error('Failed to parse token for assigned tenant ID:', e)
+  const storedToken = localStorage.getItem('auth_token')
+  if (storedToken) {
+    token.value = storedToken
+
+    // Extract assigned tenant ID from token
+    try {
+      const tokenData = parseJwt(storedToken)
+      if (tokenData.assigned_tenant_id) {
+        assignedTenantId.value = tokenData.assigned_tenant_id
+        localStorage.setItem('assigned_tenant_id', tokenData.assigned_tenant_id)
+        console.log('✅ Found assigned tenant ID in token:', tokenData.assigned_tenant_id)
       }
+    } catch (e) {
+      console.error('Failed to parse token for assigned tenant ID:', e)
+    }
 
-      const storedUser = localStorage.getItem('user_data')
-      if (storedUser && storedUser !== 'undefined') {
-        try {
-          user.value = JSON.parse(storedUser)
-           // ⭐ ADD THIS: Attach assignedTenantId to user object
+    const storedUser = localStorage.getItem('user_data')
+    if (storedUser && storedUser !== 'undefined') {
+      try {
+        user.value = JSON.parse(storedUser)
+
+        // ⭐ Attach assignedTenantId to user object
         if (assignedTenantId.value && !user.value.assignedTenantId) {
           user.value.assignedTenantId = assignedTenantId.value
-          // Update localStorage with the enhanced user object
           localStorage.setItem('user_data', JSON.stringify(user.value))
         }
-          api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
-          console.log('Auth initialized with stored user:', user.value)
-          console.log('User role computed as:', userRole.value) 
-          console.log('Set Authorization header with token')
-          
-          // Refresh token timestamp
-          localStorage.setItem('token_last_refreshed', new Date().getTime())
-          
-          // Store current tenant ID from localStorage if available
-          const tenantId = localStorage.getItem('current_tenant_id')
-          if (tenantId) {
-            currentTenantId.value = tenantId
-            console.log('Set current tenant ID from localStorage:', tenantId)
-          }
-          
-          return true
-        } catch (e) {
-          console.error('Failed to parse stored user_data:', e)
-          return false
+
+        // ✅ Set auth header
+        api.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
+
+        console.log('Auth initialized with stored user:', user.value)
+        console.log('User role computed as:', userRole.value)
+        console.log('Set Authorization header with token')
+
+        // Refresh token timestamp
+        localStorage.setItem('token_last_refreshed', new Date().getTime())
+
+        // ✅ Restore current tenant ID on refresh/back button
+        const tenantId = localStorage.getItem('current_tenant_id')
+        if (tenantId) {
+          currentTenantId.value = tenantId
+          console.log('Set current tenant ID from localStorage:', tenantId)
         }
-      } else {
-        console.warn('Token exists but no valid user data found')
+
+        // ✅ Mark auth store initialized (IMPORTANT for router/back button)
+        isInitialized.value = true
+        return true
+      } catch (e) {
+        console.error('Failed to parse stored user_data:', e)
+        isInitialized.value = true
         return false
       }
+    } else {
+      console.warn('Token exists but no valid user data found')
+      isInitialized.value = true
+      return false
     }
-    
-    return false
   }
+
+  // ✅ No token found
+  isInitialized.value = true
+  return false
+}
+
 
   // Verify token is still valid
   const verifyToken = async () => {
@@ -666,6 +670,7 @@ const isSuperAdmin = computed(() => {
     normalizedRole,
     hasRole,
     checkAuth,
+    isInitialized,
     
     // Getters
     isAuthenticated,
