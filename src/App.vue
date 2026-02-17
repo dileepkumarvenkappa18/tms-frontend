@@ -23,85 +23,79 @@
 
     <!-- Toast Notifications Container -->
     <Teleport to="body">
-  <div class="fixed top-4 right-4 md:right-8 lg:right-12 z-50 space-y-2">
-    <TransitionGroup
-      name="toast"
-      enter-active-class="transition-all duration-300 ease-out"
-      leave-active-class="transition-all duration-200 ease-in"
-      enter-from-class="opacity-0 transform translate-x-full"
-      enter-to-class="opacity-100 transform translate-x-0"
-      leave-from-class="opacity-100 transform translate-x-0"
-      leave-to-class="opacity-0 transform translate-x-full"
-    >
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        :class="[
-          'w-80 max-w-xs bg-white shadow-lg rounded-xl pointer-events-auto overflow-hidden border-l-4',
-          getToastBorderColor(toast.type)
-        ]"
-      >
-        <div class="p-4">
-          <div class="flex items-start">
+      <div class="fixed top-4 right-4 md:right-8 lg:right-12 z-50 space-y-2">
+        <TransitionGroup
+          name="toast"
+          enter-active-class="transition-all duration-300 ease-out"
+          leave-active-class="transition-all duration-200 ease-in"
+          enter-from-class="opacity-0 transform translate-x-full"
+          enter-to-class="opacity-100 transform translate-x-0"
+          leave-from-class="opacity-100 transform translate-x-0"
+          leave-to-class="opacity-0 transform translate-x-full"
+        >
+          <div
+            v-for="toast in toasts"
+            :key="toast.id"
+            :class="[
+              'w-80 max-w-xs bg-white shadow-lg rounded-xl pointer-events-auto overflow-hidden border-l-4',
+              getToastBorderColor(toast.type)
+            ]"
+          >
+            <div class="p-4">
+              <div class="flex items-start">
+                <!-- Toast Icon -->
+                <div class="flex-shrink-0">
+                  <component
+                    :is="getToastIcon(toast.type)"
+                    class="h-6 w-6"
+                    :class="getToastIconColor(toast.type)"
+                  />
+                </div>
 
-            <!-- Toast Icon -->
-            <div class="flex-shrink-0">
-              <component
-                :is="getToastIcon(toast.type)"
-                class="h-6 w-6"
-                :class="getToastIconColor(toast.type)"
-              />
-            </div>
+                <!-- Toast Text -->
+                <div class="ml-3 flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-900">
+                    {{ toast.title }}
+                  </p>
 
-            <!-- Toast Text -->
-            <div class="ml-3 flex-1 min-w-0">
-              <p class="text-sm font-semibold text-gray-900">
-                {{ toast.title }}
-              </p>
+                  <p
+                    v-if="toast.message"
+                    class="mt-1 text-sm text-gray-600 leading-5"
+                  >
+                    {{ toast.message }}
+                  </p>
+                </div>
 
-              <p
-                v-if="toast.message"
-                class="mt-1 text-sm text-gray-600 leading-5"
-              >
-                {{ toast.message }}
-              </p>
-            </div>
-
-            <!-- Close Button -->
-            <div class="ml-3 flex-shrink-0">
-              <button
-                @click="removeToast(toast.id)"
-                class="rounded-md text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-150"
-              >
-                <XMarkIcon class="h-5 w-5" />
-              </button>
+                <!-- Close Button -->
+                <div class="ml-3 flex-shrink-0">
+                  <button
+                    @click="removeToast(toast.id)"
+                    class="rounded-md text-gray-400 hover:text-gray-600 focus:outline-none transition-colors duration-150"
+                  >
+                    <XMarkIcon class="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </TransitionGroup>
       </div>
-    </TransitionGroup>
-  </div>
-</Teleport>
+    </Teleport>
 
     <!-- Main Router View - Only shown after initialization -->
-    <template v-if="!isInitializing">
-      <!-- THIS IS THE UPDATED SECTION TO HANDLE LAYOUTS -->
-      <component :is="currentLayout">
-        <router-view v-slot="{ Component, route }">
-          <Transition
-            :name="getPageTransition(route)"
-            mode="out-in"
-            enter-active-class="transition-all duration-300 ease-out"
-            leave-active-class="transition-all duration-200 ease-in"
-          >
-            <component :is="Component" :key="route.path" />
-          </Transition>
-        </router-view>
-      </component>
-    </template>
+    <router-view v-if="!isInitializing" v-slot="{ Component, route }">
+      <Transition
+        :name="getPageTransition(route)"
+        mode="out-in"
+        enter-active-class="transition-all duration-300 ease-out"
+        leave-active-class="transition-all duration-200 ease-in"
+      >
+        <component :is="Component" :key="route.path" />
+      </Transition>
+    </router-view>
     
     <!-- Initialization Error Fallback -->
-    <div v-else-if="initializationFailed" class="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+    <div v-if="initializationFailed" class="min-h-screen flex flex-col items-center justify-center bg-gray-50">
       <div class="text-center max-w-md px-4">
         <h1 class="text-2xl font-bold text-indigo-600 mb-4">Something went wrong</h1>
         <p class="text-gray-600 mb-6">There was a problem starting the application. Please try again.</p>
@@ -227,7 +221,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed, markRaw, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getRoleBasedRedirectPath } from '@/utils/redirectHelpers'
@@ -240,12 +234,6 @@ import {
   WifiIcon,
   DevicePhoneMobileIcon
 } from '@heroicons/vue/24/outline'
-
-// Import layouts
-import AuthLayout from '@/layouts/AuthLayout.vue'
-import PublicLayout from '@/layouts/PublicLayout.vue'
-import DashboardLayout from '@/layouts/DashboardLayout.vue'
-import SuperAdminLayout from '@/layouts/SuperAdminLayout.vue'
 
 // Router setup
 const router = useRouter()
@@ -273,20 +261,6 @@ let deferredPrompt = null
 
 // Track if user just logged in (to show welcome toast only once)
 const justLoggedIn = ref(false)
-
-// Layout management
-const layouts = {
-  'AuthLayout': markRaw(AuthLayout),
-  'PublicLayout': markRaw(PublicLayout),
-  'DashboardLayout': markRaw(DashboardLayout),
-  'SuperAdminLayout': markRaw(SuperAdminLayout)
-}
-
-const currentLayout = computed(() => {
-  const layoutName = route.meta.layout || 'PublicLayout'
-  console.log('Current layout:', layoutName, 'for route:', route.path)
-  return layouts[layoutName] || layouts['PublicLayout']
-})
 
 // Auth-related computed properties
 const isAuthenticated = computed(() => authStore.isAuthenticated)

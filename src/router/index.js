@@ -219,18 +219,26 @@ const routes = [
   }
 },
 
-  // ✅ CRITICAL FIX: Tenant Selection route - MOVED TO TOP PRIORITY
   {
-    path: '/tenant-selection',
-    name: 'TenantSelection',
-    component: TenantSelectionView,
-    meta: { 
-      requiresAuth: true,
-      allowedRoles: ['superadmin', 'super_admin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser'],
-      title: 'Temple Selection',
-      layout: 'DashboardLayout'
-    }
+  path: '/tenant-selection',
+  name: 'TenantSelection',
+  component: DashboardLayout,  // ✅ Wrapped in DashboardLayout
+  meta: { 
+    requiresAuth: true,
+    allowedRoles: ['superadmin', 'super_admin', 'standard_user', 'standarduser', 'monitoring_user', 'monitoringuser'],
+    title: 'Temple Selection'
   },
+  children: [
+    {
+      path: '',
+      component: TenantSelectionView,  // ✅ As a child route
+      meta: {
+        title: 'Select Temple',
+        breadcrumb: 'Temple Selection'
+      }
+    }
+  ]
+},
 
   // Tenant Routes
   {
