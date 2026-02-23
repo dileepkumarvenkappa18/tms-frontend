@@ -1001,15 +1001,18 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
   console.log(`Fetching temples for tenant: ${tenantId}`);
   
   try {
-    // Strategy 1: Try temples endpoint with tenant filtering
+    let fetchedTemples = [];
+    
+    // Strategy 1: Try temples endpoint with tenant filtering (query params only)
     try {
-      const templesResponse = await api.get('/temples', {
+      console.log(`Strategy 1: Trying /v1/temples for tenant ${tenantId}`);
+      const templesResponse = await api.get('/v1/temples', {
         params: {
           tenant_id: tenantId,
           entityId: tenantId,
           entity_id: tenantId
-        },
-        headers: buildTenantHeaders(tenantId)
+        }
+        // ❌ NO HEADERS - removed buildTenantHeaders(tenantId)
       });
       
       let temples = [];
@@ -1021,8 +1024,10 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
         temples = templesResponse.data.temples;
       }
       
+      console.log(`Found ${temples.length} temples from /v1/temples for tenant ${tenantId}`);
+      
       if (temples.length > 0) {
-        return temples.map(temple => ({
+        fetchedTemples = temples.map(temple => ({
           id: temple.id,
           name: temple.name || temple.temple_name || temple.entity_name || 'Unknown Temple',
           status: temple.status || 'active',
@@ -1030,21 +1035,23 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
           created_by: temple.created_by || tenantId,
           entityId: temple.entityId || temple.tenant_id || tenantId
         }));
+        return fetchedTemples;
       }
     } catch (templesErr) {
-      console.log('Temples endpoint failed, trying entities endpoint:', templesErr.message);
+      console.log(`Strategy 1 failed for tenant ${tenantId}:`, templesErr.message);
     }
 
-    // Strategy 2: Try entities endpoint with tenant filtering
+    // Strategy 2: Try entities endpoint (query params only)
     try {
+      console.log(`Strategy 2: Trying /entities for tenant ${tenantId}`);
       const entitiesResponse = await api.get('/entities', {
         params: {
           tenant_id: tenantId,
           entityId: tenantId,
           entity_id: tenantId,
           created_by: tenantId
-        },
-        headers: buildTenantHeaders(tenantId)
+        }
+        // ❌ NO HEADERS
       });
 
       let entities = [];
@@ -1056,31 +1063,42 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
         entities = entitiesResponse.data.entities;
       }
 
-      // Filter entities that belong to this tenant
-      const tenantEntities = entities.filter(entity => 
-        String(entity.created_by) === String(tenantId) ||
-        String(entity.tenant_id) === String(tenantId) ||
-        String(entity.entityId) === String(tenantId)
-      );
+      console.log(`Got ${entities.length} total entities from /entities`);
 
-      return tenantEntities.map(entity => ({
-        id: entity.id,
-        name: entity.name || entity.temple_name || entity.entity_name || 'Unknown Temple',
-        status: entity.status || 'active',
-        tenant_id: entity.tenant_id || entity.entityId || entity.created_by || tenantId,
-        created_by: entity.created_by || tenantId,
-        entityId: entity.entityId || entity.tenant_id || tenantId
-      }));
+      const tenantEntities = entities.filter(entity => {
+        const entityCreatedBy = String(entity.created_by || '');
+        const entityTenantId = String(entity.tenant_id || '');
+        const entityId = String(entity.entityId || '');
+        const tenantIdStr = String(tenantId);
+        
+        return entityCreatedBy === tenantIdStr || 
+               entityTenantId === tenantIdStr || 
+               entityId === tenantIdStr;
+      });
+
+      console.log(`Filtered ${tenantEntities.length} entities for tenant ${tenantId}`);
+
+      if (tenantEntities.length > 0) {
+        fetchedTemples = tenantEntities.map(entity => ({
+          id: entity.id,
+          name: entity.name || entity.temple_name || entity.entity_name || 'Unknown Temple',
+          status: entity.status || 'active',
+          tenant_id: entity.tenant_id || entity.entityId || entity.created_by || tenantId,
+          created_by: entity.created_by || tenantId,
+          entityId: entity.entityId || entity.tenant_id || tenantId
+        }));
+        return fetchedTemples;
+      }
 
     } catch (entitiesErr) {
-      console.log('Entities endpoint also failed:', entitiesErr.message);
+      console.log(`Strategy 2 failed for tenant ${tenantId}:`, entitiesErr.message);
     }
 
-    // Strategy 3: Try getting all entities and filter client-side (fallback)
+    // Strategy 3: Get all entities and filter client-side
     try {
-      const allResponse = await api.get('/entities', {
-        headers: buildTenantHeaders(tenantId)
-      });
+      console.log(`Strategy 3: Trying /entities without filters for tenant ${tenantId}`);
+      const allResponse = await api.get('/entities');
+      // ❌ NO HEADERS
 
       let allEntities = [];
       if (Array.isArray(allResponse.data)) {
@@ -1089,25 +1107,43 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
         allEntities = allResponse.data.data;
       }
 
-      const filteredEntities = allEntities.filter(entity => 
-        String(entity.created_by) === String(tenantId) ||
-        String(entity.tenant_id) === String(tenantId) ||
-        String(entity.entityId) === String(tenantId)
-      );
+      console.log(`Got ${allEntities.length} total entities from /entities (no filter)`);
 
-      return filteredEntities.map(entity => ({
-        id: entity.id,
-        name: entity.name || entity.temple_name || entity.entity_name || 'Unknown Temple',
-        status: entity.status || 'active',
-        tenant_id: entity.tenant_id || entity.entityId || entity.created_by || tenantId,
-        created_by: entity.created_by || tenantId,
-        entityId: entity.entityId || entity.tenant_id || tenantId
-      }));
+      const filteredEntities = allEntities.filter(entity => {
+        const entityCreatedBy = String(entity.created_by || '');
+        const entityTenantId = String(entity.tenant_id || '');
+        const entityIdField = String(entity.entityId || '');
+        const entityOwnerId = String(entity.owner_id || '');
+        const entityUserId = String(entity.user_id || '');
+        const tenantIdStr = String(tenantId);
+        
+        return entityCreatedBy === tenantIdStr || 
+               entityTenantId === tenantIdStr || 
+               entityIdField === tenantIdStr ||
+               entityOwnerId === tenantIdStr ||
+               entityUserId === tenantIdStr;
+      });
+
+      console.log(`Client-side filtered ${filteredEntities.length} entities for tenant ${tenantId}`);
+
+      if (filteredEntities.length > 0) {
+        fetchedTemples = filteredEntities.map(entity => ({
+          id: entity.id,
+          name: entity.name || entity.temple_name || entity.entity_name || 'Unknown Temple',
+          status: entity.status || 'active',
+          tenant_id: entity.tenant_id || entity.entityId || entity.created_by || tenantId,
+          created_by: entity.created_by || tenantId,
+          entityId: entity.entityId || entity.tenant_id || tenantId
+        }));
+        return fetchedTemples;
+      }
 
     } catch (fallbackErr) {
-      console.error('All strategies failed for tenant:', tenantId, fallbackErr);
-      return [];
+      console.error(`Strategy 3 failed for tenant ${tenantId}:`, fallbackErr);
     }
+
+    console.warn(`All strategies failed for tenant ${tenantId}, returning empty array`);
+    return [];
 
   } catch (err) {
     console.error(`Error fetching temples for tenant ${tenantId}:`, err);

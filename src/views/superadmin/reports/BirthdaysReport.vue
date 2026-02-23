@@ -1089,7 +1089,7 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
   try {
     let fetchedTemples = [];
     
-    // Strategy 1: Try temples endpoint with tenant filtering
+    // Strategy 1: Try temples endpoint with tenant filtering (query params only)
     try {
       console.log(`Strategy 1: Trying /v1/temples for tenant ${tenantId}`);
       const templesResponse = await api.get('/v1/temples', {
@@ -1097,8 +1097,8 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
           tenant_id: tenantId,
           entityId: tenantId,
           entity_id: tenantId
-        },
-        headers: buildTenantHeaders(tenantId)
+        }
+        // ❌ NO HEADERS - removed buildTenantHeaders(tenantId)
       });
       
       let temples = [];
@@ -1127,7 +1127,7 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
       console.log(`Strategy 1 failed for tenant ${tenantId}:`, templesErr.message);
     }
 
-    // Strategy 2: Try entities endpoint with tenant filtering
+    // Strategy 2: Try entities endpoint (query params only)
     try {
       console.log(`Strategy 2: Trying /entities for tenant ${tenantId}`);
       const entitiesResponse = await api.get('/entities', {
@@ -1136,8 +1136,8 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
           entityId: tenantId,
           entity_id: tenantId,
           created_by: tenantId
-        },
-        headers: buildTenantHeaders(tenantId)
+        }
+        // ❌ NO HEADERS
       });
 
       let entities = [];
@@ -1151,22 +1151,15 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
 
       console.log(`Got ${entities.length} total entities from /entities`);
 
-      // Filter entities that belong to this tenant - CHECK ALL POSSIBLE FIELDS
       const tenantEntities = entities.filter(entity => {
         const entityCreatedBy = String(entity.created_by || '');
         const entityTenantId = String(entity.tenant_id || '');
         const entityId = String(entity.entityId || '');
         const tenantIdStr = String(tenantId);
         
-        const matches = entityCreatedBy === tenantIdStr || 
-                       entityTenantId === tenantIdStr || 
-                       entityId === tenantIdStr;
-        
-        if (matches) {
-          console.log(`Entity ${entity.id} (${entity.name}) belongs to tenant ${tenantId}`);
-        }
-        
-        return matches;
+        return entityCreatedBy === tenantIdStr || 
+               entityTenantId === tenantIdStr || 
+               entityId === tenantIdStr;
       });
 
       console.log(`Filtered ${tenantEntities.length} entities for tenant ${tenantId}`);
@@ -1187,12 +1180,11 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
       console.log(`Strategy 2 failed for tenant ${tenantId}:`, entitiesErr.message);
     }
 
-    // Strategy 3: Try getting all entities and filter client-side (fallback)
+    // Strategy 3: Get all entities and filter client-side
     try {
       console.log(`Strategy 3: Trying /entities without filters for tenant ${tenantId}`);
-      const allResponse = await api.get('/entities', {
-        headers: buildTenantHeaders(tenantId)
-      });
+      const allResponse = await api.get('/entities');
+      // ❌ NO HEADERS
 
       let allEntities = [];
       if (Array.isArray(allResponse.data)) {
@@ -1203,7 +1195,6 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
 
       console.log(`Got ${allEntities.length} total entities from /entities (no filter)`);
 
-      // More aggressive filtering - check all possible tenant ID fields
       const filteredEntities = allEntities.filter(entity => {
         const entityCreatedBy = String(entity.created_by || '');
         const entityTenantId = String(entity.tenant_id || '');
@@ -1237,7 +1228,6 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
       console.error(`Strategy 3 failed for tenant ${tenantId}:`, fallbackErr);
     }
 
-    // If all strategies failed, return empty array
     console.warn(`All strategies failed for tenant ${tenantId}, returning empty array`);
     return [];
 
@@ -1246,7 +1236,6 @@ const fetchTemplesForSingleTenant = async (tenantId) => {
     return [];
   }
 };
-
 // Manual refresh function
 const manualRefreshTemples = async () => {
   await fetchTemples();
