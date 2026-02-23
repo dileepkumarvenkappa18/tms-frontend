@@ -767,10 +767,14 @@ const confirmDeleteEvent = (event) => {
 
 const deleteEvent = async () => {
   if (!eventToDelete.value) return
-  
+
+  // Use event's entityId, fall back to templeId from route
+  const entityId = eventToDelete.value.entityId || templeId.value
+  console.log('🗑️ deleteEvent - id:', eventToDelete.value.id, 'entityId:', entityId)
+
   isDeleting.value = true
   try {
-    await eventStore.deleteEvent(eventToDelete.value.id)
+    await eventStore.deleteEvent(eventToDelete.value.id, entityId)
     await eventStore.fetchEvents(templeId.value)
     toast.success('Event deleted successfully')
     showDeleteModal.value = false

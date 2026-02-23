@@ -209,25 +209,52 @@ async getTemples(searchParams = {}) {
   }
 },
 
-// NEW METHOD: Get temple by ID with full details including documents
 async getTempleById(id) {
   try {
     console.log(`📡 Fetching temple details for ID: ${id}`)
     
     const timestamp = Date.now()
-    const response = await api.get(`/entities/${id}?_=${timestamp}`)
     
-    console.log('📥 Temple details response:', response)
+    // Try multiple endpoints in order of preference
+    let response
+    
+    try {
+      // First: try the standard entity endpoint
+      response = await api.get(`/entities/${id}?_=${timestamp}`)
+    } catch (err) {
+      if (err.response?.status === 403) {
+        console.warn(`⚠️ Access denied to /entities/${id}, trying public endpoint...`)
+        
+        try {
+          // Second: try a public/temple-specific endpoint
+          response = await api.get(`/temples/${id}?_=${timestamp}`)
+        } catch (err2) {
+          try {
+            // Third: try fetching from the list and finding by ID
+            response = await api.get(`/entities?_=${timestamp}`)
+            const list = Array.isArray(response.data) ? response.data 
+              : response.data?.data || response.data?.entities || []
+            const found = list.find(e => String(e.id) === String(id))
+            if (found) return this.normalizeTempleData(found)
+            throw new Error('Temple not found in accessible list')
+          } catch (err3) {
+            throw err // re-throw original 403
+          }
+        }
+      } else {
+        throw err
+      }
+    }
     
     const templeData = response.data || response
     return this.normalizeTempleData(templeData)
+    
   } catch (error) {
     console.error(`❌ Error fetching temple ID ${id}:`, error)
     console.error('Error response:', error.response?.data)
     throw error
   }
 },
-
 // NEW METHOD: Get temple documents
 async getTempleDocuments(id) {
   try {

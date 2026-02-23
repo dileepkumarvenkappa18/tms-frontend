@@ -749,14 +749,7 @@ const handleDateChange = () => {
   }
 };
 
-// Build helper functions
-const buildTenantHeaders = (tenantId) => {
-  if (!tenantId) return {};
-  
-  return {
-    'X-Entity-ID': String(tenantId),
-  };
-};
+
 
 // CRITICAL FIX: Enhanced report parameters with proper entity filtering
 const buildReportParams = () => {

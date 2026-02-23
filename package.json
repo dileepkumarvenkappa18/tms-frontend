@@ -12,6 +12,9 @@
     "storybook": "storybook dev -p 6006"
   },
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "@heroicons/vue": "^2.2.0",
     "@tailwindcss/vite": "^4.1.8",
     "@vee-validate/i18n": "^4.15.1",

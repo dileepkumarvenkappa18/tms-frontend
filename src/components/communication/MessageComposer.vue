@@ -422,6 +422,7 @@ export default {
             subject: subject.value.trim(),
             body: message.value.trim(),
             template_id: null,
+            entity_id: entityID.value,
             // For custom recipients, send specific emails/phones
             // For audience-based, let backend handle the recipient list
             recipients: isCustom ? selectedRecipients.value.map(r => {

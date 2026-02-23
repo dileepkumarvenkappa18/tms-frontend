@@ -528,36 +528,29 @@ const extractTempleMedia = (templeData) => {
 // Load entity details with media
 const loadEntityDetails = async (entityId) => {
   try {
-    console.log('🔍 Fetching entity details for entity:', entityId)
-    
-    const token = localStorage.getItem('auth_token')
-    
-    // Try the dedicated details endpoint
+    console.log('Fetching entity details for entity:', entityId)
+
     const response = await api.get(`/entities/${entityId}/details`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'X-Entity-ID': entityId
-      }
+      params: { entity_id: entityId }
     })
-    
-    console.log('✅ Entity details response:', response.data)
-    
+
+    console.log('Entity details response:', response.data)
+
     if (response.data) {
       temple.value = response.data
-      
-      // Extract media URLs
+
       const media = extractTempleMedia(response.data)
       templeLogo.value = media.logo
       templeVideo.value = media.video
-      
-      console.log('✅ Temple logo URL:', templeLogo.value)
-      console.log('✅ Temple video URL:', templeVideo.value)
-      
+
+      console.log('Temple logo URL:', templeLogo.value)
+      console.log('Temple video URL:', templeVideo.value)
+
       return response.data
     }
   } catch (err) {
-    console.error('❌ Error loading entity details:', err)
-    
+    console.error('Error loading entity details:', err)
+
     // Fallback: try to get from temple store
     try {
       const fetchedTemple = await templeStore.getTempleById(entityId)
@@ -568,10 +561,10 @@ const loadEntityDetails = async (entityId) => {
         templeVideo.value = media.video
       }
     } catch (storeErr) {
-      console.error('❌ Fallback temple fetch failed:', storeErr)
+      console.error('Fallback temple fetch failed:', storeErr)
     }
   }
-  
+
   return null
 }
 

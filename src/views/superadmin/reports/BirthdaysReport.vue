@@ -725,14 +725,7 @@ const handleDateChange = () => {
   }
 };
 
-// Build helper functions
-const buildTenantHeaders = (tenantId) => {
-  if (!tenantId) return {};
-  
-  return {
-    'X-Entity-ID': String(tenantId),
-  };
-};
+
 
 // CRITICAL FIX: buildReportParams() function for Vue component
 // Add this to your BirthdaysReport.vue <script> section

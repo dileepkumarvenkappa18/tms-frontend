@@ -210,15 +210,14 @@ const updateEvent = async (id, updates) => {
 }
 
 
-const deleteEvent = async (id) => {
+const deleteEvent = async (id, entityId) => {  // ← entityId param must be here
   loading.value = true
   error.value = null
+  console.log('🗑️ Store deleteEvent:', { id, entityId })  // ← add this to confirm
 
   try {
-    const response = await eventService.deleteEvent(id)
-
+    const response = await eventService.deleteEvent(id, entityId)  // ← must pass entityId
     events.value = events.value.filter(e => e.id !== Number(id))
-
     toast.success('Event deleted successfully')
     return response
   } catch (err) {

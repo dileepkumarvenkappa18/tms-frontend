@@ -130,7 +130,7 @@ const fetchUpcomingEvents = async (entityId) => {
     
     // Set headers for this specific request
     const headers = createAuthHeader()
-    headers.headers['X-Entity-ID'] = entityId.toString()
+
     
     // Make the API call with proper headers
     //const response = await axios.get(`${API_URL}/events/upcoming`, headers)

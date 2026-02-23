@@ -67,11 +67,7 @@ async getTempleForDevotee(entityId) {
     
     // Try devotee-specific endpoint first
     try {
-      const response = await api.get(`/temples/${entityId}?_=${timestamp}`, {
-        headers: {
-          'X-Entity-ID': entityId
-        }
-      });
+     const response = await api.get(`/temples/${entityId}?_=${timestamp}`);
       
       console.log('✅ Temple fetched via /temples endpoint');
       return this.normalizeTempleData(response.data);
@@ -79,11 +75,7 @@ async getTempleForDevotee(entityId) {
       console.log('⚠️ /temples endpoint failed, trying /entities...');
       
       // Fallback to entities endpoint
-      const response = await api.get(`/entities/${entityId}?_=${timestamp}`, {
-        headers: {
-          'X-Entity-ID': entityId
-        }
-      });
+      const response = await api.get(`/entities/${entityId}?_=${timestamp}`);
       
       console.log('✅ Temple fetched via /entities endpoint');
       return this.normalizeTempleData(response.data);

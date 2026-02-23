@@ -40,25 +40,6 @@ api.interceptors.request.use(
     }
 
     const isAuthEndpoint = config.url.includes('/auth/') || config.url.includes('/v1/auth/')
-    
-    if (!isAuthEndpoint) {
-      const entityId = localStorage.getItem('current_entity_id')
-
-      // Try to extract entity ID from request URL if missing or mismatched
-      const match = config.url?.match(/\/entities\/(\d+)/)
-      const entityFromUrl = match ? match[1] : null
-
-      const finalEntityId = entityFromUrl || entityId
-      if (finalEntityId) {
-        config.headers['X-Entity-ID'] = finalEntityId
-      }
-
-      if (import.meta.env.DEV) {
-        console.log('🔹Request Headers ->', {
-          'X-Entity-ID': config.headers['X-Entity-ID']
-        })
-      }
-    }
 
     // CRITICAL FIX: Handle FormData properly
     if (config.data instanceof FormData) {

@@ -1657,15 +1657,21 @@ const confirmDeleteSeva = (seva) => {
 
 const deleteSeva = async () => {
   if (!sevaToDelete.value) return
-  
+
   formLoading.value = true
-  
+
   try {
     const sevaId = sevaToDelete.value.id || sevaToDelete.value.ID
-    console.log('Deleting seva ID:', sevaId)
-    
-    const result = await sevaService.deleteSeva(sevaId)
-    
+
+    // Use the seva's own entity_id — NOT the session entity
+    const sevaEntityId = sevaToDelete.value.entity_id ||
+                         sevaToDelete.value.EntityID ||
+                         parseInt(entityId)
+
+    console.log('Deleting seva ID:', sevaId, '| Seva entity_id:', sevaEntityId)
+
+    const result = await sevaService.deleteSeva(sevaId, sevaEntityId)
+
     if (result && result.success) {
       await loadSevaCatalog()
       showToast(`Seva "${sevaToDelete.value.name || sevaToDelete.value.Name}" deleted successfully`, 'success')
@@ -1725,13 +1731,23 @@ const saveSeva = async () => {
     
     if (editingSeva.value) {
       const sevaId = editingSeva.value.id || editingSeva.value.ID
+
+      // Use the seva's own entity_id — NOT the session entity
+      const sevaEntityId = editingSeva.value.entity_id ||
+                           editingSeva.value.EntityID ||
+                           parseInt(entityId)
+
       console.log("Updating seva ID:", sevaId)
+      console.log("Seva entity_id:", sevaEntityId, "| Session entity:", entityId)
       
       const updatePayload = Object.fromEntries(
-        Object.entries(payload).filter(([key, value]) => {
+        Object.entries(payload).filter(([_, value]) => {
           return value !== null && value !== undefined && value !== ''
         })
       )
+
+      // Explicitly attach the seva's own entity_id
+      updatePayload.entity_id = parseInt(sevaEntityId)
       
       console.log("Final update payload:", updatePayload)
       

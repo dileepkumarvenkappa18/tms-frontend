@@ -527,7 +527,9 @@ import { useDonationStore } from '@/stores/donation'
 import { useTempleActivities } from '@/composables/useTempleActivities'
 import devoteeService from '@/services/devotee.service'
 import eventService from '@/services/event.service'
-import axios from 'axios'
+
+
+import api from '@/plugins/axios'
 
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner.vue'
 import DashboardWidget from '@/components/dashboard/DashboardWidget.vue'
@@ -1027,79 +1029,61 @@ const restoreSavedData = () => {
 // Add this function around line 1107 (before loadDashboardData)
 const loadEntityDetails = async (entityId) => {
   try {
-    console.log('🔍 Fetching entity details for entity:', entityId);
-    
-    // Get the auth token
-    const token = localStorage.getItem('auth_token');
-    console.log('🔑 Using auth token:', token ? 'Found' : 'Missing');
-    
-    // Strategy 1: Try the dedicated details endpoint
+    console.log('Fetching entity details for entity:', entityId)
+
+  
     try {
-      console.log('📡 Calling GET /entities/' + entityId + '/details');
-      
-      const response = await axios.get(`/entities/${entityId}/details`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'X-Entity-ID': entityId
-        }
-      });
-      
-      console.log('✅ API Response status:', response.status);
-      console.log('✅ API Response data:', response.data);
-      
+      const response = await api.get(`/entities/${entityId}/details`, {
+        params: { entity_id: entityId }  // entity_id as query param, matching donations pattern
+      })
+
+      console.log('Entity details response:', response.data)
+
       if (response.data) {
-        console.log('📹 Media in response:', response.data.media || response.data.Media);
-        entityDetails.value = response.data;
-        return response.data;
+        entityDetails.value = response.data
+        return response.data
       }
     } catch (detailsErr) {
-      console.error('❌ /entities/:id/details failed');
-      console.error('Status:', detailsErr.response?.status);
-      console.error('Message:', detailsErr.message);
-      console.error('Response data:', detailsErr.response?.data);
-      
-      // If it's a 401/403, check RBAC middleware
+      console.error('/entities/:id/details failed:', detailsErr.response?.status, detailsErr.message)
+
       if (detailsErr.response?.status === 401) {
-        console.error('🚫 Authentication failed - check if token is valid');
+        console.error('Authentication failed - check if token is valid')
       } else if (detailsErr.response?.status === 403) {
-        console.error('🚫 Authorization failed - check if devotee role has access');
+        console.error('Authorization failed - check if devotee role has access')
       }
     }
-    
-    // Strategy 2: Fallback to dashboard API
+
+    // Strategy 2: Fallback to dashboard API — entity_id as query param
     try {
-      console.log('🔄 Trying fallback: GET /entity/' + entityId + '/devotee/dashboard');
-      
-      const dashResponse = await axios.get(`/entity/${entityId}/devotee/dashboard`);
-      
-      console.log('✅ Dashboard response:', dashResponse.data);
-      
+      const dashResponse = await api.get(`/entity/${entityId}/devotee/dashboard`, {
+        params: { entity_id: entityId }  // entity_id as query param
+      })
+
+      console.log('Dashboard fallback response:', dashResponse.data)
+
       if (dashResponse.data) {
-        // Try to extract entity from various possible locations
-        const entityData = dashResponse.data.entity || 
-                          dashResponse.data.entityDetails || 
-                          dashResponse.data.temple;
-        
+        const entityData =
+          dashResponse.data.entity ||
+          dashResponse.data.entityDetails ||
+          dashResponse.data.temple
+
         if (entityData) {
-          console.log('✅ Extracted entity from dashboard');
-          console.log('📹 Media field:', entityData.media || entityData.Media);
-          entityDetails.value = entityData;
-          return entityData;
+          entityDetails.value = entityData
+          return entityData
         } else {
-          console.warn('⚠️ Dashboard response has no entity data');
-          console.log('Available keys:', Object.keys(dashResponse.data));
+          console.warn('Dashboard response has no entity data. Available keys:', Object.keys(dashResponse.data))
         }
       }
     } catch (dashErr) {
-      console.error('❌ Dashboard fallback failed:', dashErr.message);
+      console.error('Dashboard fallback failed:', dashErr.message)
     }
-    
-    console.error('❌ All entity loading strategies failed');
-    return null;
-    
+
+    console.error('All entity loading strategies failed')
+    return null
+
   } catch (err) {
-    console.error('❌ Unexpected error in loadEntityDetails:', err);
-    return null;
+    console.error('Unexpected error in loadEntityDetails:', err)
+    return null
   }
 };
 //Dileep
@@ -1575,64 +1559,49 @@ const enrichSevaWithNames = async (sevas) => {
 // Function to load upcoming events for the current entity
 const loadUpcomingEvents = async () => {
   try {
-    // Get current entity ID from route - THIS IS CRITICAL
-    const entityId = route.params.id;
-    
-    // Get token for authentication
-    const token = localStorage.getItem('auth_token');
-    
-    // Create headers with the ENTITY ID from the route
-    const headers = {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'X-Entity-ID': entityId
-      }
-    };
-    
-    // Log the entity ID we're using
-    console.log(`🔍 Fetching upcoming events for entity ID: ${entityId}`);
-    
-    // Make API call    
-    //const response = await axios.get(`${API_URL}/events/upcoming`, headers);
-    const response = await axios.get(`/events/upcoming`, headers);
-    
+    const entityId = route.params.id
+    console.log(`Fetching upcoming events for entity ID: ${entityId}`)
+
+    const response = await api.get('/events/upcoming', {
+      params: { entity_id: entityId }
+    })
+
     if (response.data && Array.isArray(response.data)) {
-      // Less restrictive date filtering to include today's events
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
       const filteredEvents = response.data.filter(event => {
-        const eventDate = new Date(event.event_date || event.date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today;
-      });
-      
-      console.log(`Dashboard: Found ${filteredEvents.length} upcoming events after filtering for entity ID ${entityId}`);
-      
-      // Display up to 4 events
-      upcomingEvents.value = filteredEvents.slice(0, 4);
-      
-      // Update local storage
-      localData.upcomingEvents = JSON.parse(JSON.stringify(filteredEvents.slice(0, 4)));
-      
+        const eventDate = new Date(event.event_date || event.date)
+        eventDate.setHours(0, 0, 0, 0)
+        return eventDate >= today
+      })
+
+      console.log(`Found ${filteredEvents.length} upcoming events for entity ID ${entityId}`)
+
+      upcomingEvents.value = filteredEvents.slice(0, 4)
+      localData.upcomingEvents = JSON.parse(JSON.stringify(filteredEvents.slice(0, 4)))
+
       try {
         localStorage.setItem('dashboard_local_data', JSON.stringify({
           ...JSON.parse(localStorage.getItem('dashboard_local_data') || '{}'),
           upcomingEvents: localData.upcomingEvents,
           timestamp: Date.now()
-        }));
+        }))
       } catch (e) {
-        console.warn('Could not save events to localStorage', e);
+        console.warn('Could not save events to localStorage', e)
       }
-      
-      return filteredEvents;
+
+      return filteredEvents
     }
-    
-    return [];
+
+    return []
   } catch (err) {
-    console.error('Error loading dashboard upcoming events:', err);
-    return [];
+    console.error('Error loading upcoming events:', err)
+    if (err.response?.status === 401) {
+      showToast('Please login to view events', 'error')
+      logout()
+    }
+    return []
   }
 };
 
