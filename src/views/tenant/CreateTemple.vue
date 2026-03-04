@@ -48,7 +48,7 @@
           <span class="text-sm text-gray-500">{{ Math.round((currentStep / 3) * 100) }}% Complete</span>
         </div>
         <div class="w-full bg-gray-200 rounded-full h-2">
-          <div 
+          <div
             class="bg-indigo-600 h-2 rounded-full transition-all duration-300"
             :style="{ width: `${(currentStep / 3) * 100}%` }"
           ></div>
@@ -450,15 +450,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Logo *</h3>
-                  <p class="text-gray-600 mb-4">Upload temple logo (JPG, PNG - Max 500kb)</p>
+                  <p class="text-gray-600 mb-4">Upload temple logo (JPG, PNG - Max 5MB)</p>
                   <div class="flex justify-center">
                     <label class="cursor-pointer bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
                       <span>Choose Logo</span>
-                      <input 
-                        type="file" 
-                        class="hidden" 
-                        accept="image/jpeg,image/jpg,image/png" 
-                        @change="handleMediaUpload($event, 'logo')" 
+                      <input
+                        type="file"
+                        class="hidden"
+                        accept="image/jpeg,image/jpg,image/png"
+                        @change="handleMediaUpload($event, 'logo')"
                       />
                     </label>
                   </div>
@@ -476,15 +476,15 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                   </svg>
                   <h3 class="text-lg font-medium text-gray-900 mb-2">Temple Video (Optional)</h3>
-                  <p class="text-gray-600 mb-4">Upload temple video (MP4, MOV, AVI - Max 5MB)</p>
+                  <p class="text-gray-600 mb-4">Upload temple video (MP4, MOV, AVI - Max 50MB)</p>
                   <div class="flex justify-center">
                     <label class="cursor-pointer bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
                       <span>Choose Video</span>
-                      <input 
-                        type="file" 
-                        class="hidden" 
-                        accept="video/mp4,video/quicktime,video/x-msvideo" 
-                        @change="handleMediaUpload($event, 'video')" 
+                      <input
+                        type="file"
+                        class="hidden"
+                        accept="video/mp4,video/quicktime,video/x-msvideo"
+                        @change="handleMediaUpload($event, 'video')"
                       />
                     </label>
                   </div>
@@ -506,9 +506,9 @@
                   required
                 />
                 <span class="text-sm text-gray-700">
-                  I agree to the 
+                  I agree to the
                   <router-link to="/terms" class="text-indigo-600 hover:text-indigo-800 underline">Terms and Conditions</router-link>
-                  and 
+                  and
                   <router-link to="/privacy" class="text-indigo-600 hover:text-indigo-800 underline">Privacy Policy</router-link>.
                   I confirm that all information provided is accurate and complete.
                 </span>
@@ -578,8 +578,8 @@
           <div>
             <h3 class="text-sm font-medium text-blue-800 mb-1">Need Help?</h3>
             <p class="text-sm text-blue-700">
-              If you need assistance with temple registration, please contact our support team at 
-              <a href="mailto:support@templesaas.com" class="underline">support@templesaas.com</a> 
+              If you need assistance with temple registration, please contact our support team at
+              <a href="mailto:support@templesaas.com" class="underline">support@templesaas.com</a>
               or call us at <a href="tel:+91-800-123-4567" class="underline">+91-800-123-4567</a>
             </p>
           </div>
@@ -590,13 +590,108 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import api from '@/plugins/axios'
 
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
+const userStore = useAuthStore()
+
+// ============================================================
+// TENANT ID RESOLUTION
+// Covers all roles: superadmin, templeadmin, standard_user,
+// monitoring_user — without relying on a single localStorage key
+// ============================================================
+const resolvedTenantId = computed(() => {
+  const role = (userStore.userRole || '').toLowerCase()
+
+  console.log('🔍 resolvedTenantId - role:', role)
+  console.log('🔍 resolvedTenantId - userStore.assignedTenantId:', userStore.assignedTenantId)
+  console.log('🔍 resolvedTenantId - userStore.user:', userStore.user)
+  console.log('🔍 resolvedTenantId - route.query.tenant_id:', route.query.tenant_id)
+  console.log('🔍 resolvedTenantId - route.params.tenantId:', route.params.tenantId)
+
+  // 1. Superadmin navigating from tenant dashboard via route query (?tenant_id=X)
+  if (route.query.tenant_id) {
+    console.log('✅ Using tenant_id from route query:', route.query.tenant_id)
+    return String(route.query.tenant_id)
+  }
+
+  // 2. Superadmin navigating via route params (/tenant/:tenantId/...)
+  if (route.params.tenantId) {
+    console.log('✅ Using tenantId from route params:', route.params.tenantId)
+    return String(route.params.tenantId)
+  }
+
+  // 3. Standard user / Monitoring user — use their assigned tenant ID
+  //    This comes from the JWT token parsed during login/initialize
+  if (
+    role === 'standard_user' || role === 'standarduser' ||
+    role === 'monitoring_user' || role === 'monitoringuser'
+  ) {
+    const assigned =
+      userStore.assignedTenantId ||                      // Pinia store ref (set from JWT)
+      userStore.user?.assignedTenantId ||                // Attached to user object during login
+      userStore.user?.assigned_tenant_id ||              // Direct field from backend
+      userStore.user?.tenant_id ||                       // Alternative field name
+      localStorage.getItem('assigned_tenant_id') ||     // Persisted from JWT parse
+      localStorage.getItem('selected_tenant_id')        // Set during tenant selection flow
+
+    if (assigned) {
+      console.log('✅ Using assigned tenant ID for standard/monitoring user:', assigned)
+      return String(assigned)
+    }
+
+    console.warn('⚠️ Standard/Monitoring user has no assigned tenant ID')
+    return null
+  }
+
+  // 4. Templeadmin / Tenant — their own user ID is the tenant ID
+  if (role === 'templeadmin' || role === 'tenant') {
+    const tid =
+      userStore.currentTenantId ||
+      localStorage.getItem('current_tenant_id') ||
+      userStore.user?.id
+
+    if (tid) {
+      console.log('✅ Using templeadmin own ID as tenant ID:', tid)
+      return String(tid)
+    }
+  }
+
+  // 5. Superadmin without route context — check localStorage set by TenantDashboard
+  if (role === 'superadmin' || role === 'super_admin') {
+    const tid =
+      localStorage.getItem('currentTenantId') ||
+      localStorage.getItem('selected_tenant_id') ||
+      localStorage.getItem('current_tenant_id')
+
+    if (tid) {
+      console.log('✅ Using superadmin localStorage tenant ID:', tid)
+      return String(tid)
+    }
+  }
+
+  // 6. Last resort — try all localStorage keys
+  const fallback =
+    localStorage.getItem('currentTenantId') ||
+    localStorage.getItem('current_tenant_id') ||
+    localStorage.getItem('selected_tenant_id') ||
+    localStorage.getItem('tenant_id') ||
+    localStorage.getItem('assigned_tenant_id')
+
+  if (fallback) {
+    console.log('✅ Using localStorage fallback tenant ID:', fallback)
+    return String(fallback)
+  }
+
+  console.error('❌ Could not resolve tenant ID from any source')
+  return null
+})
 
 // Form state
 const currentStep = ref(1)
@@ -644,7 +739,7 @@ const validateEmail = (email) => {
 
 const validatePhone = (phone) => {
   const digitsOnly = phone.replace(/\D/g, '')
-  return digitsOnly.length === 12 && digitsOnly.startsWith('91') || digitsOnly.length === 10
+  return (digitsOnly.length === 12 && digitsOnly.startsWith('91')) || digitsOnly.length === 10
 }
 
 const validateUrl = (url) => {
@@ -665,7 +760,7 @@ const validateYear = (year) => {
 // Phone number formatting
 const formatPhoneNumber = (event) => {
   let value = event.target.value.replace(/\D/g, '')
-  
+
   if (value.startsWith('91') && value.length > 2) {
     value = '+91 ' + value.slice(2)
   } else if (value.length === 10) {
@@ -675,7 +770,7 @@ const formatPhoneNumber = (event) => {
       value = '+91 ' + value
     }
   }
-  
+
   form.phone = value
 }
 
@@ -803,29 +898,29 @@ const previousStep = () => {
 // File upload handlers
 const handleFileUpload = (event, type) => {
   const files = Array.from(event.target.files)
-  
+
   if (fileErrors.value[type]) {
     delete fileErrors.value[type]
   }
-  
+
   if (files.length === 0) return
-  
+
   const maxSize = 10 * 1024 * 1024 // 10MB
   const invalidFiles = files.filter(file => file.size > maxSize)
-  
+
   if (invalidFiles.length > 0) {
     fileErrors.value[type] = 'File size too large (max 10MB)'
     return
   }
-  
+
   const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
   const invalidTypes = files.filter(file => !allowedTypes.includes(file.type))
-  
+
   if (invalidTypes.length > 0) {
     fileErrors.value[type] = 'Invalid file type (PDF, JPG, PNG only)'
     return
   }
-  
+
   if (type === 'additional') {
     if (!form.documents.additional) {
       form.documents.additional = []
@@ -834,22 +929,20 @@ const handleFileUpload = (event, type) => {
   } else {
     form.documents[type] = files[0]
   }
-  
+
   error.value = null
-  toast.success(`File(s) uploaded successfully`)
+  toast.success('File(s) uploaded successfully')
 }
 
-// 🔥 FIXED: Media upload handler
+// Media upload handler
 const handleMediaUpload = (event, type) => {
   const file = event.target.files[0]
   if (!file) return
 
-  // Clear previous errors
   if (fileErrors.value[type]) {
     delete fileErrors.value[type]
   }
 
-  // Size validation
   const maxSize = type === 'video' ? 50 * 1024 * 1024 : 5 * 1024 * 1024
   if (file.size > maxSize) {
     const sizeMB = type === 'video' ? '50MB' : '5MB'
@@ -858,7 +951,6 @@ const handleMediaUpload = (event, type) => {
     return
   }
 
-  // Type validation
   const allowedTypes = {
     logo: ['image/jpeg', 'image/jpg', 'image/png'],
     video: ['video/mp4', 'video/quicktime', 'video/x-msvideo']
@@ -870,10 +962,9 @@ const handleMediaUpload = (event, type) => {
     return
   }
 
-  // Store the file
   form.media[type] = file
   console.log(`✅ ${type.toUpperCase()} selected:`, file.name, file.type, file.size)
-  
+
   error.value = null
   toast.success(`${type.toUpperCase()} uploaded successfully`)
 }
@@ -894,6 +985,31 @@ const handleSubmit = async () => {
     console.log('📁 Documents:', form.documents)
     console.log('🎬 Media:', form.media)
 
+    // ============================================================
+    // RESOLVE TENANT ID
+    // ============================================================
+    const selectedTenantId = resolvedTenantId.value
+
+    console.log('🏛️ Resolved tenant_id:', selectedTenantId)
+    console.log('👤 User role:', userStore.userRole)
+    console.log('👤 User object:', userStore.user)
+    console.log('👤 assignedTenantId:', userStore.assignedTenantId)
+
+    if (!selectedTenantId) {
+      const role = (userStore.userRole || '').toLowerCase()
+      let errMsg = 'Tenant not selected. Please go back to the dashboard.'
+
+      if (role === 'standard_user' || role === 'standarduser' ||
+          role === 'monitoring_user' || role === 'monitoringuser') {
+        errMsg = 'Your account is not assigned to a tenant. Please contact your administrator.'
+      }
+
+      error.value = errMsg
+      toast.error(errMsg)
+      isSubmitting.value = false
+      return
+    }
+
     // Prepare phone number
     let phoneNumber = form.phone.replace(/\D/g, '')
     if (phoneNumber.startsWith('91') && phoneNumber.length === 12) {
@@ -902,10 +1018,9 @@ const handleSubmit = async () => {
       phoneNumber = '+91' + phoneNumber
     }
 
-    // Create FormData
+    // Build FormData
     const formData = new FormData()
-    
-    // Add text fields
+
     formData.append('name', form.name?.trim() || '')
     formData.append('main_deity', form.main_deity?.trim() || '')
     formData.append('temple_type', form.temple_type || '')
@@ -921,23 +1036,21 @@ const handleSubmit = async () => {
     formData.append('landmark', form.landmark?.trim() || '')
     formData.append('map_link', form.map_link?.trim() || '')
     formData.append('status', 'pending')
+    formData.append('tenant_id', selectedTenantId)
 
-    // Add document files
+    // Documents
     if (form.documents.registration) {
       formData.append('registration_cert', form.documents.registration)
       console.log('📎 Added registration_cert')
     }
-    
     if (form.documents.trustDeed) {
       formData.append('trust_deed', form.documents.trustDeed)
       console.log('📎 Added trust_deed')
     }
-    
     if (form.documents.property) {
       formData.append('property_docs', form.documents.property)
       console.log('📎 Added property_docs')
     }
-    
     if (form.documents.additional?.length > 0) {
       form.documents.additional.forEach((file, index) => {
         formData.append(`additional_docs_${index}`, file)
@@ -945,18 +1058,17 @@ const handleSubmit = async () => {
       })
     }
 
-    // 🔥 Add media files with EXACT backend field names
+    // Media
     if (form.media.logo) {
       formData.append('temple_logo', form.media.logo)
       console.log('🖼️ Added temple_logo:', form.media.logo.name, form.media.logo.type)
     }
-
     if (form.media.video) {
       formData.append('temple_video', form.media.video)
       console.log('🎥 Added temple_video:', form.media.video.name, form.media.video.type)
     }
 
-    // Debug: Log all FormData entries
+    // Debug FormData
     console.log('📋 FormData contents:')
     for (let [key, value] of formData.entries()) {
       if (value instanceof File) {
@@ -966,18 +1078,14 @@ const handleSubmit = async () => {
       }
     }
 
-    // Make API call
     const response = await api.post('/entities', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      timeout: 60000 // 60 seconds for video uploads
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000
     })
-    
-    console.log('✅ Temple created successfully:', response.data)
 
+    console.log('✅ Temple created successfully:', response.data)
     toast.success('Temple registration submitted successfully!')
-    
+
     // Reset form
     Object.keys(form).forEach(key => {
       if (key === 'documents') {
@@ -990,15 +1098,14 @@ const handleSubmit = async () => {
         form[key] = ''
       }
     })
-    
-    // Redirect
+
     setTimeout(() => {
       router.push('/tenant/dashboard')
     }, 2000)
 
   } catch (err) {
     console.error('❌ Temple registration failed:', err)
-    
+
     if (err.code === 'ECONNABORTED') {
       error.value = 'Request timed out. Please try again.'
     } else if (err.response?.status === 413) {
@@ -1008,7 +1115,7 @@ const handleSubmit = async () => {
     } else {
       error.value = err.response?.data?.error || 'Failed to submit registration'
     }
-    
+
     toast.error(error.value)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } finally {

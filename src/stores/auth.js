@@ -597,46 +597,38 @@ const isSuperAdmin = computed(() => {
   
   // Select tenant (for admins, standard users, and monitoring users)
   const selectTenant = async (tenantId) => {
-    if (!tenantId) {
-      console.error('No tenant ID provided')
-      return { success: false, error: 'No tenant ID provided' }
+  if (!tenantId) {
+    console.error('No tenant ID provided')
+    return { success: false, error: 'No tenant ID provided' }
+  }
+  
+  try {
+    console.log('🏛️ Selecting tenant ID:', tenantId)
+    
+    localStorage.setItem('selected_tenant_id', tenantId)
+    localStorage.setItem('current_tenant_id', tenantId)  // ✅ This is key
+    localStorage.setItem('current_entity_id', tenantId)
+    
+    currentTenantId.value = tenantId  // ✅ Update store state
+    
+    const role = (userRole.value || '').toLowerCase()
+    let redirectPath
+
+    if (role === 'superadmin' || role === 'super_admin') {
+      redirectPath = `/tenant/${tenantId}/dashboard`  // ✅ Use tenant dashboard, not entity
+    } else if (role === 'standard_user' || role === 'standarduser' || 
+               role === 'monitoring_user' || role === 'monitoringuser') {
+      redirectPath = `/entity/${tenantId}/dashboard`
+    } else {
+      redirectPath = `/tenant/${tenantId}/dashboard`
     }
     
-    try {
-      console.log('🏛️ Selecting tenant ID:', tenantId)
-      
-      // Store the tenant ID
-      localStorage.setItem('selected_tenant_id', tenantId)
-      localStorage.setItem('current_tenant_id', tenantId)
-      localStorage.setItem('current_entity_id', tenantId)
-      
-      // Update store state
-      currentTenantId.value = tenantId
-      
-      // Determine redirect path based on role
-      const role = (userRole.value || '').toLowerCase()
-      let redirectPath
-      
-      if (role === 'superadmin' || role === 'super_admin' || 
-          role === 'standard_user' || role === 'standarduser' || 
-          role === 'monitoring_user' || role === 'monitoringuser') {
-        redirectPath = `/entity/${tenantId}/dashboard`
-      } else {
-        redirectPath = `/tenant/${tenantId}/dashboard`
-      }
-      
-      return {
-        success: true,
-        redirectPath
-      }
-    } catch (err) {
-      console.error('Error selecting tenant:', err)
-      return { 
-        success: false, 
-        error: 'Failed to select tenant' 
-      }
-    }
+    return { success: true, redirectPath }
+  } catch (err) {
+    console.error('Error selecting tenant:', err)
+    return { success: false, error: 'Failed to select tenant' }
   }
+}
   
   // Debug function to check if we can see the tenant data
   const debugTenantData = () => {

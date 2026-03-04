@@ -21,19 +21,19 @@
               <div class="flex items-center gap-3 mt-1">
                 <div v-if="currentTemple.createdBy" class="flex items-center gap-2">
                   <p class="text-xs text-gray-400">
-                    Created by: 
+                    Created by:
                     <span v-if="creatorDetails.loading" class="text-gray-400">Loading...</span>
                     <span v-else-if="creatorDetails.fullName" class="text-indigo-600 font-medium">
                       {{ creatorDetails.fullName }}
                     </span>
                     <span v-else class="text-gray-400">User ID: {{ currentTemple.createdBy }}</span>
                   </p>
-                  <span v-if="creatorDetails.roleName" 
+                  <span v-if="creatorDetails.roleName"
                     class="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                     {{ creatorDetails.roleName }}
                   </span>
                 </div>
-                <span v-if="currentTemple.status" 
+                <span v-if="currentTemple.status"
                   :class="{
                     'bg-green-100 text-green-800': currentTemple.status === 'approved',
                     'bg-yellow-100 text-yellow-800': currentTemple.status === 'pending',
@@ -45,7 +45,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- User Info -->
           <div class="flex items-center space-x-3">
             <div class="text-right hidden sm:block">
@@ -71,7 +71,7 @@
               <h2 class="text-2xl font-bold text-gray-900">My Donations</h2>
               <p class="mt-1 text-sm text-gray-600">Track your donation history and receipts</p>
             </div>
-            <button 
+            <button
               @click="showDonationForm = true"
               class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
             >
@@ -137,8 +137,8 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
-            <select 
-              v-model="filters.dateRange" 
+            <select
+              v-model="filters.dateRange"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Time</option>
@@ -148,11 +148,11 @@
               <option value="year">This Year</option>
             </select>
           </div>
-          
+
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Donation Type</label>
-            <select 
-              v-model="filters.donationType" 
+            <select
+              v-model="filters.donationType"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Types</option>
@@ -165,8 +165,8 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Amount Range</label>
-            <select 
-              v-model="filters.amountRange" 
+            <select
+              v-model="filters.amountRange"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
               <option value="all">All Amounts</option>
@@ -178,7 +178,7 @@
           </div>
 
           <div class="flex items-end">
-            <button 
+            <button
               @click="resetFilters"
               class="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
             >
@@ -211,7 +211,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="donation in filteredDonations" :key="donation.id" class="hover:bg-gray-50">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ formatDate(donation.date || donation.created_at || donation.donated_at || donation.donatedAt) }}
+                  {{ formatDate(getDonationDate(donation)) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="getDonationTypeClass(donation.type || donation.donationType)" class="px-2 py-1 text-xs font-medium rounded-full">
@@ -232,7 +232,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                  <button 
+                  <button
                     @click="viewDonationDetails(donation)"
                     class="text-indigo-600 hover:text-indigo-900 font-medium"
                   >
@@ -255,8 +255,8 @@
               :disabled="pagination.page === 1"
               :class="[
                 'px-3 py-1 rounded border',
-                pagination.page === 1 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                pagination.page === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               ]"
             >
@@ -267,8 +267,8 @@
               :disabled="pagination.page >= pagination.totalPages"
               :class="[
                 'px-3 py-1 rounded border',
-                pagination.page >= pagination.totalPages 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                pagination.page >= pagination.totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               ]"
             >
@@ -278,7 +278,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-if="filteredDonations.length === 0" class="text-center py-12">
+        <div v-if="filteredDonations.length === 0 && !loading" class="text-center py-12">
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
           </svg>
@@ -301,7 +301,8 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- From Details (Donor Information) -->
+
+          <!-- FROM: Donor Information -->
           <div class="space-y-4">
             <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
               <h4 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
@@ -313,96 +314,94 @@
               <div class="space-y-2">
                 <div>
                   <p class="text-xs text-blue-700">Name</p>
-                  <p class="font-semibold text-blue-900">{{ selectedDonation.donorName || selectedDonation.userName || currentUser.name || 'N/A' }}</p>
+                  <p class="font-semibold text-blue-900">
+                    {{ selectedDonation.donorName || selectedDonation.userName || selectedDonation.user_name || currentUser.name || 'N/A' }}
+                  </p>
                 </div>
                 <div>
                   <p class="text-xs text-blue-700">Email</p>
-                  <p class="text-sm text-blue-900">{{ selectedDonation.donorEmail || selectedDonation.userEmail || currentUser.email || 'N/A' }}</p>
+                  <p class="text-sm text-blue-900">
+                    {{ selectedDonation.donorEmail || selectedDonation.userEmail || selectedDonation.user_email || currentUser.email || 'N/A' }}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- To Details (Temple/Recipient Information) -->
-          <!-- To Details (ACTUAL RECIPIENT Information) -->
-<div class="space-y-4">
-  <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-    <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-      </svg>
-      To (Actual Recipient)
-    </h4>
-    <div class="space-y-2">
-      <div>
-        <p class="text-xs text-green-700">Temple Name</p>
-        <p class="font-semibold text-green-900">{{ selectedDonation.entityName || currentTemple.name || 'N/A' }}</p>
-      </div>
-      
-      <!-- ✅ Show ACTUAL recipient from donation record -->
-      <div v-if="selectedDonation.account_holder_name">
-        <p class="text-xs text-green-700">Payment Received By</p>
-        <p class="text-sm font-semibold text-green-900">{{ selectedDonation.account_holder_name }}</p>
-      </div>
-      
-      <div v-if="selectedDonation.account_number">
-        <p class="text-xs text-green-700">Account/UPI ID</p>
-        <p class="text-sm font-mono text-green-900">{{ selectedDonation.account_number }}</p>
-      </div>
-      
-      <div v-if="selectedDonation.upi_id">
-        <p class="text-xs text-green-700">UPI ID</p>
-        <p class="text-sm font-mono text-green-900">{{ selectedDonation.upi_id }}</p>
-      </div>
+          <!-- TO: Temple / Recipient Information -->
+          <div class="space-y-4">
+            <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+              <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                To (Recipient)
+              </h4>
+              <div class="space-y-2">
+                <div>
+                  <p class="text-xs text-green-700">Temple Name</p>
+                  <p class="font-semibold text-green-900">
+                    {{ selectedDonation.entityName || selectedDonation.entity_name || currentTemple.name || 'N/A' }}
+                  </p>
+                </div>
+                <div v-if="getField(selectedDonation, 'account_holder_name')">
+                  <p class="text-xs text-green-700">Payment Received By</p>
+                  <p class="text-sm font-semibold text-green-900">
+                    {{ getField(selectedDonation, 'account_holder_name') }}
+                  </p>
+                </div>
+                <div v-if="getField(selectedDonation, 'upi_id') || getField(selectedDonation, 'account_number')">
+                  <p class="text-xs text-green-700">UPI ID / Account</p>
+                  <p class="text-sm font-mono text-green-900">
+                    {{ getField(selectedDonation, 'upi_id') || getField(selectedDonation, 'account_number') }}
+                  </p>
+                </div>
+                <div v-if="getField(selectedDonation, 'account_type')">
+                  <p class="text-xs text-green-700">Payment Type</p>
+                  <p class="text-sm text-green-900">{{ getField(selectedDonation, 'account_type') }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <!-- ℹ️ Show expected vs actual if different -->
-      <div v-if="selectedDonation.account_holder_name && 
-                 creatorDetails.bank && 
-                 selectedDonation.account_holder_name !== creatorDetails.bank.account_holder_name"
-           class="mt-3 pt-3 border-t border-yellow-300 bg-yellow-50 rounded p-2">
-        <p class="text-xs font-semibold text-yellow-900">⚠️ Payment Routing Notice:</p>
-        <p class="text-xs text-yellow-800">
-          Payment was processed through {{ selectedDonation.account_holder_name }} 
-          for {{ creatorDetails.bank.account_holder_name }}
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-          <!-- Payment Details - Shows based on payment method -->
+          <!-- Payment Information Section -->
           <div class="md:col-span-2">
-            <!-- UPI Payment Details -->
-            <div
-v-if="['upi','online','netbanking','card','wallet'].includes(
-  (selectedDonation.method || selectedDonation.paymentMethod || '').toLowerCase()
-)"
-                 class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4">
+            <div v-if="isOnlinePayment(selectedDonation)" class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4">
               <h4 class="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                 </svg>
-                UPI Payment Information
+                {{ getPaymentSectionTitle(selectedDonation) }}
               </h4>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p class="text-xs text-indigo-700">Payment ID</p>
-                  <p class="text-sm font-mono text-indigo-900 break-all">{{ selectedDonation.paymentId || selectedDonation.payment_id || 'N/A' }}</p>
+                  <p class="text-sm font-mono text-indigo-900 break-all">{{ getPaymentId(selectedDonation) }}</p>
                 </div>
                 <div>
-                  <p class="text-xs text-indigo-700">Transaction/Order ID</p>
-                  <p class="text-sm font-mono text-indigo-900 break-all">{{ selectedDonation.transactionId || selectedDonation.transaction_id || 'N/A' }}</p>
+                  <p class="text-xs text-indigo-700">Order / Transaction ID</p>
+                  <p class="text-sm font-mono text-indigo-900 break-all">{{ getOrderId(selectedDonation) }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-indigo-700">Amount</p>
                   <p class="text-lg font-bold text-indigo-900">₹{{ Number(selectedDonation.amount || 0).toLocaleString() }}</p>
                 </div>
+                <div v-if="getField(selectedDonation, 'upi_id')">
+                  <p class="text-xs text-indigo-700">UPI ID</p>
+                  <p class="text-sm font-mono text-indigo-900">{{ getField(selectedDonation, 'upi_id') }}</p>
+                </div>
+                <div v-if="getField(selectedDonation, 'account_number') && isCardPayment(selectedDonation)">
+                  <p class="text-xs text-indigo-700">Card Number</p>
+                  <p class="text-sm font-mono text-indigo-900">{{ getField(selectedDonation, 'account_number') }}</p>
+                </div>
+                <div v-if="getField(selectedDonation, 'account_holder_name')">
+                  <p class="text-xs text-indigo-700">Account Holder</p>
+                  <p class="text-sm font-semibold text-indigo-900">{{ getField(selectedDonation, 'account_holder_name') }}</p>
+                </div>
               </div>
             </div>
 
-            <!-- Bank Transfer Details -->
-            <div v-else-if="selectedDonation.method === 'bank' || selectedDonation.paymentMethod === 'bank'" 
-                 class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+            <div v-else-if="isBankTransfer(selectedDonation)" class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
               <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
@@ -432,24 +431,11 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
                 </div>
                 <div>
                   <p class="text-xs text-green-700">Amount Transferred</p>
-                  <p class="text-lg font-bold text-green-900">₹{{ selectedDonation.amount.toLocaleString() }}</p>
-                </div>
-              </div>
-              <div v-if="selectedDonation.bank_transaction_id || selectedDonation.bank_reference" class="mt-3 pt-3 border-t border-green-300">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div v-if="selectedDonation.bank_transaction_id">
-                    <p class="text-xs text-green-700">Transaction ID</p>
-                    <p class="text-sm font-mono text-green-900">{{ selectedDonation.bank_transaction_id }}</p>
-                  </div>
-                  <div v-if="selectedDonation.bank_reference">
-                    <p class="text-xs text-green-700">Bank Reference</p>
-                    <p class="text-sm font-mono text-green-900">{{ selectedDonation.bank_reference }}</p>
-                  </div>
+                  <p class="text-lg font-bold text-green-900">₹{{ Number(selectedDonation.amount || 0).toLocaleString() }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- Generic Payment Details (fallback) -->
             <div v-else class="bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
               <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,15 +446,15 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <p class="text-xs text-gray-700">Payment ID</p>
-                  <p class="text-sm font-mono text-gray-900 break-all">{{ selectedDonation.payment_id || 'N/A' }}</p>
+                  <p class="text-sm font-mono text-gray-900 break-all">{{ getPaymentId(selectedDonation) }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-700">Order ID</p>
-                  <p class="text-sm font-mono text-gray-900 break-all">{{ selectedDonation.order_id || 'N/A' }}</p>
+                  <p class="text-sm font-mono text-gray-900 break-all">{{ getOrderId(selectedDonation) }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-700">Amount</p>
-                  <p class="text-lg font-bold text-gray-900">₹{{ selectedDonation.amount.toLocaleString() }}</p>
+                  <p class="text-lg font-bold text-gray-900">₹{{ Number(selectedDonation.amount || 0).toLocaleString() }}</p>
                 </div>
               </div>
             </div>
@@ -498,11 +484,11 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
                 </div>
                 <div>
                   <p class="text-xs text-amber-700">Date</p>
-                  <p class="text-sm text-amber-900">{{ formatDate(selectedDonation.date || selectedDonation.created_at || selectedDonation.donatedAt) }}</p>
+                  <p class="text-sm text-amber-900">{{ formatDate(getDonationDate(selectedDonation)) }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-amber-700">Time</p>
-                  <p class="text-sm text-amber-900">{{ formatTime(selectedDonation.date || selectedDonation.created_at || selectedDonation.donatedAt) }}</p>
+                  <p class="text-sm text-amber-900">{{ formatTime(getDonationDate(selectedDonation)) }}</p>
                 </div>
               </div>
               <div v-if="selectedDonation.note" class="mt-3 pt-3 border-t border-amber-300">
@@ -514,7 +500,7 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
         </div>
 
         <div class="flex gap-3 mt-6 pt-6 border-t">
-          <button 
+          <button
             @click="selectedDonation = null"
             class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
           >
@@ -524,7 +510,9 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
       </div>
     </div>
 
-    <!-- Donation Form Modal -->
+    <!-- ==============================
+         Donation Form Modal
+         ============================== -->
     <div v-if="showDonationForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
@@ -535,57 +523,42 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
             </svg>
           </button>
         </div>
-        
-        <!-- Step 1: Payment Method Selection -->
-        <div v-if="!donationForm.showBankDetails" class="space-y-4">
-          <!-- Payment Method Selection -->
+
+        <!-- Step 1: Donation Form -->
+        <div v-if="!donationForm.showBankDetails && !donationForm.showUpiDirect" class="space-y-4">
+
+          <!-- ✅ UPDATED: Payment Method Selection — 3 options -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-3 gap-3">
+
+            
+
+              <!-- Razorpay / Online -->
               <button
                 type="button"
                 @click="donationForm.paymentMethod = 'online'"
                 :class="[
                   'p-4 border-2 rounded-lg transition-all duration-200',
-                  donationForm.paymentMethod === 'online' 
-                    ? 'border-indigo-600 bg-indigo-50' 
+                  donationForm.paymentMethod === 'online'
+                    ? 'border-indigo-600 bg-indigo-50'
                     : 'border-gray-300 hover:border-indigo-300'
                 ]"
               >
-                <svg class="w-8 h-8 mx-auto mb-2" :class="donationForm.paymentMethod === 'online' ? 'text-indigo-600' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                </svg>
+                <span class="text-3xl block mb-1">💳</span>
                 <p :class="['text-sm font-medium', donationForm.paymentMethod === 'online' ? 'text-indigo-900' : 'text-gray-700']">
-                  UPI / Online
+                  Razorpay
                 </p>
-              </button>
-              
-              <button
-                type="button"
-                @click="donationForm.paymentMethod = 'bank'"
-                :class="[
-                  'p-4 border-2 rounded-lg transition-all duration-200',
-                  donationForm.paymentMethod === 'bank' 
-                    ? 'border-green-600 bg-green-50' 
-                    : 'border-gray-300 hover:border-green-300'
-                ]"
-              >
-                <svg class="w-8 h-8 mx-auto mb-2" :class="donationForm.paymentMethod === 'bank' ? 'text-green-600' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
-                </svg>
-                <p :class="['text-sm font-medium', donationForm.paymentMethod === 'bank' ? 'text-green-900' : 'text-gray-700']">
-                  Bank Transfer
-                </p>
+                <p class="text-xs text-gray-500 mt-1">Card / NetBanking</p>
               </button>
             </div>
           </div>
 
-          <!-- Donation Form -->
           <form @submit.prevent="handleDonationSubmit" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Donation Type</label>
-              <select 
-                v-model="donationForm.type" 
+              <select
+                v-model="donationForm.type"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
@@ -599,9 +572,9 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Amount (₹)</label>
-              <input 
-                type="number" 
-                v-model="donationForm.amount" 
+              <input
+                type="number"
+                v-model="donationForm.amount"
                 required
                 min="1"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -611,67 +584,186 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Purpose (Optional)</label>
-              <textarea 
-                v-model="donationForm.purpose" 
+              <textarea
+                v-model="donationForm.purpose"
                 rows="3"
                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Purpose of donation (optional)"
               ></textarea>
             </div>
 
+            <!-- Tenant Bank Info Panel -->
+            <div
+              v-if="tenantBankInfo.account_holder_name || tenantBankInfo.upi_id"
+              class="bg-blue-50 border border-blue-300 rounded-lg p-4"
+            >
+              <p class="text-xs font-semibold text-blue-800 mb-3 flex items-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path>
+                </svg>
+                🏦 Your donation will be received by:
+              </p>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between items-center">
+                  <span class="text-blue-600 text-xs font-medium">Account Holder</span>
+                  <span class="font-semibold text-blue-900">{{ tenantBankInfo.account_holder_name || 'N/A' }}</span>
+                </div>
+                <div v-if="tenantBankInfo.upi_id" class="flex justify-between items-center">
+                  <span class="text-blue-600 text-xs font-medium">UPI ID</span>
+                  <span class="font-mono font-semibold text-blue-900">{{ tenantBankInfo.upi_id }}</span>
+                </div>
+                <div v-if="tenantBankInfo.account_number" class="flex justify-between items-center">
+                  <span class="text-blue-600 text-xs font-medium">Account No</span>
+                  <span class="font-mono text-blue-900">{{ tenantBankInfo.account_number }}</span>
+                </div>
+                <div v-if="tenantBankInfo.ifsc_code" class="flex justify-between items-center">
+                  <span class="text-blue-600 text-xs font-medium">IFSC</span>
+                  <span class="font-mono text-blue-900">{{ tenantBankInfo.ifsc_code }}</span>
+                </div>
+                <div v-if="tenantBankInfo.bank_name" class="flex justify-between items-center">
+                  <span class="text-blue-600 text-xs font-medium">Bank</span>
+                  <span class="text-blue-900">{{ tenantBankInfo.bank_name }}</span>
+                </div>
+                <div v-if="tenantBankInfo.branch_name" class="flex justify-between items-center">
+                  <span class="text-blue-600 text-xs font-medium">Branch</span>
+                  <span class="text-blue-900">{{ tenantBankInfo.branch_name }}</span>
+                </div>
+              </div>
+            </div>
+
             <div class="flex gap-3 pt-4">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 @click="closeDonationForm"
                 class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="submit"
                 :disabled="submittingDonation"
                 :class="[
                   'flex-1 px-4 py-2 rounded-lg font-medium transition-colors duration-200',
-                  donationForm.paymentMethod === 'bank' 
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white',
-                  submittingDonation ? 'opacity-50' : ''
+                  donationForm.paymentMethod === 'bank'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : donationForm.paymentMethod === 'upi_direct'
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-indigo-600 hover:bg-indigo-700 text-white',
+                  submittingDonation ? 'opacity-50 cursor-not-allowed' : ''
                 ]"
               >
-                {{ submittingDonation ? 'Processing...' : (donationForm.paymentMethod === 'bank' ? 'View Bank Details' : 'Proceed to Payment') }}
+                {{
+                  submittingDonation
+                    ? 'Processing...'
+                    : donationForm.paymentMethod === 'bank'
+                      ? 'View Bank Details'
+                      : donationForm.paymentMethod === 'upi_direct'
+                        ? 'View UPI Details'
+                        : 'Proceed to Payment'
+                }}
               </button>
             </div>
           </form>
         </div>
 
-        <!-- Step 2: Bank Details View -->
-        <div v-else class="space-y-4">
+        <!-- ✅ Step 2A: UPI Direct Details -->
+        <div v-else-if="donationForm.showUpiDirect" class="space-y-4">
           <div class="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-2xl">📱</span>
+              <div>
+                <p class="font-semibold text-green-900">UPI Direct Payment</p>
+                <p class="text-sm text-green-700">Amount: ₹{{ donationForm.amount }} · {{ donationForm.type }} Donation</p>
+              </div>
+            </div>
+            <p class="text-xs text-green-700 mt-1">💚 100% of your donation goes directly to the temple — no platform fees.</p>
+          </div>
+
+          <!-- UPI ID to pay -->
+          <div v-if="tenantBankInfo.upi_id || creatorDetails.bank?.upi_id" class="bg-white border-2 border-green-300 rounded-lg p-4">
+            <p class="text-xs text-gray-500 mb-1">Pay via UPI ID</p>
+            <div class="flex items-center justify-between">
+              <p class="text-xl font-mono font-bold text-green-800">
+                {{ tenantBankInfo.upi_id || creatorDetails.bank?.upi_id }}
+              </p>
+              <button
+                @click="copyToClipboard(tenantBankInfo.upi_id || creatorDetails.bank?.upi_id)"
+                class="p-2 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
+                title="Copy UPI ID"
+              >
+                <svg class="w-5 h-5 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              Open any UPI app (GPay, PhonePe, Paytm, BHIM) → Send money → Enter the UPI ID above
+            </p>
+          </div>
+
+          <!-- Account holder name -->
+          <div v-if="tenantBankInfo.account_holder_name || creatorDetails.bank?.account_holder_name" class="bg-gray-50 border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+            <div>
+              <p class="text-xs text-gray-500">Account Holder / Recipient Name</p>
+              <p class="font-semibold text-gray-900">
+                {{ tenantBankInfo.account_holder_name || creatorDetails.bank?.account_holder_name }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Fallback if no UPI details -->
+          <div v-if="!tenantBankInfo.upi_id && !creatorDetails.bank?.upi_id" class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p class="text-sm text-red-800">⚠️ UPI details not available. Please use Bank Transfer or contact the temple admin.</p>
+          </div>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <p class="text-sm font-medium text-amber-900 mb-1">📞 After Payment:</p>
+            <p class="text-xs text-amber-800">
+                Share your UTR / transaction screenshot
+                <template v-if="creatorDetails.fullName"> with <span class="font-semibold">{{ creatorDetails.fullName }}</span></template>
+                <template v-if="creatorDetails.phone"> at <span class="font-semibold">{{ creatorDetails.phone }}</span></template>
+                <template v-if="creatorDetails.email"><template v-if="creatorDetails.phone"> or </template><span class="font-semibold">{{ creatorDetails.email }}</span></template>
+                to receive a donation receipt.
+            </p>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button type="button" @click="goBackToForm" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+              ← Back
+            </button>
+            <button type="button" @click="closeDonationForm" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              Done
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2B: Bank Details (for bank transfer method) -->
+        <div v-else class="space-y-4">
+          <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
             <div class="flex items-center gap-3 mb-4">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               <div>
-                <p class="font-semibold text-green-900">Donation Amount: ₹{{ donationForm.amount }}</p>
-                <p class="text-sm text-green-700">{{ donationForm.type }} Donation</p>
+                <p class="font-semibold text-blue-900">Donation Amount: ₹{{ donationForm.amount }}</p>
+                <p class="text-sm text-blue-700">{{ donationForm.type }} Donation</p>
               </div>
             </div>
           </div>
 
-          <!-- Bank Details -->
-          <div v-if="creatorDetails.bank" class="space-y-4">
+          <!-- Bank details -->
+          <div v-if="tenantBankInfo.account_holder_name || creatorDetails.bank" class="space-y-4">
             <h4 class="font-semibold text-gray-900">Transfer to This Account:</h4>
-            
+
             <div class="bg-white border-2 border-gray-200 rounded-lg p-4 space-y-3">
               <div class="flex justify-between items-center">
                 <div>
                   <p class="text-xs text-gray-500">Account Holder</p>
-                  <p class="font-semibold text-gray-900">{{ creatorDetails.bank.account_holder_name }}</p>
+                  <p class="font-semibold text-gray-900">
+                    {{ tenantBankInfo.account_holder_name || creatorDetails.bank?.account_holder_name || 'N/A' }}
+                  </p>
                 </div>
-                <button 
-                  @click="copyToClipboard(creatorDetails.bank.account_holder_name)"
-                  class="p-2 hover:bg-gray-100 rounded"
-                >
+                <button @click="copyToClipboard(tenantBankInfo.account_holder_name || creatorDetails.bank?.account_holder_name)" class="p-2 hover:bg-gray-100 rounded">
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                   </svg>
@@ -681,12 +773,11 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
               <div class="flex justify-between items-center">
                 <div>
                   <p class="text-xs text-gray-500">Account Number</p>
-                  <p class="text-lg font-mono font-bold text-gray-900">{{ creatorDetails.bank.account_number }}</p>
+                  <p class="text-lg font-mono font-bold text-gray-900">
+                    {{ tenantBankInfo.account_number || creatorDetails.bank?.account_number || 'N/A' }}
+                  </p>
                 </div>
-                <button 
-                  @click="copyToClipboard(creatorDetails.bank.account_number)"
-                  class="p-2 hover:bg-gray-100 rounded"
-                >
+                <button @click="copyToClipboard(tenantBankInfo.account_number || creatorDetails.bank?.account_number)" class="p-2 hover:bg-gray-100 rounded">
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                   </svg>
@@ -696,12 +787,11 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
               <div class="flex justify-between items-center">
                 <div>
                   <p class="text-xs text-gray-500">IFSC Code</p>
-                  <p class="font-mono font-semibold text-gray-900">{{ creatorDetails.bank.ifsc_code }}</p>
+                  <p class="font-mono font-semibold text-gray-900">
+                    {{ tenantBankInfo.ifsc_code || creatorDetails.bank?.ifsc_code || 'N/A' }}
+                  </p>
                 </div>
-                <button 
-                  @click="copyToClipboard(creatorDetails.bank.ifsc_code)"
-                  class="p-2 hover:bg-gray-100 rounded"
-                >
+                <button @click="copyToClipboard(tenantBankInfo.ifsc_code || creatorDetails.bank?.ifsc_code)" class="p-2 hover:bg-gray-100 rounded">
                   <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                   </svg>
@@ -710,52 +800,55 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
 
               <div class="pt-3 border-t">
                 <p class="text-xs text-gray-500">Bank</p>
-                <p class="text-sm text-gray-900">{{ creatorDetails.bank.bank_name }}</p>
-                <p class="text-sm text-gray-600">{{ creatorDetails.bank.branch_name }}</p>
+                <p class="text-sm text-gray-900">
+                  {{ tenantBankInfo.bank_name || creatorDetails.bank?.bank_name || 'N/A' }}
+                </p>
+                <p class="text-sm text-gray-600">
+                  {{ tenantBankInfo.branch_name || creatorDetails.bank?.branch_name || 'N/A' }}
+                </p>
               </div>
             </div>
 
-            <!-- UPI Option -->
-            <div v-if="creatorDetails.bank.upi_id" class="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4">
-              <p class="font-semibold text-indigo-900 mb-2">Or Pay via UPI:</p>
+            <!-- UPI section inside bank details too -->
+            <div
+              v-if="tenantBankInfo.upi_id || creatorDetails.bank?.upi_id"
+              class="bg-green-50 border-2 border-green-200 rounded-lg p-4"
+            >
+              <p class="font-semibold text-green-900 mb-2">Or Pay via UPI:</p>
               <div class="flex justify-between items-center">
-                <p class="text-lg font-mono font-bold text-indigo-900">{{ creatorDetails.bank.upi_id }}</p>
-                <button 
-                  @click="copyToClipboard(creatorDetails.bank.upi_id)"
-                  class="p-2 hover:bg-indigo-100 rounded"
-                >
-                  <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p class="text-lg font-mono font-bold text-green-900">
+                  {{ tenantBankInfo.upi_id || creatorDetails.bank?.upi_id }}
+                </p>
+                <button @click="copyToClipboard(tenantBankInfo.upi_id || creatorDetails.bank?.upi_id)" class="p-2 hover:bg-green-100 rounded">
+                  <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                   </svg>
                 </button>
               </div>
             </div>
 
-            <!-- Contact Info -->
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <p class="text-sm font-medium text-amber-900 mb-2">📞 After Payment:</p>
               <p class="text-xs text-amber-800">
-                Please contact <span class="font-semibold">{{ creatorDetails.fullName }}</span> at 
-                <span class="font-semibold">{{ creatorDetails.phone }}</span> or 
-                <span class="font-semibold">{{ creatorDetails.email }}</span> 
-                with your transaction details to receive your donation receipt.
+                Share your transaction details
+                <template v-if="creatorDetails.fullName"> with <span class="font-semibold">{{ creatorDetails.fullName }}</span></template>
+                <template v-if="creatorDetails.phone"> at <span class="font-semibold">{{ creatorDetails.phone }}</span></template>
+                <template v-if="creatorDetails.email"><template v-if="creatorDetails.phone"> or </template><span class="font-semibold">{{ creatorDetails.email }}</span></template>
+                to receive your donation receipt.
               </p>
             </div>
           </div>
 
+          <!-- Fallback if no bank details found -->
+          <div v-else class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p class="text-sm text-red-800">⚠️ Bank details not available. Please contact the temple admin directly.</p>
+          </div>
+
           <div class="flex gap-3 pt-4">
-            <button 
-              type="button" 
-              @click="goBackToForm"
-              class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-            >
+            <button type="button" @click="goBackToForm" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
               ← Back
             </button>
-            <button 
-              type="button" 
-              @click="closeDonationForm"
-              class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
+            <button type="button" @click="closeDonationForm" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               Done
             </button>
           </div>
@@ -766,198 +859,225 @@ v-if="['upi','online','netbanking','card','wallet'].includes(
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { donationService } from '@/services/donation.service'
 import api from '@/plugins/axios'
 
 const loadRazorpayScript = () => {
   return new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-};
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
+}
 
-// Reactive data
-const showDonationForm = ref(false)
-const selectedDonation = ref(null)
-const donationHistory = ref([])
-const loading = ref(true)
-const submittingDonation = ref(false)
-const pagination = ref({
-  page: 1,
-  limit: 20,
-  total: 0,
-  totalPages: 0
-})
+// ==============================
+// Reactive Data
+// ==============================
+const showDonationForm    = ref(false)
+const selectedDonation    = ref(null)
+const donationHistory     = ref([])
+const loading             = ref(true)
+const submittingDonation  = ref(false)
+const pagination          = ref({ page: 1, limit: 20, total: 0, totalPages: 0 })
+const upiLoading     = ref(false)
+const upiError       = ref(null)
+const upiPaymentData = ref(null)
+const upiCopied      = ref(false)
+const qrCanvas       = ref(null)
 
-// Temple and User info
-const currentTemple = ref({
-  id: null,
-  name: '',
-  city: '',
-  state: '',
-  status: '',
-  createdBy: null,
-})
+// ✅ tenantBankInfo — loaded on page mount from fetchTempleInfo
+const tenantBankInfo = ref({})
 
-// Creator user details with bank info
-const creatorDetails = ref({
-  id: null,
-  fullName: '',
-  email: '',
-  phone: '',
-  roleId: null,
-  roleName: '',
-  loading: false,
-  error: null,
-  temple: null,
-  bank: null,
-})
+const currentTemple   = ref({ id: null, name: '', city: '', state: '', status: '', createdBy: null })
+const creatorDetails  = ref({ id: null, fullName: '', email: '', phone: '', roleId: null, roleName: '', loading: false, error: null, temple: null, bank: null })
+const currentUser     = ref({ id: null, name: '', email: '', phone: '' })
+const userContext     = ref(null)
+const filters         = ref({ dateRange: 'all', donationType: 'all', amountRange: 'all' })
 
-// Current logged-in user (devotee)
-const currentUser = ref({
-  id: null,
-  name: '',
-  email: '',
-  phone: ''
-})
-
-// User context for entity association
-const userContext = ref(null)
-
-// Filters
-const filters = ref({
-  dateRange: 'all',
-  donationType: 'all',
-  amountRange: 'all'
-})
-
-// Donation form
+// ✅ UPDATED: donationForm now includes showUpiDirect flag
 const donationForm = ref({
   type: '',
   amount: '',
   purpose: '',
-  paymentMethod: 'online'
+  paymentMethod: 'upi_direct',   // default to UPI Direct
+  showBankDetails: false,
+  showUpiDirect: false,
 })
 
-// Computed properties
-const totalDonated = computed(() => {
-  return donationHistory.value.reduce((total, donation) => total + (donation.amount || 0), 0)
-})
+// ==============================
+// Helper: resolve field from donation object
+// ==============================
+const getField = (donation, fieldName) => {
+  if (!donation) return null
+  const fieldMap = {
+    'account_holder_name': ['account_holder_name', 'AccountHolderName'],
+    'account_number':      ['account_number', 'AccountNumber'],
+    'account_type':        ['account_type', 'AccountType'],
+    'ifsc_code':           ['ifsc_code', 'IFSCCode', 'ifscCode'],
+    'upi_id':              ['upi_id', 'UPIID', 'upiId'],
+  }
+  const keys = fieldMap[fieldName] || [fieldName]
+  for (const key of keys) {
+    const val = donation[key]
+    if (val !== undefined && val !== null && val !== '') return val
+  }
+  return null
+}
+
+const getPaymentId = (donation) => {
+  if (!donation) return 'N/A'
+  return donation.paymentId || donation.payment_id || donation.PaymentID || donation.razorpay_payment_id || 'Pending'
+}
+
+const getOrderId = (donation) => {
+  if (!donation) return 'N/A'
+  return donation.transactionId || donation.order_id || donation.OrderID || donation.razorpay_order_id || 'N/A'
+}
+
+const getDonationDate = (donation) => {
+  if (!donation) return null
+  return donation.donatedAt || donation.donated_at || donation.date || donation.created_at || donation.createdAt || null
+}
+
+const isOnlinePayment = (donation) => {
+  if (!donation) return false
+  const method = (donation.method || donation.paymentMethod || '').toLowerCase().trim()
+  return !['bank', 'bank_transfer', 'cash', ''].includes(method)
+}
+
+const isCardPayment = (donation) => {
+  if (!donation) return false
+  const method = (donation.method || donation.paymentMethod || '').toLowerCase()
+  const accountType = (getField(donation, 'account_type') || '').toUpperCase()
+  return method === 'card' || accountType.startsWith('CARD')
+}
+
+const isBankTransfer = (donation) => {
+  if (!donation) return false
+  const method = (donation.method || donation.paymentMethod || '').toLowerCase()
+  return method === 'bank' || method === 'bank_transfer'
+}
+
+const getPaymentSectionTitle = (donation) => {
+  if (!donation) return 'Payment Information'
+  const method = (donation.method || donation.paymentMethod || '').toLowerCase()
+  const titles = {
+    upi: 'UPI Payment Information',
+    upi_direct: 'UPI Direct Payment Information',
+    card: 'Card Payment Information',
+    netbanking: 'Net Banking Information',
+    wallet: 'Wallet Payment Information',
+    online: 'Online Payment Information',
+    unknown: 'Online Payment Information',
+  }
+  return titles[method] || 'Payment Information'
+}
+
+// ==============================
+// Computed
+// ==============================
+const totalDonated = computed(() =>
+  donationHistory.value
+    .filter(d => (d.status || '').toLowerCase() === 'success')
+    .reduce((total, d) => total + (Number(d.amount) || 0), 0)
+)
 
 const thisMonthDonated = computed(() => {
   const thisMonth = new Date().getMonth()
-  const thisYear = new Date().getFullYear()
-  
+  const thisYear  = new Date().getFullYear()
   return donationHistory.value
-    .filter(donation => {
-      const donationDate = new Date(donation.date || donation.created_at || donation.donatedAt)
-      return donationDate.getMonth() === thisMonth && donationDate.getFullYear() === thisYear
+    .filter(d => {
+      if ((d.status || '').toLowerCase() !== 'success') return false
+      const date = new Date(getDonationDate(d))
+      return date.getMonth() === thisMonth && date.getFullYear() === thisYear
     })
-    .reduce((total, donation) => total + Number(donation.amount || 0), 0)
+    .reduce((total, d) => total + Number(d.amount || 0), 0)
 })
 
-const filteredDonations = computed(() => {
-  // Just return and sort - filtering is now done server-side
-  return [...donationHistory.value].sort((a, b) => {
-    const dateA = new Date(a.date || a.created_at || a.donatedAt)
-    const dateB = new Date(b.date || b.created_at || b.donatedAt)
-    return dateB - dateA
-  })
-})
+const filteredDonations = computed(() =>
+  [...donationHistory.value].sort((a, b) =>
+    new Date(getDonationDate(b)) - new Date(getDonationDate(a))
+  )
+)
 
-// Methods
+// ==============================
+// Formatters
+// ==============================
 const formatDate = (date) => {
   if (!date) return 'N/A'
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  })
+  return new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 const formatTime = (date) => {
   if (!date) return 'N/A'
-  return new Date(date).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  })
+  return new Date(date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
 const getDonationTypeClass = (type) => {
   const classes = {
-    'general': 'bg-blue-100 text-blue-800',
-    'seva': 'bg-green-100 text-green-800',
-    'festival': 'bg-amber-100 text-amber-800',
-    'construction': 'bg-purple-100 text-purple-800',
-    'event': 'bg-pink-100 text-pink-800'
+    general: 'bg-blue-100 text-blue-800',
+    seva: 'bg-green-100 text-green-800',
+    festival: 'bg-amber-100 text-amber-800',
+    construction: 'bg-purple-100 text-purple-800',
+    event: 'bg-pink-100 text-pink-800',
   }
   return classes[type] || 'bg-gray-100 text-gray-800'
 }
 
 const getStatusClass = (status) => {
-  const statusLower = (status || '').toLowerCase()
   const classes = {
-    'completed': 'bg-green-100 text-green-800',
-    'success': 'bg-green-100 text-green-800',
-    'pending': 'bg-amber-100 text-amber-800',
-    'processing': 'bg-amber-100 text-amber-800',
-    'failed': 'bg-red-100 text-red-800',
-    'error': 'bg-red-100 text-red-800'
+    completed: 'bg-green-100 text-green-800',
+    success: 'bg-green-100 text-green-800',
+    pending: 'bg-amber-100 text-amber-800',
+    processing: 'bg-amber-100 text-amber-800',
+    failed: 'bg-red-100 text-red-800',
+    error: 'bg-red-100 text-red-800',
   }
-  return classes[statusLower] || 'bg-gray-100 text-gray-800'
+  return classes[(status || '').toLowerCase()] || 'bg-gray-100 text-gray-800'
 }
 
 const getPaymentMethodClass = (method) => {
-  const methodLower = (method || '').toLowerCase()
   const classes = {
-    'upi': 'bg-purple-100 text-purple-800',
-    'online': 'bg-indigo-100 text-indigo-800',
-    'bank': 'bg-green-100 text-green-800',
-    'card': 'bg-blue-100 text-blue-800',
-    'cash': 'bg-gray-100 text-gray-800'
+    upi: 'bg-purple-100 text-purple-800',
+    upi_direct: 'bg-green-100 text-green-800',
+    online: 'bg-indigo-100 text-indigo-800',
+    bank: 'bg-blue-100 text-blue-800',
+    card: 'bg-blue-100 text-blue-800',
+    cash: 'bg-gray-100 text-gray-800',
+    wallet: 'bg-orange-100 text-orange-800',
+    netbanking: 'bg-teal-100 text-teal-800',
+    unknown: 'bg-indigo-100 text-indigo-800',
   }
-  return classes[methodLower] || 'bg-gray-100 text-gray-800'
+  return classes[(method || '').toLowerCase()] || 'bg-gray-100 text-gray-800'
 }
 
 const getPaymentMethodLabel = (method) => {
-  const m = (method || '').toLowerCase()
   const labels = {
     upi: 'UPI',
+    upi_direct: 'UPI Direct',
     online: 'Online (Razorpay)',
     netbanking: 'Net Banking',
     card: 'Card',
     wallet: 'Wallet',
-    bank: 'Bank Transfer'
+    bank: 'Bank Transfer',
+    unknown: 'Online',
   }
-  return labels[m] || method || 'N/A'
+  return labels[(method || '').toLowerCase()] || method || 'N/A'
 }
 
-
+// ==============================
+// Actions
+// ==============================
 const resetFilters = () => {
-  filters.value = {
-    dateRange: 'all',
-    donationType: 'all',
-    amountRange: 'all'
-  }
+  filters.value = { dateRange: 'all', donationType: 'all', amountRange: 'all' }
 }
 
 const viewDonationDetails = (donation) => {
   selectedDonation.value = donation
-  console.log('📋 Viewing donation details:', donation)
-}
-
-const maskAccountNumber = (accountNumber) => {
-  if (!accountNumber) return 'N/A'
-  const accStr = accountNumber.toString()
-  if (accStr.length <= 4) return accStr
-  const lastFour = accStr.slice(-4)
-  const masked = 'X'.repeat(accStr.length - 4)
-  return masked + lastFour
+  console.log('📋 Donation:', JSON.stringify(donation, null, 2))
 }
 
 const changePage = async (newPage) => {
@@ -967,24 +1087,22 @@ const changePage = async (newPage) => {
 }
 
 const copyToClipboard = async (text) => {
+  if (!text) return
   try {
     await navigator.clipboard.writeText(text)
     alert('✅ Copied to clipboard!')
-  } catch (err) {
-    const textArea = document.createElement('textarea')
-    textArea.value = text
-    document.body.appendChild(textArea)
-    textArea.select()
+  } catch {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    document.body.appendChild(ta)
+    ta.select()
     document.execCommand('copy')
-    document.body.removeChild(textArea)
+    document.body.removeChild(ta)
     alert('✅ Copied to clipboard!')
   }
 }
 
-const handleDonationSubmit = () => {
-  // Always proceed to Razorpay payment
-  submitDonation()
-}
+const handleDonationSubmit = () => submitDonation()
 
 const closeDonationForm = () => {
   showDonationForm.value = false
@@ -992,24 +1110,31 @@ const closeDonationForm = () => {
     type: '',
     amount: '',
     purpose: '',
-    paymentMethod: 'online'
+    paymentMethod: 'upi_direct',
+    showBankDetails: false,
+    showUpiDirect: false,
   }
 }
 
+const goBackToForm = () => {
+  donationForm.value.showBankDetails = false
+  donationForm.value.showUpiDirect   = false
+}
+
+// ==============================
+// Data Fetching
+// ==============================
 const fetchLoggedInUser = async () => {
   try {
     const userData = localStorage.getItem('user_data')
     if (userData) {
       const parsed = JSON.parse(userData)
       currentUser.value = {
-        id: parsed.id,
-        name: parsed.fullName || parsed.full_name || 'Devotee',
+        id:    parsed.id,
+        name:  parsed.fullName || parsed.full_name || 'Devotee',
         email: parsed.email || '',
-        phone: parsed.phone || ''
+        phone: parsed.phone || '',
       }
-      console.log('👤 Logged-in user loaded:', currentUser.value)
-    } else {
-      console.warn('⚠️ No user_data in localStorage')
     }
   } catch (error) {
     console.error('❌ Error loading user data:', error)
@@ -1018,87 +1143,79 @@ const fetchLoggedInUser = async () => {
 
 const fetchTempleInfo = async () => {
   try {
-    console.log('🏛️ Fetching temple information...')
-
     const storedTempleName = localStorage.getItem('selectedTempleName')
-    if (storedTempleName) {
-      currentTemple.value.name = storedTempleName
-    }
+    if (storedTempleName) currentTemple.value.name = storedTempleName
 
     let entityId = null
     const match = window.location.pathname.match(/\/entity\/(\d+)\//)
-    if (match && match[1]) {
-      entityId = match[1]
-    }
-
-    if (!entityId) {
-      console.warn('⚠️ Entity ID not found in URL')
-      return
-    }
-
-    console.log('✅ Using entity ID:', entityId)
+    if (match && match[1]) entityId = match[1]
+    if (!entityId) return
 
     const response = await api.get(`/entities/${entityId}/details`)
     const data = response.data?.data || response.data
-
-    console.log('🔍 Temple API Response:', data)
-
-    if (!data || !data.id) {
-      console.warn('⚠️ No temple data received')
-      return
-    }
+    if (!data || !data.id) return
 
     currentTemple.value = {
-      id: data.id,
-      name: data.name || storedTempleName || 'Temple',
-      city: data.city || '',
-      state: data.state || '',
-      status: data.status || '',
+      id:        data.id,
+      name:      data.name || storedTempleName || 'Temple',
+      city:      data.city || '',
+      state:     data.state || '',
+      status:    data.status || '',
       createdBy: data.created_by || null,
     }
 
-    if (data.creator) {
-      console.log('✅ Creator found in response')
-      
-      // Map bank details - handle both nested and flat structures
+    // ✅ Support both data.creator and data.tenant as the source of bank/contact info
+    const creatorSrc = data.creator || data.tenant || null
+    if (creatorSrc) {
       let bankDetails = null
-      if (data.creator.bank) {
-        // Nested structure: creator.bank object exists
-        bankDetails = data.creator.bank
-      } else if (data.creator.account_number) {
-        // Flat structure: bank details directly in creator
+
+      if (creatorSrc.bank) {
+        bankDetails = creatorSrc.bank
+      } else if (creatorSrc.account_number || creatorSrc.upi_id) {
         bankDetails = {
-          account_holder_name: data.creator.account_holder_name,
-          account_number: data.creator.account_number,
-          ifsc_code: data.creator.ifsc_code,
-          account_type: data.creator.account_type,
-          upi_id: data.creator.upi_id,
-          bank_name: data.creator.bank_name || 'N/A',
-          branch_name: data.creator.branch_name || 'N/A'
+          account_holder_name: creatorSrc.account_holder_name || '',
+          account_number:      creatorSrc.account_number      || '',
+          ifsc_code:           creatorSrc.ifsc_code           || '',
+          account_type:        creatorSrc.account_type        || '',
+          upi_id:              creatorSrc.upi_id              || '',
+          bank_name:           creatorSrc.bank_name           || '',
+          branch_name:         creatorSrc.branch_name         || '',
         }
       }
-      console.log('✅ Creator details loaded:', {
-        name: creatorDetails.value.fullName,
-        bank: creatorDetails.value.bank ? 'Available' : 'Not available'
-      })
+
+      // ✅ Only store meaningful phone/email — empty string means "not available"
+      const creatorPhone = creatorSrc.phone  || creatorSrc.mobile || ''
+      const creatorEmail = creatorSrc.email  || ''
+      const creatorName  = creatorSrc.name   || creatorSrc.full_name || creatorSrc.account_holder_name || ''
 
       creatorDetails.value = {
-        id: data.creator.id,
-        fullName: data.creator.name || data.creator.full_name || 'N/A',
-        email: data.creator.email || 'N/A',
-        phone: data.creator.phone || 'N/A',
-        roleName: data.creator.role || 'N/A',
-        loading: false,
-        error: null,
-        temple: data.creator.temple || null,
-        bank: bankDetails,
+        id:       creatorSrc.id       || null,
+        fullName: creatorName,
+        email:    creatorEmail,
+        phone:    creatorPhone,
+        roleName: creatorSrc.role     || creatorSrc.roleName || '',
+        loading:  false,
+        error:    null,
+        temple:   creatorSrc.temple   || null,
+        bank:     bankDetails,
+      }
+
+      if (bankDetails) {
+        tenantBankInfo.value = {
+          account_holder_name: bankDetails.account_holder_name || '',
+          account_number:      bankDetails.account_number      || '',
+          ifsc_code:           bankDetails.ifsc_code           || '',
+          account_type:        bankDetails.account_type        || '',
+          upi_id:              bankDetails.upi_id              || '',
+          bank_name:           bankDetails.bank_name           || '',
+          branch_name:         bankDetails.branch_name         || '',
+        }
+        console.log('🏦 Tenant bank loaded from entity details:', tenantBankInfo.value)
       }
     }
 
     localStorage.setItem('selectedTempleName', currentTemple.value.name)
     localStorage.setItem('selectedEntityId', currentTemple.value.id)
-
-    console.log('✅ Temple details loaded:', currentTemple.value.name)
   } catch (error) {
     console.error('❌ Failed to fetch temple details:', error)
     currentTemple.value.name = localStorage.getItem('selectedTempleName') || 'Temple'
@@ -1107,112 +1224,39 @@ const fetchTempleInfo = async () => {
 
 const getUserContext = async () => {
   try {
-    console.log('🔍 Getting user context...')
-    
-    if (typeof donationService.getCurrentUserContext !== 'function') {
-      console.warn('⚠️ donationService.getCurrentUserContext not available')
-      
-      try {
-        const userData = localStorage.getItem('user_data')
-        if (userData) {
-          const parsed = JSON.parse(userData)
-          userContext.value = {
-            id: parsed.id,
-            user_id: parsed.id,
-            user_type: parsed.roleId === 3 ? 'devotee' : 'unknown',
-            temple_id: parsed.entityId,
-            entity_id: parsed.entityId,
-            temple_name: localStorage.getItem('selectedTempleName'),
-            entity_name: localStorage.getItem('selectedTempleName')
-          }
-          console.log('✅ User context from localStorage:', userContext.value)
-          return
-        }
-      } catch (parseError) {
-        console.warn('⚠️ Error parsing user_data:', parseError)
+    const userData = localStorage.getItem('user_data')
+    if (userData) {
+      const parsed = JSON.parse(userData)
+      userContext.value = {
+        id:          parsed.id,
+        user_id:     parsed.id,
+        entity_id:   parsed.entityId,
+        temple_name: localStorage.getItem('selectedTempleName'),
       }
-      
-      return
-    }
-    
-    const context = await donationService.getCurrentUserContext()
-    
-    if (context.success && context.data) {
-      userContext.value = context.data
-      console.log('✅ User context loaded:', userContext.value)
-    } else {
-      console.warn('⚠️ Failed to get user context:', context)
     }
   } catch (error) {
     console.error('❌ Error getting user context:', error)
   }
 }
 
-const debugDonationResponse = (response) => {
-  console.log('=== DONATION RESPONSE DEBUG ===')
-  console.log('Full response:', response)
-  console.log('Response type:', typeof response)
-  console.log('Response keys:', Object.keys(response || {}))
-  
-  if (response.data) {
-    console.log('response.data:', response.data)
-    console.log('response.data keys:', Object.keys(response.data || {}))
-  }
-  
-  console.log('JSON stringified:', JSON.stringify(response, null, 2))
-  console.log('=== END DEBUG ===')
-}
-
 const parseRazorpayResponse = (response) => {
-  const possibleDataSources = [
-    response,
-    response.data,
-    response.result,
-    response.payload,
-    response.order,
-    response.razorpay
-  ].filter(source => source && typeof source === 'object')
-  
+  const sources = [response?.data, response, response?.result, response?.order]
+    .filter(s => s && typeof s === 'object')
   let order_id, razorpay_key, amount
-  
-  for (const source of possibleDataSources) {
-    order_id = order_id || 
-      source.order_id || 
-      source.OrderID || 
-      source.orderId || 
-      source.razorpay_order_id ||
-      source.RazorpayOrderID ||
-      source.orderID ||
-      source.id
-    
-    razorpay_key = razorpay_key || 
-      source.razorpay_key || 
-      source.RazorpayKey || 
-      source.razorpayKey || 
-      source.key || 
-      source.Key ||
-      source.api_key ||
-      source.ApiKey ||
-      source.razorpay_api_key ||
-      source.RazorpayApiKey
-    
-    amount = amount || 
-      source.amount || 
-      source.Amount || 
-      source.total || 
-      source.Total ||
-      source.payment_amount ||
-      source.PaymentAmount
+
+  for (const source of sources) {
+    order_id    = order_id    || source.order_id    || source.OrderID    || source.orderId    || source.orderID || source.id
+    razorpay_key = razorpay_key || source.razorpay_key || source.RazorpayKey || source.razorpayKey || source.key || source.Key
+    amount      = amount      || source.amount      || source.Amount
   }
-  
+
   amount = amount || Number(donationForm.value.amount)
-  
   return { order_id, razorpay_key, amount }
 }
 
 const submitDonation = async () => {
   if (submittingDonation.value) return
-  
+
   try {
     submittingDonation.value = true
 
@@ -1221,189 +1265,160 @@ const submitDonation = async () => {
       return
     }
 
-    if (!userContext.value) {
-      await getUserContext()
+    // ✅ UPI Direct — show UPI details step, no Razorpay needed
+    if (donationForm.value.paymentMethod === 'upi_direct') {
+      donationForm.value.showUpiDirect = true
+      return
     }
 
-    const scriptLoaded = await loadRazorpayScript();
+    // Bank transfer — show bank details step, no Razorpay needed
+    if (donationForm.value.paymentMethod === 'bank') {
+      donationForm.value.showBankDetails = true
+      return
+    }
+
+    if (!userContext.value) await getUserContext()
+
+    const scriptLoaded = await loadRazorpayScript()
     if (!scriptLoaded) {
-      alert("Razorpay SDK failed to load. Please check your internet connection.");
-      return;
+      alert('Razorpay SDK failed to load. Please check your internet connection.')
+      return
     }
 
     const donationData = {
-      amount: Number(donationForm.value.amount),
+      amount:       Number(donationForm.value.amount),
       donationType: donationForm.value.type,
-      note: donationForm.value.purpose,
-      paymentMethod: donationForm.value.paymentMethod,
+      note:         donationForm.value.purpose || undefined,
     }
 
     if (currentTemple.value.id) {
-      donationData.entityId = currentTemple.value.id
+      donationData.entityId  = currentTemple.value.id
       donationData.entity_id = currentTemple.value.id
-      donationData.templeId = currentTemple.value.id
-      donationData.temple_id = currentTemple.value.id
-    } else if (userContext.value) {
-      if (userContext.value.entity_id) {
-        donationData.entityId = userContext.value.entity_id
-        donationData.entity_id = userContext.value.entity_id
-      } else if (userContext.value.temple_id) {
-        donationData.templeId = userContext.value.temple_id
-        donationData.temple_id = userContext.value.temple_id
-        donationData.entityId = userContext.value.temple_id
-        donationData.entity_id = userContext.value.temple_id
-      }
+    } else if (userContext.value?.entity_id) {
+      donationData.entityId  = userContext.value.entity_id
+      donationData.entity_id = userContext.value.entity_id
     }
 
-    console.log('💰 Creating donation:', donationData)
-
     const response = await donationService.createDonation(donationData)
-    debugDonationResponse(response)
+    console.log('💰 Create donation response:', JSON.stringify(response, null, 2))
 
     const { order_id, razorpay_key, amount } = parseRazorpayResponse(response)
 
-    if (!order_id || !razorpay_key) {
-      const missingFields = []
-      if (!order_id) missingFields.push('order_id')
-      if (!razorpay_key) missingFields.push('razorpay_key')
-      
-      throw new Error(`Server response missing: ${missingFields.join(', ')}`)
+    const backendTenantBank = response?.data?.tenant || response?.tenant || {}
+    if (backendTenantBank.account_holder_name || backendTenantBank.upi_id) {
+      tenantBankInfo.value = {
+        account_holder_name: backendTenantBank.account_holder_name || tenantBankInfo.value.account_holder_name || '',
+        account_number:      backendTenantBank.account_number      || tenantBankInfo.value.account_number      || '',
+        ifsc_code:           backendTenantBank.ifsc_code           || tenantBankInfo.value.ifsc_code           || '',
+        account_type:        backendTenantBank.account_type        || tenantBankInfo.value.account_type        || '',
+        upi_id:              backendTenantBank.upi_id              || tenantBankInfo.value.upi_id              || '',
+        bank_name:           backendTenantBank.bank_name           || tenantBankInfo.value.bank_name           || '',
+        branch_name:         backendTenantBank.branch_name         || tenantBankInfo.value.branch_name         || '',
+      }
+      // ✅ Also fill creatorDetails contact info from tenant if currently missing
+      if (!creatorDetails.value.phone && backendTenantBank.phone)    creatorDetails.value.phone    = backendTenantBank.phone
+      if (!creatorDetails.value.email && backendTenantBank.email)    creatorDetails.value.email    = backendTenantBank.email
+      if (!creatorDetails.value.fullName && backendTenantBank.name)  creatorDetails.value.fullName = backendTenantBank.name
+      console.log('🏦 Tenant bank updated from createDonation response:', tenantBankInfo.value)
     }
 
-    const options = {
-      key: razorpay_key,
-      amount: amount * 100,
-      currency: "INR",
-      name: currentTemple.value.name || "Temple Donation",
-      description: "Thank you for your generosity!",
-      order_id: order_id,
-      handler: async function (response) {
-        try {
-          console.log('✅ Payment successful, verifying...')
-          
-          await donationService.verifyDonation({
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_signature: response.razorpay_signature,
-          });
+    if (!order_id || !razorpay_key) {
+      throw new Error(`Server response missing: ${!order_id ? 'order_id ' : ''}${!razorpay_key ? 'razorpay_key' : ''}`)
+    }
 
-          alert("Donation successful! Thank you for your generosity.");
-          showDonationForm.value = false;
-          
+    const tb = tenantBankInfo.value
+    const options = {
+      key:      razorpay_key,
+      amount:   amount * 100,
+      currency: 'INR',
+      name:     currentTemple.value.name || 'Temple Donation',
+      description: tb.upi_id
+        ? `Paying to UPI: ${tb.upi_id}`
+        : tb.account_holder_name
+          ? `Paying to: ${tb.account_holder_name}`
+          : 'Thank you for your generosity!',
+      order_id: order_id,
+      notes: {
+        tenant_account_holder: tb.account_holder_name || '',
+        tenant_upi:            tb.upi_id              || '',
+        tenant_account:        tb.account_number      || '',
+        tenant_ifsc:           tb.ifsc_code           || '',
+        tenant_bank:           tb.bank_name           || '',
+        donation_type:         donationForm.value.type,
+      },
+      handler: async function (rzpResponse) {
+        try {
+          console.log('✅ Razorpay payment success:', rzpResponse)
+          await donationService.verifyDonation({
+            orderID:     rzpResponse.razorpay_order_id,
+            paymentID:   rzpResponse.razorpay_payment_id,
+            razorpaySig: rzpResponse.razorpay_signature,
+          })
+          alert('Donation successful! Thank you for your generosity.')
+          showDonationForm.value = false
           donationForm.value = {
-            type: '',
-            amount: '',
-            purpose: '',
-            paymentMethod: 'online'
+            type: '', amount: '', purpose: '',
+            paymentMethod: 'upi_direct',
+            showBankDetails: false,
+            showUpiDirect: false,
           }
-          
-          await fetchDonationHistory();
+          await fetchDonationHistory()
         } catch (verifyError) {
-          console.error("❌ Verification failed:", verifyError);
-          alert("Payment verification failed. Please contact support.");
+          console.error('❌ Verification failed:', verifyError)
+          alert('Payment verification failed. Please contact support.')
         }
       },
       prefill: {
-        name: currentUser.value.name || "Donor",
-        email: currentUser.value.email || "",
+        name:  currentUser.value.name  || 'Donor',
+        email: currentUser.value.email || '',
       },
-      theme: {
-        color: "#6366f1",
-      },
-      modal: {
-        ondismiss: function() {
-          console.log('Payment modal dismissed')
-        }
-      }
-    };
+      theme: { color: '#6366f1' },
+    }
 
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+    const rzp = new window.Razorpay(options)
+    rzp.open()
+
   } catch (error) {
-    console.error("❌ Donation error:", error);
-    
-    const errorMessage = error.response?.data?.error || 
-                        error.response?.data?.message || 
-                        error.message || 
-                        'Something went wrong'
-    
-    alert("Error: " + errorMessage);
+    console.error('❌ Donation error:', error)
+    alert('Error: ' + (error.response?.data?.error || error.message || 'Something went wrong'))
   } finally {
     submittingDonation.value = false
   }
-};
-
+}
 
 const fetchDonationHistory = async () => {
   try {
     loading.value = true
 
-    console.log('📋 Fetching donation history with filters...')
-    
-    // Build filters object
-    const filterParams = {
-      page: pagination.value.page,
-      limit: pagination.value.limit,
-    }
-
-    // Map frontend filters to backend
-    if (filters.value.dateRange !== 'all') {
-      filterParams.dateRange = filters.value.dateRange
-    }
-
-    if (filters.value.donationType !== 'all') {
-      filterParams.type = filters.value.donationType
-    }
+    const filterParams = { page: pagination.value.page, limit: pagination.value.limit }
+    if (filters.value.dateRange !== 'all') filterParams.dateRange = filters.value.dateRange
+    if (filters.value.donationType !== 'all') filterParams.type = filters.value.donationType
 
     if (filters.value.amountRange !== 'all') {
       const range = filters.value.amountRange
-      if (range === '0-500') {
-        filterParams.minAmount = 0
-        filterParams.maxAmount = 500
-      } else if (range === '501-1000') {
-        filterParams.minAmount = 501
-        filterParams.maxAmount = 1000
-      } else if (range === '1001-5000') {
-        filterParams.minAmount = 1001
-        filterParams.maxAmount = 5000
-      } else if (range === '5000+') {
-        filterParams.minAmount = 5000
-      }
+      if (range === '0-500')      { filterParams.minAmount = 0;    filterParams.maxAmount = 500  }
+      else if (range === '501-1000')  { filterParams.minAmount = 501;  filterParams.maxAmount = 1000 }
+      else if (range === '1001-5000') { filterParams.minAmount = 1001; filterParams.maxAmount = 5000 }
+      else if (range === '5000+')     { filterParams.minAmount = 5000 }
     }
 
-    console.log('🔍 Filter params:', filterParams)
-
-    // Try the new history endpoint first using the service
     let response
     try {
       response = await donationService.getDonationHistory(filterParams)
-      console.log('✅ Using getDonationHistory service method')
-      console.log('📊 Response:', response)
-    } catch (historyError) {
-      // Fallback to old endpoint if new one doesn't exist
-      console.log('ℹ️ Falling back to getMyDonations service method')
+    } catch {
       response = await donationService.getMyDonations()
     }
 
-    // Handle response format
     if (response) {
-      // If response has a data property
       if (response.data !== undefined) {
-        donationHistory.value = Array.isArray(response.data) 
-          ? response.data 
-          : (response.data || [])
-        
-        // Update pagination info if available
+        donationHistory.value = Array.isArray(response.data) ? response.data : (response.data || [])
         if (response.total !== undefined) {
-          pagination.value.total = response.total
-          pagination.value.page = response.page || 1
-          pagination.value.limit = response.limit || 20
+          pagination.value.total      = response.total
+          pagination.value.page       = response.page       || 1
+          pagination.value.limit      = response.limit      || 20
           pagination.value.totalPages = response.total_pages || 1
-          
-          console.log(`📊 Pagination: Page ${pagination.value.page} of ${pagination.value.totalPages}, Total: ${pagination.value.total}`)
         }
       } else if (Array.isArray(response)) {
-        // Direct array response
         donationHistory.value = response
       } else {
         donationHistory.value = []
@@ -1411,42 +1426,30 @@ const fetchDonationHistory = async () => {
     } else {
       donationHistory.value = []
     }
-    
+
     console.log(`✅ Loaded ${donationHistory.value.length} donations`)
-    
-    if (donationHistory.value.length > 0) {
-      console.log('📄 Sample donation:', donationHistory.value[0])
-    }
   } catch (error) {
     console.error('❌ Error fetching donation history:', error)
     donationHistory.value = []
-    
-    if (error.response?.status !== 404) {
-      console.warn('⚠️ Failed to load donation history:', error.response?.data?.error || error.message)
-    }
   } finally {
     loading.value = false
   }
 }
 
+// ==============================
 // Lifecycle
+// ==============================
 onMounted(async () => {
-  console.log('🚀 DonationHistory component mounted')
-  
   await fetchLoggedInUser()
   await getUserContext()
   await fetchTempleInfo()
   await fetchDonationHistory()
-
-  console.log('✅ All data loaded')
 })
 
-// Watch for filter changes and refetch from server
 watch(
   () => filters.value,
   async () => {
-    console.log('🔄 Filters changed, refetching data...')
-    pagination.value.page = 1 // Reset to first page when filters change
+    pagination.value.page = 1
     await fetchDonationHistory()
   },
   { deep: true }

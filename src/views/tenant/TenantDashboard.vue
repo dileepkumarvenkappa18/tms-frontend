@@ -24,14 +24,7 @@
         @load="handleImageLoad"
       />
     </div>
-    
-    <!-- Background overlay - removed for now to show original image -->
-    <!-- <div 
-      v-if="hasValidLogo"
-      class="fixed inset-0 pointer-events-none"
-      style="z-index: 1; background: linear-gradient(to bottom, rgba(44, 62, 80, 0.7), rgba(44, 62, 80, 0.85));"
-    ></div> -->
-    
+
     <!-- Content wrapper with relative positioning -->
     <div class="relative" style="z-index: 10;">
     <!-- Header Section -->
@@ -72,7 +65,6 @@
           </div>
         </div>
           <div class="flex items-center space-x-4">
-            
           </div>
         </div>
       </div>
@@ -409,78 +401,59 @@ import TempleApprovalStatus from '@/components/temple/TempleApprovalStatus.vue'
 import api from '@/services/api'
 
 const selectedSection = ref('dashboard')
-
-// Dashboard logo - will be fetched from API
-const dashboardLogo = ref('') // Start empty, will be set from API
-
-// Video URL - will be fetched from API
+const dashboardLogo = ref('')
 const introVideoUrl = ref('')
-
-// Video player state
 const showVideoPlayer = ref(false)
-
-// Logo expand modal state
 const showLogoModal = ref(false)
-
-// Tenant name - will be fetched from API
 const tenantName = ref('')
 
-// Computed property to check if logo is valid
 const hasValidLogo = computed(() => {
-  return dashboardLogo.value && 
-         dashboardLogo.value.trim() !== '' && 
+  return dashboardLogo.value &&
+         dashboardLogo.value.trim() !== '' &&
          !dashboardLogo.value.includes('jay-jagannath-group-logo.png')
 })
 
-// Computed property to check if video is available
 const hasVideo = computed(() => {
   return introVideoUrl.value && introVideoUrl.value.trim() !== ''
 })
 
-// Computed property for dashboard title
 const dashboardTitle = computed(() => {
   if (tenantName.value) {
     return `${tenantName.value} Dashboard`
   }
   return 'Tenant Dashboard'
-}) 
+})
+
 const router = useRouter()
 const route = useRoute()
 const templeStore = useTempleStore()
 const userStore = useAuthStore()
 const { showToast } = useToast()
 
-// Loading state
 const isLoading = ref(true)
-
-// Permission alert state
 const showPermissionAlert = ref(false)
 
-// Status check helper functions
+// ============================================================
+// STATUS HELPERS
+// ============================================================
 const isTempleApproved = (temple) => {
-  const status = (temple.status || '').toString().toLowerCase()
-  return status === 'approved'
+  return (temple.status || '').toString().toLowerCase() === 'approved'
 }
 
 const isTempleRejected = (temple) => {
-  const status = (temple.status || '').toString().toLowerCase()
-  return status === 'rejected'
+  return (temple.status || '').toString().toLowerCase() === 'rejected'
 }
 
 const isTemplePending = (temple) => {
-  const status = (temple.status || '').toString().toLowerCase()
-  return status === 'pending'
+  return (temple.status || '').toString().toLowerCase() === 'pending'
 }
 
-// User status helper computed properties
 const isUserApproved = computed(() => {
-  const status = (userStore.user?.status || '').toString().toLowerCase()
-  return status === 'approved'
+  return (userStore.user?.status || '').toString().toLowerCase() === 'approved'
 })
 
 const isUserRejected = computed(() => {
-  const status = (userStore.user?.status || '').toString().toLowerCase()
-  return status === 'rejected'
+  return (userStore.user?.status || '').toString().toLowerCase() === 'rejected'
 })
 
 const isUserPending = computed(() => {
@@ -488,7 +461,9 @@ const isUserPending = computed(() => {
   return status === 'pending' || !status
 })
 
-// Role-based checks
+// ============================================================
+// ROLE CHECKS
+// ============================================================
 const isTenantUser = computed(() => {
   const role = (userStore.userRole || '').toLowerCase()
   return role === 'tenant' || role === 'templeadmin'
@@ -497,7 +472,6 @@ const isTenantUser = computed(() => {
 const isMonitoringUser = computed(() => {
   const role = (userStore.userRole || '').toLowerCase()
   const roleId = userStore.user?.roleId || userStore.user?.role_id
-  // Check both role name and roleId (6 for monitoring_user)
   return role === 'monitoring_user' || role === 'monitoringuser' || roleId === 6 || roleId === '6'
 })
 
@@ -506,74 +480,106 @@ const isStandardUser = computed(() => {
   return role === 'standard_user' || role === 'standarduser'
 })
 
-// Formatted role display
-const userRoleDisplay = computed(() => {
-  if (isTenantUser.value && !isMonitoringUser.value) return 'Tenant'
-  if (isMonitoringUser.value) return 'Monitoring User'
-  if (isStandardUser.value) return 'Standard User'
-  return userStore.userRole || 'User'
-})
-
-// Get the tenant ID from route params or auth store
+// ============================================================
+// TENANT ID — covers all roles
+// ============================================================
 const tenantId = computed(() => {
-  // First try to get from route params
+  // 1. Superadmin viewing a specific tenant via route params
   if (route.params.tenantId) {
     console.log('Using tenantId from route params:', route.params.tenantId)
     return route.params.tenantId
   }
-  
-  // For monitoring/standard users, use assigned tenant ID
-  if ((isMonitoringUser.value || isStandardUser.value) && userStore.assignedTenantId) {
-    console.log('Using assigned tenant ID:', userStore.assignedTenantId)
-    return userStore.assignedTenantId
+
+  // 2. Superadmin navigating from tenant dashboard via query param
+  if (route.query.tenant_id) {
+    console.log('Using tenantId from route query:', route.query.tenant_id)
+    return route.query.tenant_id
   }
-  
-  // Fallback to auth store
-  const authTenantId = userStore.user?.id || localStorage.getItem('current_tenant_id')
-  console.log('Using tenantId from auth store:', authTenantId)
-  return authTenantId
+
+  // 3. Standard/Monitoring user — try all possible sources for assigned tenant
+  if (isMonitoringUser.value || isStandardUser.value) {
+    const assignedId =
+      userStore.assignedTenantId ||
+      userStore.user?.assignedTenantId ||
+      userStore.user?.assigned_tenant_id ||
+      userStore.user?.tenant_id ||
+      userStore.user?.tenantId ||
+      localStorage.getItem('assigned_tenant_id') ||
+      localStorage.getItem('selected_tenant_id')
+
+    if (assignedId) {
+      console.log('Using assigned tenant ID for standard/monitoring user:', assignedId)
+      return assignedId
+    }
+
+    console.warn('⚠️ Standard/Monitoring user has no assigned tenant ID in any source')
+  }
+
+  // 4. Templeadmin — their own user ID is the tenant ID
+  if (isTenantUser.value) {
+    const tid = userStore.currentTenantId || localStorage.getItem('current_tenant_id') || userStore.user?.id
+    if (tid) {
+      console.log('Using templeadmin own ID as tenant ID:', tid)
+      return tid
+    }
+  }
+
+  // 5. Superadmin without route context — check localStorage
+  const fallback =
+    localStorage.getItem('current_tenant_id') ||
+    localStorage.getItem('currentTenantId') ||
+    localStorage.getItem('tenant_id')
+
+  console.log('Using localStorage fallback tenant ID:', fallback)
+  return fallback
 })
 
-// Reset temple data to ensure clean state
-const resetTempleData = () => {
-  // Clear any cached temple data
-  localStorage.removeItem('temple_data')
-  localStorage.removeItem('temple_cache')
-  // Optional: Clear temples array if your store supports it
-  if (typeof templeStore.clearTempleData === 'function') {
-    templeStore.clearTempleData()
+// ============================================================
+// HANDLE CREATE TEMPLE CLICK
+// Passes tenant ID via route query so CreateTemple.vue can
+// always resolve it regardless of role
+// ============================================================
+const handleCreateTempleClick = () => {
+  if (isMonitoringUser.value) {
+    showPermissionAlert.value = true
+    showToast('You are not allowed to create temples. Monitoring users have view-only access.', 'error')
+    setTimeout(() => { showPermissionAlert.value = false }, 5000)
+    return
   }
+
+  const tid = tenantId.value
+
+  if (!tid) {
+    showToast('Unable to determine tenant. Please refresh and try again.', 'error')
+    return
+  }
+
+  console.log('🏛️ Navigating to CreateTemple with tenant_id:', tid)
+
+  // Always pass tenant_id as query param — CreateTemple.vue reads this first
+  // Also persist to localStorage as a safety net
+  localStorage.setItem('currentTenantId', String(tid))
+
+  router.push({
+    path: '/tenant/entities/create',
+    query: { tenant_id: String(tid) }
+  })
 }
 
-// Computed properties
+// ============================================================
+// COMPUTED COUNTS
+// ============================================================
 const approvedTemplesCount = computed(() => {
-  return templeStore.temples.filter(temple => isTempleApproved(temple)).length
+  return templeStore.temples.filter(t => isTempleApproved(t)).length
 })
 
 const pendingTemplesCount = computed(() => {
-  return templeStore.temples.filter(temple => isTemplePending(temple)).length
+  return templeStore.temples.filter(t => isTemplePending(t)).length
 })
 
-// Handle create temple button click
-const handleCreateTempleClick = () => {
-  if (isMonitoringUser.value) {
-    // Show error message
-    showPermissionAlert.value = true
-    showToast('You are not allowed to create temples. Monitoring users have view-only access.', 'error')
-    
-    // Auto-hide alert after 5 seconds
-    setTimeout(() => {
-      showPermissionAlert.value = false
-    }, 5000)
-    
-    return
-  }
-  
-  // Navigate to create temple page
-  router.push('/tenant/entities/create')
-}
-
-// Methods
+// ============================================================
+// METHODS
+// ============================================================
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -584,7 +590,6 @@ const formatDate = (dateString) => {
 }
 
 const viewTemple = (temple) => {
-  // Navigate to temple view/details page
   router.push(`/tenant/entities/${temple.id}`)
 }
 
@@ -593,12 +598,10 @@ const editTemple = (temple) => {
     showToast('You are not allowed to edit temples. Monitoring users have view-only access.', 'error')
     return
   }
-  // Navigate to temple edit page
   router.push(`/tenant/entities/${temple.id}/edit`)
 }
 
 const manageTemple = (temple) => {
-  // Navigate to temple management dashboard
   router.push(`/entity/${temple.id}/dashboard`)
 }
 
@@ -607,84 +610,61 @@ const reUploadDocuments = (temple) => {
     showToast('You are not allowed to re-upload documents. Monitoring users have view-only access.', 'error')
     return
   }
-  // Navigate to document re-upload page
   router.push(`/tenant/entities/${temple.id}/documents`)
 }
 
-// Watch for changes to tenantId and reload data if it changes
-watch(tenantId, async (newValue, oldValue) => {
-  if (newValue && newValue !== oldValue) {
-    console.log(`TenantId changed from ${oldValue} to ${newValue}, reloading data...`)
-    await loadTempleData()
+const resetTempleData = () => {
+  localStorage.removeItem('temple_data')
+  localStorage.removeItem('temple_cache')
+  if (typeof templeStore.clearTempleData === 'function') {
+    templeStore.clearTempleData()
   }
-})
+}
 
-// Load temple data for the current tenant
 const loadTempleData = async () => {
-  isLoading.value = true;
-  
+  isLoading.value = true
+
   if (!tenantId.value) {
-    console.warn('No tenant ID available, cannot load temples');
-    isLoading.value = false;
-    return;
+    console.warn('No tenant ID available, cannot load temples')
+    isLoading.value = false
+    return
   }
-  
+
   try {
-    // Reset temple data to ensure clean state
-    resetTempleData();
-    
-    // Check if this is a SuperAdmin viewing a tenant's temples
-    const selectedTenantId = localStorage.getItem('selected_tenant_id');
-    console.log('Loading temples for tenant ID:', tenantId.value, 'Selected tenant ID:', selectedTenantId);
-    
+    resetTempleData()
+
+    const selectedTenantId = localStorage.getItem('selected_tenant_id')
+    console.log('Loading temples for tenant ID:', tenantId.value, 'Selected tenant ID:', selectedTenantId)
+
     if (selectedTenantId) {
-      // Use the specialized method for SuperAdmin tenant view
-      console.log('Using fetchDirectByTenant for SuperAdmin tenant view');
-      await templeStore.fetchDirectByTenant(selectedTenantId);
+      console.log('Using fetchDirectByTenant for SuperAdmin tenant view')
+      await templeStore.fetchDirectByTenant(selectedTenantId)
     } else {
-      // Regular temple fetch for non-SuperAdmin users
-      console.log('Using standard fetchTemples');
-      await templeStore.fetchTemples(tenantId.value);
+      console.log('Using standard fetchTemples')
+      await templeStore.fetchTemples(tenantId.value)
     }
   } catch (error) {
-    console.error('Error loading temple data:', error);
-    showToast('Failed to load temple data. Please try again.', 'error');
+    console.error('Error loading temple data:', error)
+    showToast('Failed to load temple data. Please try again.', 'error')
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 
 const formatAddress = (address) => {
   if (!address) return ''
-  
   try {
     const addr = typeof address === 'string' ? JSON.parse(address) : address
     if (!addr) return ''
-    
-    const parts = [
-      addr.street,
-      addr.city,
-      addr.state,
-      addr.pincode,
-      addr.country
-    ].filter(Boolean)
-    
-    return parts.join(', ')
+    return [addr.street, addr.city, addr.state, addr.pincode, addr.country].filter(Boolean).join(', ')
   } catch {
     return address || ''
   }
 }
 
-// Image loading handlers
-const handleImageError = (event) => {
-  // Silently handle image error
-}
+const handleImageError = () => {}
+const handleImageLoad = () => {}
 
-const handleImageLoad = (event) => {
-  // Silently handle image load
-}
-
-// Play video function
 const playVideo = () => {
   if (introVideoUrl.value) {
     showVideoPlayer.value = true
@@ -693,112 +673,75 @@ const playVideo = () => {
   }
 }
 
-// Close video player
-const closeVideoPlayer = () => {
-  showVideoPlayer.value = false
-}
+const closeVideoPlayer = () => { showVideoPlayer.value = false }
+const expandLogo = () => { if (hasValidLogo.value) showLogoModal.value = true }
+const closeLogoModal = () => { showLogoModal.value = false }
 
-// Expand logo function
-const expandLogo = () => {
-  if (hasValidLogo.value) {
-    showLogoModal.value = true
-  }
-}
-
-// Close logo modal
-const closeLogoModal = () => {
-  showLogoModal.value = false
-}
-
-// Fetch logo from API
-// Fetch logo from API - Using both endpoints
+// ============================================================
+// FETCH LOGO / VIDEO FROM API
+// ============================================================
 const fetchLogoFromAPI = async () => {
   try {
-    // Get the correct tenant ID based on user role
     let targetTenantId = tenantId.value
-    
+
     console.log('=== FETCH LOGO DEBUG ===')
     console.log('📍 Target Tenant ID:', targetTenantId)
     console.log('👤 User Role:', userStore.userRole)
     console.log('👤 User ID:', userStore.user?.id)
     console.log('👤 Is Monitoring/Standard User:', isMonitoringUser.value || isStandardUser.value)
     console.log('👤 Assigned Tenant ID:', userStore.assignedTenantId)
-    
-    // For monitoring/standard users, use their assigned tenant ID
-    if ((isMonitoringUser.value || isStandardUser.value) && userStore.assignedTenantId) {
-      targetTenantId = userStore.assignedTenantId
-      console.log('✅ Using assigned tenant ID:', targetTenantId)
+
+    // For monitoring/standard users, prefer assigned tenant ID
+    if ((isMonitoringUser.value || isStandardUser.value)) {
+      const assigned =
+        userStore.assignedTenantId ||
+        userStore.user?.assignedTenantId ||
+        userStore.user?.assigned_tenant_id ||
+        userStore.user?.tenant_id ||
+        localStorage.getItem('assigned_tenant_id')
+
+      if (assigned) {
+        targetTenantId = assigned
+        console.log('✅ Using assigned tenant ID for logo fetch:', targetTenantId)
+      }
     }
-    
+
     if (!targetTenantId) {
-      console.warn('⚠️ No tenant ID available')
+      console.warn('⚠️ No tenant ID available for logo fetch')
       return
     }
-    
-    // Try Method 1: Fetch from /tenant-details/:id
+
+    // Method 1: /tenant-details/:id
     console.log('🔄 Method 1: Fetching from /tenant-details/' + targetTenantId)
     try {
       const response1 = await api.get(`/tenant-details/${targetTenantId}`)
-      console.log('📦 Response 1 (tenant-details):', response1)
-      
       const tenantData = response1?.data?.data || response1?.data || response1
-      console.log('📦 Extracted tenant data:', tenantData)
-      
+
       if (tenantData) {
-        // Extract tenant name
-        tenantName.value = tenantData.full_name || 
-                          tenantData.fullName || 
-                          tenantData.temple_name ||
-                          tenantData.name || 
-                          ''
-        
-        console.log('👤 Tenant Name:', tenantName.value)
-        
-        // Extract logo URL from multiple possible locations
-        const logoUrl = tenantData.temple_details?.logo_url || 
-                       tenantData.logo_url || 
-                       null
-        
-        // Extract video URL
-        const videoUrl = tenantData.temple_details?.intro_video_url || 
-                        tenantData.intro_video_url || 
-                        null
-        
-        console.log('🖼️ Raw Logo URL:', logoUrl)
-        console.log('🎥 Raw Video URL:', videoUrl)
-        
-        // Process logo URL
+        tenantName.value = tenantData.full_name || tenantData.fullName || tenantData.temple_name || tenantData.name || ''
+
+        const logoUrl = tenantData.temple_details?.logo_url || tenantData.logo_url || null
+        const videoUrl = tenantData.temple_details?.intro_video_url || tenantData.intro_video_url || null
+
         if (logoUrl && logoUrl.trim() !== '') {
           let finalLogoUrl = logoUrl
-          
           if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-            const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
-            finalLogoUrl = `${API_BASE_URL}${cleanPath}`
+            finalLogoUrl = `${API_BASE_URL}${logoUrl.startsWith('/') ? logoUrl : '/' + logoUrl}`
           }
-          
           dashboardLogo.value = finalLogoUrl
-          console.log('✅ Final Logo URL set:', finalLogoUrl)
           await nextTick()
-        } else {
-          console.log('⚠️ No logo URL found in tenant-details endpoint')
         }
-        
-        // Process video URL
+
         if (videoUrl && videoUrl.trim() !== '') {
           let finalVideoUrl = videoUrl
-          
           if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
             const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-            const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
-            finalVideoUrl = `${API_BASE_URL}${cleanPath}`
+            finalVideoUrl = `${API_BASE_URL}${videoUrl.startsWith('/') ? videoUrl : '/' + videoUrl}`
           }
-          
           introVideoUrl.value = finalVideoUrl
-          console.log('✅ Final Video URL set:', finalVideoUrl)
         }
-        
-        // If we got the data successfully, return early
+
         if (tenantName.value || dashboardLogo.value) {
           console.log('✅ Successfully fetched data from tenant-details endpoint')
           return
@@ -807,130 +750,80 @@ const fetchLogoFromAPI = async () => {
     } catch (error1) {
       console.warn('⚠️ Method 1 failed, trying Method 2:', error1.message)
     }
-    
-    // Try Method 2: Fetch from /tenantsInfo?status=active (fallback)
+
+    // Method 2: /tenantsInfo?status=active (fallback)
     console.log('🔄 Method 2: Fetching from /tenantsInfo?status=active')
     try {
       const response2 = await api.get('/tenantsInfo?status=active')
-      console.log('📦 Response 2 (tenantsInfo):', response2)
-      
-      // Handle different response structures
       let tenants = []
-      if (Array.isArray(response2)) {
-        tenants = response2
-      } else if (response2 && Array.isArray(response2.data)) {
-        tenants = response2.data
-      } else if (response2 && response2.tenants && Array.isArray(response2.tenants)) {
-        tenants = response2.tenants
-      }
-      
-      console.log('📊 Found tenants:', tenants.length)
-      console.log('🔍 Looking for tenant with ID:', targetTenantId)
-      
-      // Find the tenant that matches the target tenant ID
-      if (tenants.length > 0) {
-        const matchingTenant = tenants.find(tenant => {
-          const tId = tenant.id || 
-                      tenant.user_id || 
-                      tenant.userId || 
-                      tenant.ID ||
-                      null
-          console.log('  Checking tenant:', tId, '=== ', targetTenantId, '?', String(tId) === String(targetTenantId))
-          return tId && String(tId) === String(targetTenantId)
-        })
-        
-        console.log('🎯 Matching tenant:', matchingTenant)
-        
-        if (matchingTenant) {
-          // Extract tenant name
-          const name = matchingTenant.full_name || 
-                      matchingTenant.fullName || 
-                      matchingTenant.name || 
-                      matchingTenant.FullName ||
-                      null
-          
-          if (name) {
-            tenantName.value = name
-            console.log('👤 Tenant Name from tenantsInfo:', tenantName.value)
+      if (Array.isArray(response2)) tenants = response2
+      else if (response2 && Array.isArray(response2.data)) tenants = response2.data
+      else if (response2?.tenants && Array.isArray(response2.tenants)) tenants = response2.tenants
+
+      const matchingTenant = tenants.find(t => {
+        const tId = t.id || t.user_id || t.userId || t.ID || null
+        return tId && String(tId) === String(targetTenantId)
+      })
+
+      if (matchingTenant) {
+        tenantName.value = matchingTenant.full_name || matchingTenant.fullName || matchingTenant.name || ''
+
+        const logoUrl = matchingTenant.temple_details?.logo_url || matchingTenant.logo_url || null
+        const videoUrl = matchingTenant.temple_details?.intro_video_url || matchingTenant.intro_video_url || null
+
+        if (logoUrl && logoUrl.trim() !== '') {
+          let finalLogoUrl = logoUrl
+          if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+            finalLogoUrl = `${API_BASE_URL}${logoUrl.startsWith('/') ? logoUrl : '/' + logoUrl}`
           }
-          
-          // Extract logo_url from temple_details (nested structure)
-          const logoUrl = matchingTenant.temple_details?.logo_url || 
-                         matchingTenant.logo_url || 
-                         null
-          
-          // Extract intro_video_url from temple_details
-          const videoUrl = matchingTenant.temple_details?.intro_video_url || 
-                          matchingTenant.intro_video_url || 
-                          null
-          
-          console.log('🖼️ Logo URL from tenantsInfo:', logoUrl)
-          console.log('🎥 Video URL from tenantsInfo:', videoUrl)
-          
-          // Check if logoUrl exists and is not empty
-          if (logoUrl && logoUrl.trim() !== '') {
-            let finalLogoUrl = logoUrl
-            
-            if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
-              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-              const cleanPath = logoUrl.startsWith('/') ? logoUrl : `/${logoUrl}`
-              finalLogoUrl = `${API_BASE_URL}${cleanPath}`
-            }
-            
-            dashboardLogo.value = finalLogoUrl
-            console.log('✅ Final Logo URL from tenantsInfo:', finalLogoUrl)
-            await nextTick()
+          dashboardLogo.value = finalLogoUrl
+          await nextTick()
+        }
+
+        if (videoUrl && videoUrl.trim() !== '') {
+          let finalVideoUrl = videoUrl
+          if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
+            const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+            finalVideoUrl = `${API_BASE_URL}${videoUrl.startsWith('/') ? videoUrl : '/' + videoUrl}`
           }
-          
-          // Check if videoUrl exists and is not empty
-          if (videoUrl && videoUrl.trim() !== '') {
-            let finalVideoUrl = videoUrl
-            
-            if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
-              const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-              const cleanPath = videoUrl.startsWith('/') ? videoUrl : `/${videoUrl}`
-              finalVideoUrl = `${API_BASE_URL}${cleanPath}`
-            }
-            
-            introVideoUrl.value = finalVideoUrl
-            console.log('✅ Final Video URL from tenantsInfo:', finalVideoUrl)
-          }
-        } else {
-          console.error('❌ No matching tenant found in tenantsInfo response')
+          introVideoUrl.value = finalVideoUrl
         }
       }
     } catch (error2) {
       console.error('❌ Method 2 also failed:', error2.message)
     }
-    
-    console.log('=== FINAL STATE ===')
-    console.log('Tenant Name:', tenantName.value)
-    console.log('Logo URL:', dashboardLogo.value)
-    console.log('Video URL:', introVideoUrl.value)
-    console.log('Has Valid Logo:', hasValidLogo.value)
-    
   } catch (error) {
     console.error('❌ Fatal error in fetchLogoFromAPI:', error)
-    console.error('Error details:', error.response?.data)
   }
 }
-// Lifecycle
+
+// ============================================================
+// WATCHERS
+// ============================================================
+watch(tenantId, async (newValue, oldValue) => {
+  if (newValue && newValue !== oldValue) {
+    console.log(`TenantId changed from ${oldValue} to ${newValue}, reloading data...`)
+    await loadTempleData()
+  }
+})
+
+// ============================================================
+// LIFECYCLE
+// ============================================================
 onMounted(async () => {
   console.log('TenantDashboard mounted with tenantId:', tenantId.value)
   console.log('User role:', userStore.userRole, 'Role ID:', userStore.user?.roleId)
   console.log('Is Monitoring User:', isMonitoringUser.value)
-  console.log('import.meta.env.VITE_API_BASE_URL: ',import.meta.env.VITE_API_BASE_URL)
-  
-  // Fetch logo from API
+  console.log('Is Standard User:', isStandardUser.value)
+  console.log('assignedTenantId:', userStore.assignedTenantId)
+  console.log('user object:', userStore.user)
+
   await fetchLogoFromAPI()
-  
-  // Load temples for current tenant
   await loadTempleData()
-  
-  // Check if tenant is pending approval
+
   if (isTenantUser.value && !isMonitoringUser.value) {
     if (isUserPending.value) {
-      // Show notification about pending status
       showToast('Your account is pending approval from the administrator.', 'info')
     } else if (isUserRejected.value) {
       showToast('Your account has been rejected. Please contact support.', 'error')

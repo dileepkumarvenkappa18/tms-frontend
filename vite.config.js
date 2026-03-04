@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
   console.log("env.VITE_API_BASE_URL: ", env.VITE_API_BASE_URL)
 
   return {
+     base: '/',
     plugins: [
       vue(),
       VitePWA({

@@ -24,6 +24,7 @@
     "lucide-vue-next": "^0.516.0",
     "papaparse": "^5.5.3",
     "pinia": "^3.0.1",
+    "qrcode": "^1.5.4",
     "register-service-worker": "^1.7.2",
     "tailwindcss": "^4.1.8",
     "vee-validate": "^4.15.1",

@@ -531,6 +531,99 @@
                 {{ errors.upiId }}
               </div>
             </div>
+
+            <!-- Razorpay Divider -->
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-gray-200"></div>
+              </div>
+              <div class="relative flex justify-center">
+                <span class="px-3 bg-white text-sm text-gray-500 flex items-center gap-1">
+                  <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Razorpay Payment Gateway
+                </span>
+              </div>
+            </div>
+
+            <!-- Razorpay Info Banner -->
+            <div class="rounded-md bg-blue-50 border border-blue-200 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3 text-sm text-blue-700">
+                  <p class="font-medium mb-1">How to get your Razorpay credentials</p>
+                  <ol class="list-decimal list-inside space-y-1 text-blue-600">
+                    <li>Login to your <span class="font-medium">Razorpay Dashboard</span></li>
+                    <li>Go to <span class="font-medium">Settings → API Keys</span></li>
+                    <li>Generate or copy your <span class="font-medium">Key ID</span> and <span class="font-medium">Key Secret</span></li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <!-- Razorpay Key ID -->
+            <div>
+              <label for="razorpayKeyId" class="block text-sm font-medium text-gray-700 mb-1">
+                Razorpay Key ID <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="razorpayKeyId"
+                v-model="bankDetails.razorpayKeyId"
+                type="text"
+                class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-mono"
+                placeholder="rzp_live_XXXXXXXXXXXXXXXXXX"
+                required
+                autocomplete="off"
+                @input="clearError('razorpayKeyId')"
+              />
+              <p class="mt-1 text-xs text-gray-500">Starts with <code class="bg-gray-100 px-1 rounded">rzp_live_</code> or <code class="bg-gray-100 px-1 rounded">rzp_test_</code></p>
+              <div v-if="errors.razorpayKeyId" class="mt-1 text-xs text-red-600">
+                {{ errors.razorpayKeyId }}
+              </div>
+            </div>
+
+            <!-- Razorpay Key Secret -->
+            <div>
+              <label for="razorpaySecret" class="block text-sm font-medium text-gray-700 mb-1">
+                Razorpay Key Secret <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  id="razorpaySecret"
+                  v-model="bankDetails.razorpaySecret"
+                  :type="showRazorpaySecret ? 'text' : 'password'"
+                  class="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm font-mono"
+                  placeholder="Enter your Razorpay Key Secret"
+                  required
+                  autocomplete="off"
+                  @input="clearError('razorpaySecret')"
+                />
+                <button
+                  type="button"
+                  class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  @click="showRazorpaySecret = !showRazorpaySecret"
+                >
+                  <!-- Eye Open -->
+                  <svg v-if="!showRazorpaySecret" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <!-- Eye Closed -->
+                  <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                </button>
+              </div>
+              <p class="mt-1 text-xs text-gray-500">Keep this secret — never share it publicly</p>
+              <div v-if="errors.razorpaySecret" class="mt-1 text-xs text-red-600">
+                {{ errors.razorpaySecret }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -651,6 +744,9 @@ const isCaptchaVerified = ref(false)
 const widgetId = ref(null)
 const siteKey = import.meta.env.VITE_CLOUDFLARE_CAPTCHA_KEY || ''
 
+// ✅ NEW: Toggle visibility for Razorpay secret
+const showRazorpaySecret = ref(false)
+
 // Fixed role options
 const roleOptions = [
   { value: 'tenant', label: 'Temple Admin' },
@@ -678,7 +774,7 @@ const templeDetails = ref({
   description: ''
 })
 
-// Bank account details
+// Bank account details — ✅ Added razorpayKeyId and razorpaySecret
 const bankDetails = ref({
   accountHolderName: '',
   accountNumber: '',
@@ -686,28 +782,27 @@ const bankDetails = ref({
   branchName: '',
   ifscCode: '',
   accountType: '',
-  upiId: ''
+  upiId: '',
+  razorpayKeyId: '',
+  razorpaySecret: ''
 })
 
 // Watch for role changes to clear temple-related errors
 watch(() => form.value.role, (newRole, oldRole) => {
   if (oldRole === 'tenant' && newRole !== 'tenant') {
-    // Clear all temple and bank-related errors when switching away from temple admin
     const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription', 'logo', 'video']
-    const bankErrorKeys = ['accountHolderName', 'accountNumber', 'bankName', 'branchName', 'ifscCode', 'accountType', 'upiId']
+    const bankErrorKeys = ['accountHolderName', 'accountNumber', 'bankName', 'branchName', 'ifscCode', 'accountType', 'upiId', 'razorpayKeyId', 'razorpaySecret']
     const allKeys = [...templeErrorKeys, ...bankErrorKeys]
     
     allKeys.forEach(key => {
       delete errors.value[key]
     })
     
-    // Clear file uploads
     logoFile.value = null
     videoFile.value = null
     logoPreview.value = null
     videoPreview.value = null
     
-    // Clear bank details
     bankDetails.value = {
       accountHolderName: '',
       accountNumber: '',
@@ -715,7 +810,9 @@ watch(() => form.value.role, (newRole, oldRole) => {
       branchName: '',
       ifscCode: '',
       accountType: '',
-      upiId: ''
+      upiId: '',
+      razorpayKeyId: '',
+      razorpaySecret: ''
     }
   }
 })
@@ -738,13 +835,16 @@ const isFormValid = computed(() => {
                            logoFile.value &&
                            videoFile.value)
   
+  // ✅ Added razorpayKeyId and razorpaySecret to required bank fields
   const hasBankDetails = form.value.role !== 'tenant' ||
                         (bankDetails.value.accountHolderName &&
                          bankDetails.value.accountNumber &&
                          bankDetails.value.bankName &&
                          bankDetails.value.branchName &&
                          bankDetails.value.ifscCode &&
-                         bankDetails.value.accountType)
+                         bankDetails.value.accountType &&
+                         bankDetails.value.razorpayKeyId &&
+                         bankDetails.value.razorpaySecret)
                            
   return hasBasicFields && hasTempleDetails && hasBankDetails && Object.keys(errors.value).length === 0
 })
@@ -832,7 +932,7 @@ const selectRole = (role) => {
   
   if (role !== 'tenant') {
     const templeErrorKeys = ['templeName', 'templePlace', 'templeAddress', 'templePhoneNo', 'templeDescription', 'logo', 'video']
-    const bankErrorKeys = ['accountHolderName', 'accountNumber', 'bankName', 'branchName', 'ifscCode', 'accountType', 'upiId']
+    const bankErrorKeys = ['accountHolderName', 'accountNumber', 'bankName', 'branchName', 'ifscCode', 'accountType', 'upiId', 'razorpayKeyId', 'razorpaySecret']
     const allKeys = [...templeErrorKeys, ...bankErrorKeys]
     
     allKeys.forEach(key => delete errors.value[key])
@@ -927,6 +1027,20 @@ const validateForm = () => {
     // UPI validation (optional but if provided, validate format)
     if (bankDetails.value.upiId && !/^[\w.-]+@[\w]+$/.test(bankDetails.value.upiId)) {
       newErrors.upiId = 'Invalid UPI ID format'
+    }
+
+    // ✅ Razorpay Key ID validation
+    if (!bankDetails.value.razorpayKeyId) {
+      newErrors.razorpayKeyId = 'Razorpay Key ID is required'
+    } else if (!/^rzp_(live|test)_[A-Za-z0-9]+$/.test(bankDetails.value.razorpayKeyId)) {
+      newErrors.razorpayKeyId = 'Invalid Razorpay Key ID format (e.g. rzp_live_XXXX or rzp_test_XXXX)'
+    }
+
+    // ✅ Razorpay Secret validation
+    if (!bankDetails.value.razorpaySecret) {
+      newErrors.razorpaySecret = 'Razorpay Key Secret is required'
+    } else if (bankDetails.value.razorpaySecret.length < 20) {
+      newErrors.razorpaySecret = 'Razorpay Key Secret appears to be too short'
     }
     
     if (templeDetails.value.name && 
@@ -1026,6 +1140,10 @@ const handleRegister = async () => {
       if (bankDetails.value.upiId) {
         formData.append('upiId', bankDetails.value.upiId)
       }
+
+      // ✅ Razorpay credentials
+      formData.append('razorpayKeyId', bankDetails.value.razorpayKeyId)
+      formData.append('razorpaySecret', bankDetails.value.razorpaySecret)
     }
 
     try {
@@ -1117,6 +1235,7 @@ const resetForm = () => {
     description: ''
   }
 
+  // ✅ Reset includes razorpay fields
   bankDetails.value = {
     accountHolderName: '',
     accountNumber: '',
@@ -1124,7 +1243,9 @@ const resetForm = () => {
     branchName: '',
     ifscCode: '',
     accountType: '',
-    upiId: ''
+    upiId: '',
+    razorpayKeyId: '',
+    razorpaySecret: ''
   }
 
   logoFile.value = null
@@ -1134,6 +1255,7 @@ const resetForm = () => {
 
   errors.value = {}
   globalError.value = ''
+  showRazorpaySecret.value = false
 }
 
 const goToLogin = () => {
