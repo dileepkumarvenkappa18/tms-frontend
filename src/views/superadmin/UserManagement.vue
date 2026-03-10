@@ -217,17 +217,31 @@
                       <li><strong>Email</strong> - Valid email address</li>
                       <li><strong>Phone</strong> - Phone number</li>
                       <li><strong>Password</strong> - User password</li>
-                      <li><strong>Role</strong> - User role ({{ availableRoles.join(', ') }})</li>
+                      <li>
+                        <strong>Role</strong> - User role
+                        ({{ bulkAllowedRoles.join(', ') }})
+                      </li>
                       <li><strong>Status</strong> - active or inactive</li>
-                      <li class="text-amber-700 font-medium mt-2"><strong>For Temple Admin role, add these additional columns:</strong></li>
-                      <li class="ml-4"><strong>Temple Name</strong> - Name of the temple</li>
-                      <li class="ml-4"><strong>Temple Place</strong> - City, State location</li>
-                      <li class="ml-4"><strong>Temple Address</strong> - Complete address</li>
-                      <li class="ml-4"><strong>Temple Phone</strong> - Temple contact number</li>
-                      <li class="ml-4"><strong>Temple Description</strong> - Brief temple description</li>
-                      <li><strong style="color:red;">CSV Warning:</strong> Commas (,) are not allowed in field values like Address, Description and Place.</li>
                     </ul>
-                    <p class="mt-2 text-xs text-blue-600">Note: Temple fields are required only for users with templeadmin role.</p>
+
+                    <!-- Temple Admin blocked notice -->
+                    <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p class="text-red-700 font-medium flex items-center">
+                        <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <strong>Temple Admin role is NOT supported in bulk upload.</strong>
+                      </p>
+                      <p class="text-red-600 text-xs mt-1">
+                        To create a Temple Admin account, please use the
+                        <strong>'Create User'</strong> button individually. Any row containing the
+                        <strong>'templeadmin'</strong> role will be rejected.
+                      </p>
+                    </div>
+
+                    <p class="mt-2 text-xs text-blue-600">
+                      <strong>CSV Warning:</strong> Commas (,) are not allowed in field values like Address, Description and Place.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -278,7 +292,10 @@
                 </div>
               </div>
 
-              <div v-if="fileError" class="mt-2 text-sm text-red-600">
+              <div v-if="fileError" class="mt-2 text-sm text-red-600 flex items-center">
+                <svg class="w-4 h-4 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
                 {{ fileError }}
               </div>
             </div>
@@ -309,7 +326,6 @@
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Password</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temple Info</th>
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -319,27 +335,20 @@
                     <td class="px-4 py-3 text-sm text-gray-500">{{ row.phone }}</td>
                     <td class="px-4 py-3 text-sm text-gray-500">{{ row.password ? '****' : 'Missing' }}</td>
                     <td class="px-4 py-3 text-sm">
-                      <span class="px-2 py-1 text-xs rounded-full"
-                            :class="isValidRole(row.role) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                      <span
+                        class="px-2 py-1 text-xs rounded-full"
+                        :class="isValidRole(row.role) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      >
                         {{ row.role }}
                       </span>
                     </td>
                     <td class="px-4 py-3 text-sm">
-                      <span class="px-2 py-1 text-xs rounded-full"
-                            :class="isValidStatus(row.status) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                      <span
+                        class="px-2 py-1 text-xs rounded-full"
+                        :class="isValidStatus(row.status) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                      >
                         {{ row.status }}
                       </span>
-                    </td>
-                    <td class="px-4 py-3 text-sm">
-                      <div v-if="row.role && row.role.toLowerCase() === 'templeadmin'">
-                        <span v-if="row.temple_name" class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                          ✓ Temple Details
-                        </span>
-                        <span v-else class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
-                          ✗ Missing
-                        </span>
-                      </div>
-                      <span v-else class="text-xs text-gray-400">N/A</span>
                     </td>
                   </tr>
                 </tbody>
@@ -763,7 +772,7 @@ import api from '@/services/api'
 const { success, error } = useToast()
 const superAdminStore = useSuperAdminStore()
 
-// State variables
+// ─── State ────────────────────────────────────────────────────────────────────
 const isLoading = computed(() => superAdminStore.loadingUserAction)
 const isRolesLoading = computed(() => superAdminStore.loadingUserRoles)
 const isUsersLoading = computed(() => superAdminStore.loadingUsers)
@@ -792,26 +801,31 @@ const bulkUploadResult = ref(null)
 const tenantsData = ref([])
 const isTenantsLoading = ref(false)
 
-// Reactive data
+// ─── Reactive data ────────────────────────────────────────────────────────────
 const roles = computed(() => superAdminStore.userRoles || [])
 const users = computed(() => superAdminStore.users || [])
 const availableRoles = computed(() => roles.value.map(role => role.role_name))
 
-// Filter configuration
+// ✅ Roles allowed in bulk upload — templeadmin is intentionally excluded
+const BLOCKED_BULK_ROLES = ['templeadmin']
+const bulkAllowedRoles = computed(() =>
+  availableRoles.value.filter(r => !BLOCKED_BULK_ROLES.includes(r.toLowerCase()))
+)
+
+// ─── Filter config ────────────────────────────────────────────────────────────
 const userFilters = [
   { value: 'internal', label: 'Internal Admins' },
   { value: 'volunteers', label: 'Volunteers' },
   { value: 'devotees', label: 'Devotees' }
 ]
 
-// Role categorization
 const roleCategories = {
   internal: ['superadmin', 'templeadmin', 'standarduser', 'monitoringuser'],
   volunteers: ['volunteer', '4'],
   devotees: ['devotee', 'user', '3']
 }
 
-// Helper functions
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const normalizeRoleName = (role) => {
   let name = ''
   if (typeof role === 'object' && role) {
@@ -843,12 +857,11 @@ const resolveTempleApproval = (u) => {
 
   if (boolCandidates.includes(true)) return { known: true, approved: true }
 
-  const hasApproved =
-    statusCandidates.some((x) =>
-      x === 'approved' ||
-      x === 'approve' ||
-      (x.includes('approve') && !x.includes('not') && !x.includes('un') && !x.includes('reject') && !x.includes('pending'))
-    )
+  const hasApproved = statusCandidates.some((x) =>
+    x === 'approved' ||
+    x === 'approve' ||
+    (x.includes('approve') && !x.includes('not') && !x.includes('un') && !x.includes('reject') && !x.includes('pending'))
+  )
   if (hasApproved) return { known: true, approved: true }
 
   const negativeSet = ['pending', 'under_review', 'underreview', 'awaiting_approval', 'awaitingapproval', 'not_approved', 'notapproved', 'rejected', 'declined']
@@ -861,47 +874,39 @@ const resolveTempleApproval = (u) => {
 const getUserCategory = (user) => {
   const roleName = normalizeRoleName(user?.role)
   const roleId = String(user?.role_id || user?.role?.id || '')
-  
-  if (roleCategories.internal.includes(roleName)) {
-    return 'internal'
-  } else if (roleCategories.volunteers.includes(roleName) || roleCategories.volunteers.includes(roleId)) {
-    return 'volunteers'
-  } else if (roleCategories.devotees.includes(roleName) || roleCategories.devotees.includes(roleId)) {
-    return 'devotees'
-  }
-  
+
+  if (roleCategories.internal.includes(roleName)) return 'internal'
+  if (roleCategories.volunteers.includes(roleName) || roleCategories.volunteers.includes(roleId)) return 'volunteers'
+  if (roleCategories.devotees.includes(roleName) || roleCategories.devotees.includes(roleId)) return 'devotees'
   return 'other'
 }
 
 const getUserCountByFilter = (filterValue) => {
   const list = baseFilteredUsers.value ?? []
-  const count = list.filter(user => getUserCategory(user) === filterValue).length
-  return count || 0
+  return list.filter(user => getUserCategory(user) === filterValue).length || 0
 }
 
 const getUserInitials = (fullName) => {
   if (!fullName) return '??'
   const names = fullName.split(' ')
-  if (names.length >= 2) {
-    return (names[0][0] + names[1][0]).toUpperCase()
-  }
+  if (names.length >= 2) return (names[0][0] + names[1][0]).toUpperCase()
   return fullName.substring(0, 2).toUpperCase()
 }
 
-const baseFilteredUsers = computed(() => {
-  return (users.value || []).filter((u) => {
+const baseFilteredUsers = computed(() =>
+  (users.value || []).filter((u) => {
     if (!isTempleAdminRole(u)) return true
     const st = resolveTempleApproval(u)
     if (st.known) return st.approved
     return true
   })
-})
+)
 
-const filteredUsers = computed(() => {
-  return baseFilteredUsers.value.filter(user => getUserCategory(user) === activeFilter.value)
-})
+const filteredUsers = computed(() =>
+  baseFilteredUsers.value.filter(user => getUserCategory(user) === activeFilter.value)
+)
 
-// Form state
+// ─── Form state ───────────────────────────────────────────────────────────────
 const form = ref({
   fullName: '',
   email: '',
@@ -922,7 +927,7 @@ const form = ref({
 
 const errors = ref({})
 
-// ✅ FIXED: Logo upload handler
+// ─── Logo upload ──────────────────────────────────────────────────────────────
 const handleLogoUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
@@ -943,47 +948,33 @@ const handleLogoUpload = async (event) => {
   try {
     isUploadingFile.value = true
 
-    // Preview
     const reader = new FileReader()
-    reader.onload = (e) => {
-      logoPreview.value = e.target.result
-    }
+    reader.onload = (e) => { logoPreview.value = e.target.result }
     reader.readAsDataURL(file)
 
     const formData = new FormData()
     formData.append('logo', file)
-    
-    // ✅ Send targetUserId when editing
+
     if (isEditing.value && editingUserId.value) {
       formData.append('targetUserId', editingUserId.value.toString())
-      console.log('📤 Uploading logo for user ID:', editingUserId.value)
     }
-
-    console.log('📤 Uploading logo:', file.name, file.size, file.type)
 
     const response = await api.post('/superadmin/upload/logo', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // ✅ FIX: Get URL from response (could be response.url or response.data.url)
-    console.log('✅ Full response object:', response)
-    
     const logoUrl = response.url || response.data?.url
 
     if (logoUrl) {
       form.value.templeDetails.logoUrl = logoUrl
       logoUploadError.value = ''
       success('Logo uploaded successfully!')
-      console.log('✅ Logo URL set to:', logoUrl)
     } else {
-      console.error('❌ No URL found. Response:', response)
       throw new Error('No URL in logo upload response')
     }
   } catch (err) {
-    console.error('❌ Logo upload error:', err)
     logoUploadError.value = err.response?.data?.error || err.message || 'Failed to upload logo'
     error(logoUploadError.value)
-
     logoPreview.value = null
     form.value.templeDetails.logoUrl = ''
   } finally {
@@ -991,13 +982,13 @@ const handleLogoUpload = async (event) => {
   }
 }
 
-// ✅ FIXED: Video upload handler
+// ─── Video upload ─────────────────────────────────────────────────────────────
 const handleVideoUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
   videoUploadError.value = ''
-  
+
   const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/webm']
   if (!validTypes.includes(file.type)) {
     videoUploadError.value = 'Invalid file type. Only MP4, AVI, MOV, WMV, and WebM are allowed.'
@@ -1011,50 +1002,35 @@ const handleVideoUpload = async (event) => {
 
   try {
     isUploadingFile.value = true
-    
-    // Create preview
+
     const reader = new FileReader()
-    reader.onload = (e) => {
-      videoPreview.value = e.target.result
-    }
+    reader.onload = (e) => { videoPreview.value = e.target.result }
     reader.readAsDataURL(file)
 
     const formData = new FormData()
     formData.append('video', file)
-    
-    // ✅ Send targetUserId when editing
+
     if (isEditing.value && editingUserId.value) {
       formData.append('targetUserId', editingUserId.value.toString())
-      console.log('📤 Uploading video for user ID:', editingUserId.value)
     }
-
-    console.log('📤 Uploading video:', file.name, 'Size:', file.size, 'Type:', file.type)
 
     const response = await api.post('/superadmin/upload/video', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // ✅ FIX: Get URL from response (could be response.url or response.data.url)
-    console.log('✅ Full response object:', response)
-    
     const videoUrl = response.url || response.data?.url
 
     if (videoUrl) {
       form.value.templeDetails.introVideoUrl = videoUrl
       videoUploadError.value = ''
       success('Video uploaded successfully!')
-      console.log('✅ Video URL set to:', videoUrl)
     } else {
-      console.error('❌ No URL found. Response:', response)
       throw new Error('No URL in video upload response')
     }
   } catch (err) {
-    console.error('❌ Video upload error:', err)
-    
     const errorMessage = err.response?.data?.error || err.message || 'Failed to upload video'
     videoUploadError.value = errorMessage
     error(errorMessage)
-    
     videoPreview.value = null
     form.value.templeDetails.introVideoUrl = ''
   } finally {
@@ -1072,7 +1048,6 @@ const removeLogo = async () => {
       console.error('Failed to delete logo from server:', err)
     }
   }
-  
   form.value.templeDetails.logoUrl = ''
   logoPreview.value = null
   logoUploadError.value = ''
@@ -1088,16 +1063,13 @@ const removeVideo = async () => {
       console.error('Failed to delete video from server:', err)
     }
   }
-  
   form.value.templeDetails.introVideoUrl = ''
   videoPreview.value = null
   videoUploadError.value = ''
 }
 
-// Modal functions
-const openCreateModal = () => {
-  showCreateModal.value = true
-}
+// ─── Modal helpers ────────────────────────────────────────────────────────────
+const openCreateModal = () => { showCreateModal.value = true }
 
 const openBulkUploadModal = () => {
   showBulkUploadModal.value = true
@@ -1113,35 +1085,22 @@ const closeBulkUploadModal = () => {
 const fetchTenantsData = async () => {
   try {
     isTenantsLoading.value = true
-    console.log('Fetching tenants data...')
-
     const response = await api.get('/tenantsInfo?status=active')
-
     tenantsData.value = response.data?.data || []
-
-    console.log('Tenants loaded:', tenantsData.value.length)
-  } catch (error) {
-    console.error('Error fetching tenants:', error)
+  } catch (err) {
+    console.error('Error fetching tenants:', err)
     tenantsData.value = []
   } finally {
     isTenantsLoading.value = false
   }
 }
 
-// Fetch data on mount
 onMounted(async () => {
   await superAdminStore.refreshUserData()
   await fetchTenantsData()
 })
 
-const getTenantByUser = (user) => {
-  if (!user?.tenant_id) return null
-  return tenantsData.value.find(
-    tenant => tenant.id === user.tenant_id
-  )
-}
-
-// Helper functions
+// ─── Display helpers ──────────────────────────────────────────────────────────
 const getRoleDisplay = (role) => {
   if (typeof role === 'object' && role?.description) return role.description
   if (typeof role === 'object' && role?.role_name) return role.role_name
@@ -1156,17 +1115,23 @@ const isAssignDisabled = (user) => {
   return isStdOrMon && inactive
 }
 
-// CSV validation
-const isValidRole = (role) => availableRoles.value.includes(role)
+// ─── CSV validation ───────────────────────────────────────────────────────────
+// ✅ Returns false for templeadmin — shows red badge in preview
+const isValidRole = (role) => {
+  if (!role) return false
+  if (BLOCKED_BULK_ROLES.includes(role.toLowerCase())) return false
+  return availableRoles.value.includes(role)
+}
+
 const isValidStatus = (status) => ['active', 'inactive'].includes(status?.toLowerCase())
 
-// Download sample CSV
+// ─── Download sample CSV (no templeadmin row, no temple columns) ──────────────
 const downloadSampleCSV = () => {
   const csvContent = [
-    ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status', 'Temple Name', 'Temple Place', 'Temple Address', 'Temple Phone', 'Temple Description'],
-    ['John Doe', 'john.doe@example.com', '+1234567890', 'password123', 'devotee', 'active', '', '', '', '', ''],
-    ['Jane Smith', 'jane.smith@example.com', '+1234567891', 'password456', 'standarduser', 'active', '', '', '', '', ''],
-    ['Mike Johnson', 'mike.johnson@example.com', '+1234567892', 'password789', 'templeadmin', 'active', 'Shiva Temple', 'New Delhi Delhi', '123 Temple Street New Delhi', '+919876543210', 'Ancient temple dedicated to Lord Shiva']
+    ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status'],
+    ['John Doe', 'john.doe@example.com', '+1234567890', 'password123', 'devotee', 'active'],
+    ['Jane Smith', 'jane.smith@example.com', '+1234567891', 'password456', 'standarduser', 'active'],
+    ['Mike Johnson', 'mike.johnson@example.com', '+1234567892', 'password789', 'volunteer', 'active']
   ]
   const csvString = csvContent.map(row => row.map(field => `"${field}"`).join(',')).join('\n')
   const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
@@ -1180,7 +1145,7 @@ const downloadSampleCSV = () => {
   document.body.removeChild(link)
 }
 
-// File upload handlers for CSV
+// ─── File handling ────────────────────────────────────────────────────────────
 const handleFileSelect = (event) => {
   const file = event.target.files[0]
   if (file) processFile(file)
@@ -1205,81 +1170,70 @@ const processFile = (file) => {
   const reader = new FileReader()
   reader.onload = (e) => {
     try {
-      const csvText = e.target.result
-      parseCsvData(csvText)
+      parseCsvData(e.target.result)
     } catch (err) {
       fileError.value = 'Error reading the file. Please try again.'
     }
   }
-  reader.onerror = () => {
-    fileError.value = 'Error reading the file. Please try again.'
-  }
+  reader.onerror = () => { fileError.value = 'Error reading the file. Please try again.' }
   reader.readAsText(file)
 }
 
+// ✅ parseCsvData — blocks templeadmin rows immediately with a clear error
 const parseCsvData = (csvText) => {
   try {
     const lines = csvText.split('\n').filter(line => line.trim())
+
     if (lines.length < 2) {
       fileError.value = 'CSV file must contain at least a header row and one data row'
       return
     }
-    const headers = lines[0].split(',').map(h => h.replace(/\"/g, '').trim())
+
+    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
     const requiredHeaders = ['Full Name', 'Email', 'Phone', 'Password', 'Role', 'Status']
-    
+
     const missingHeaders = requiredHeaders.filter(expected => !headers.includes(expected))
     if (missingHeaders.length > 0) {
       fileError.value = `Missing required CSV headers: ${missingHeaders.join(', ')}`
       return
     }
-    
+
     const data = []
+
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.replace(/\"/g, '').trim())
+      const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim())
+
       if (values.length < requiredHeaders.length) {
         fileError.value = `Row ${i + 1} has ${values.length} columns but expected at least ${requiredHeaders.length}`
         return
       }
-      
+
       const rowData = {
         full_name: values[headers.indexOf('Full Name')],
-        email: values[headers.indexOf('Email')],
-        phone: values[headers.indexOf('Phone')],
-        password: values[headers.indexOf('Password')],
-        role: values[headers.indexOf('Role')],
-        status: values[headers.indexOf('Status')]
+        email:     values[headers.indexOf('Email')],
+        phone:     values[headers.indexOf('Phone')],
+        password:  values[headers.indexOf('Password')],
+        role:      values[headers.indexOf('Role')],
+        status:    values[headers.indexOf('Status')]
       }
-      
-      if (headers.includes('Temple Name')) {
-        rowData.temple_name = values[headers.indexOf('Temple Name')] || ''
+
+      // ✅ Block templeadmin role — stop parsing immediately
+      if (rowData.role && BLOCKED_BULK_ROLES.includes(rowData.role.toLowerCase())) {
+        fileError.value =
+          `Row ${i + 1}: The 'templeadmin' role is not allowed in bulk upload. ` +
+          `Please use the 'Create User' button to create Temple Admin accounts individually.`
+        csvData.value = []
+        return
       }
-      if (headers.includes('Temple Place')) {
-        rowData.temple_place = values[headers.indexOf('Temple Place')] || ''
-      }
-      if (headers.includes('Temple Address')) {
-        rowData.temple_address = values[headers.indexOf('Temple Address')] || ''
-      }
-      if (headers.includes('Temple Phone')) {
-        rowData.temple_phone = values[headers.indexOf('Temple Phone')] || ''
-      }
-      if (headers.includes('Temple Description')) {
-        rowData.temple_description = values[headers.indexOf('Temple Description')] || ''
-      }
-      
+
       if (!rowData.full_name || !rowData.email || !rowData.phone || !rowData.password || !rowData.role) {
         fileError.value = `Row ${i + 1} is missing required fields`
         return
       }
-      
-      if (rowData.role.toLowerCase() === 'templeadmin') {
-        if (!rowData.temple_name || !rowData.temple_place || !rowData.temple_address || !rowData.temple_phone || !rowData.temple_description) {
-          fileError.value = `Row ${i + 1}: Temple Admin role requires all temple details`
-          return
-        }
-      }
-      
+
       data.push(rowData)
     }
+
     csvData.value = data
   } catch (err) {
     fileError.value = 'Error parsing CSV file. Please check the format and try again.'
@@ -1289,9 +1243,8 @@ const parseCsvData = (csvText) => {
 const clearCsvData = () => {
   csvData.value = []
   fileError.value = ''
-  if (window.document.querySelector('input[type="file"]')) {
-    window.document.querySelector('input[type="file"]').value = ''
-  }
+  const fileInput = window.document.querySelector('input[type="file"]')
+  if (fileInput) fileInput.value = ''
 }
 
 const uploadBulkUsers = async () => {
@@ -1320,17 +1273,19 @@ const uploadBulkUsers = async () => {
   }
 }
 
-// Form validation
+// ─── Form validation ──────────────────────────────────────────────────────────
 const isFormValid = computed(() => {
   if (!form.value.fullName || !form.value.email || (!isEditing.value && !form.value.password) || !form.value.phone || !form.value.role) return false
   if (form.value.role === 'templeadmin') {
-    if (!form.value.templeDetails.name || !form.value.templeDetails.place || !form.value.templeDetails.address || !form.value.templeDetails.phoneNumber || !form.value.templeDetails.description) return false
+    const t = form.value.templeDetails
+    if (!t.name || !t.place || !t.address || !t.phoneNumber || !t.description) return false
   }
   return Object.keys(errors.value).length === 0
 })
 
 const validateForm = () => {
   errors.value = {}
+
   if (!form.value.fullName.trim()) errors.value.fullName = 'Full name is required'
   else if (form.value.fullName.trim().length < 2) errors.value.fullName = 'Full name must be at least 2 characters'
 
@@ -1348,9 +1303,9 @@ const validateForm = () => {
   if (!form.value.role) errors.value.role = 'Please select a user role'
 
   if (form.value.role === 'templeadmin') {
-    if (!form.value.templeDetails.name) errors.value.templeName = 'Temple name is required'
-    if (!form.value.templeDetails.place) errors.value.templePlace = 'Temple location is required'
-    if (!form.value.templeDetails.address) errors.value.templeAddress = 'Temple address is required'
+    if (!form.value.templeDetails.name)        errors.value.templeName        = 'Temple name is required'
+    if (!form.value.templeDetails.place)       errors.value.templePlace       = 'Temple location is required'
+    if (!form.value.templeDetails.address)     errors.value.templeAddress     = 'Temple address is required'
     if (!form.value.templeDetails.phoneNumber) errors.value.templePhoneNumber = 'Temple phone number is required'
     if (!form.value.templeDetails.description?.trim()) errors.value.templeDescription = 'Temple description is required'
   }
@@ -1364,17 +1319,15 @@ const handleSubmitUser = async () => {
   try {
     let userData = {
       fullName: form.value.fullName,
-      email: form.value.email,
-      phone: form.value.phone
+      email:    form.value.email,
+      phone:    form.value.phone
     }
 
-    // ✅ role + password ONLY on create
     if (!isEditing.value) {
-      userData.role = form.value.role
+      userData.role     = form.value.role
       userData.password = form.value.password
     }
 
-    // Temple admin validation + fields
     if (form.value.role === 'templeadmin') {
       const temple = form.value.templeDetails
 
@@ -1383,19 +1336,16 @@ const handleSubmitUser = async () => {
         return
       }
 
-      // ✅ CRITICAL FIX: Always include logoUrl and introVideoUrl, even if empty strings
       userData = {
         ...userData,
-        templeName: temple.name,
-        templePlace: temple.place,
-        templeAddress: temple.address || '',
-        templePhoneNo: temple.phoneNumber || '',
+        templeName:       temple.name,
+        templePlace:      temple.place,
+        templeAddress:    temple.address     || '',
+        templePhoneNo:    temple.phoneNumber || '',
         templeDescription: temple.description || '',
-        logoUrl: temple.logoUrl || '',  // Always send, even if empty
-        introVideoUrl: temple.introVideoUrl || ''  // Always send, even if empty
+        logoUrl:          temple.logoUrl      || '',
+        introVideoUrl:    temple.introVideoUrl || ''
       }
-      
-      console.log('📤 Sending user data with temple details:', userData)
     }
 
     let result
@@ -1408,7 +1358,6 @@ const handleSubmitUser = async () => {
     if (result?.message) {
       registrationSuccess.value = true
       success(result.message)
-
       setTimeout(() => {
         resetForm()
         showCreateModal.value = false
@@ -1423,7 +1372,7 @@ const handleSubmitUser = async () => {
   }
 }
 
-// Toggle user status
+// ─── Toggle status ────────────────────────────────────────────────────────────
 const toggleUserStatus = async (user) => {
   try {
     const newStatus = (user.status || '').toLowerCase() === 'active' ? 'inactive' : 'active'
@@ -1438,95 +1387,61 @@ const toggleUserStatus = async (user) => {
   }
 }
 
-// ✅ Helper function to construct full media URLs
+// ─── Media URL helper ─────────────────────────────────────────────────────────
 const getFullMediaUrl = (relativePath) => {
   if (!relativePath) return null
-  
-  // If already a full URL, return as-is
-  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
-    return relativePath
-  }
-  
-  // Construct full URL from relative path
-  // Assuming your API base URL is available from the api service
+  if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) return relativePath
   const baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin
   return `${baseUrl}${relativePath.startsWith('/') ? '' : '/'}${relativePath}`
 }
 
-// ✅ FIXED: Edit user with proper media preview handling and temple details fetching
+// ─── Edit user ────────────────────────────────────────────────────────────────
 const editUser = async (user) => {
   isEditing.value = true
   editingUserId.value = user.id
-  
-  console.log('📝 Editing user:', user)
-  
-  // Check if user is templeadmin and needs temple details
+
   const isTempleAdmin = normalizeRoleName(user?.role) === 'templeadmin'
-  
   let templeDetails = user.temple_details
-  
-  // If templeadmin but no temple_details, fetch them from the API
+
   if (isTempleAdmin && !templeDetails) {
-    console.log('🔍 Fetching temple details for user:', user.id)
     try {
-      isLoading.value = true
       const response = await api.get(`/superadmin/users/${user.id}`)
-      console.log('📦 Fetched user details:', response)
-      
       if (response && response.data) {
         templeDetails = response.data.temple_details
-        console.log('✅ Got temple details:', templeDetails)
       }
     } catch (err) {
       console.error('❌ Failed to fetch temple details:', err)
       error('Failed to load temple details')
-    } finally {
-      isLoading.value = false
     }
   }
-  
-  console.log('📷 Logo URL:', templeDetails?.logo_url)
-  console.log('🎥 Video URL:', templeDetails?.intro_video_url)
-  
-  // Construct full URLs for media
-  const logoUrl = templeDetails?.logo_url 
-    ? getFullMediaUrl(templeDetails.logo_url)
-    : ''
-  
-  const videoUrl = templeDetails?.intro_video_url
-    ? getFullMediaUrl(templeDetails.intro_video_url)
-    : ''
-  
-  console.log('📷 Full logo URL:', logoUrl)
-  console.log('🎥 Full video URL:', videoUrl)
-  
+
+  const logoUrl  = templeDetails?.logo_url        ? getFullMediaUrl(templeDetails.logo_url)        : ''
+  const videoUrl = templeDetails?.intro_video_url ? getFullMediaUrl(templeDetails.intro_video_url) : ''
+
   form.value = {
     fullName: user.full_name || '',
-    email: user.email || '',
-    phone: user.phone || '',
-    role: (typeof user.role === 'object' ? user.role?.role_name : user.role) || '',
+    email:    user.email    || '',
+    phone:    user.phone    || '',
+    role:     (typeof user.role === 'object' ? user.role?.role_name : user.role) || '',
     isActive: (user.status || '').toLowerCase() === 'active',
     templeDetails: {
-      name: templeDetails?.temple_name || '',
-      place: templeDetails?.temple_place || '',
-      address: templeDetails?.temple_address || '',
-      phoneNumber: templeDetails?.temple_phone_no || '',
-      description: templeDetails?.temple_description || '',
-      logoUrl: logoUrl,
+      name:          templeDetails?.temple_name        || '',
+      place:         templeDetails?.temple_place       || '',
+      address:       templeDetails?.temple_address     || '',
+      phoneNumber:   templeDetails?.temple_phone_no    || '',
+      description:   templeDetails?.temple_description || '',
+      logoUrl,
       introVideoUrl: videoUrl
     }
   }
-  
-  // ✅ Set media previews for existing files with full URLs
-  logoPreview.value = logoUrl
+
+  logoPreview.value  = logoUrl
   videoPreview.value = videoUrl
-  
-  console.log('✅ Logo preview set to:', logoPreview.value)
-  console.log('✅ Video preview set to:', videoPreview.value)
-  
+
   showCreateModal.value = true
 }
-// Cancel form
+
+// ─── Cancel / Reset ───────────────────────────────────────────────────────────
 const cancelUserForm = () => {
   showCreateModal.value = false
   setTimeout(() => {
@@ -1537,29 +1452,28 @@ const cancelUserForm = () => {
   }, 300)
 }
 
-// Reset form
 const resetForm = () => {
   form.value = {
     fullName: '',
-    email: '',
+    email:    '',
     password: '',
-    phone: '',
-    role: '',
+    phone:    '',
+    role:     '',
     isActive: true,
     templeDetails: {
-      name: '',
-      place: '',
-      address: '',
-      phoneNumber: '',
-      description: '',
-      logoUrl: '',
+      name:          '',
+      place:         '',
+      address:       '',
+      phoneNumber:   '',
+      description:   '',
+      logoUrl:       '',
       introVideoUrl: ''
     }
   }
-  errors.value = {}
-  logoPreview.value = null
-  videoPreview.value = null
-  logoUploadError.value = ''
+  errors.value        = {}
+  logoPreview.value   = null
+  videoPreview.value  = null
+  logoUploadError.value  = ''
   videoUploadError.value = ''
 }
 </script>
