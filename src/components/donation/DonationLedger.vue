@@ -446,7 +446,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useDonationStore } from '@/stores/donation'
 import api from '@/plugins/axios'
 
@@ -847,7 +847,5 @@ const refreshData = async () => {
   await Promise.all([fetchDashboard(), fetchDonations()]);
 };
 
-onMounted(async () => {
-  await refreshData();
-});
+
 </script>

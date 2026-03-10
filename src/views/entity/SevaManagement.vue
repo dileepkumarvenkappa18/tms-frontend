@@ -1543,10 +1543,10 @@ const loadSevas = async () => {
 
 // Load seva catalog
 const loadSevaCatalog = async () => {
-  console.log('Loading seva catalog')
+  console.log('Loading seva catalog for entity:', entityId)
   try {
     loadingSevaCatalog.value = true
-    const result = await sevaService.getSevas({ limit: 1000 })
+    const result = await sevaService.getSevas({ limit: 1000, entity_id: entityId })
     
     if (result.success) {
       sevaCatalog.value = result.data || []

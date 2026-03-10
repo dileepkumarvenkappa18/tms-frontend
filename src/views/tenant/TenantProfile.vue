@@ -321,7 +321,7 @@
           </div>
         </BaseCard>
 
-        <!-- 🆕 Bank Account Details -->
+        <!-- Bank Account Details -->
         <BaseCard class="mb-6">
           <div class="p-6">
             <div class="flex items-center gap-3 mb-6">
@@ -418,6 +418,121 @@
           </div>
         </BaseCard>
 
+        <!-- Razorpay Integration — always read-only -->
+        <BaseCard class="mb-6">
+          <div class="p-6">
+            <!-- Section header -->
+            <div class="flex items-center gap-3 mb-2">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <h2 class="text-xl font-bold text-gray-800">Razorpay Integration</h2>
+              <span class="ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Read only
+              </span>
+            </div>
+            <p class="text-sm text-gray-500 mb-6">
+              These credentials are managed by your platform administrator and cannot be edited here.
+            </p>
+
+            <div v-if="formData.razorpay_key_id || formData.razorpay_secret" class="grid md:grid-cols-2 gap-6">
+
+              <!-- Razorpay Key ID -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Razorpay Key ID
+                </label>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-mono text-sm text-gray-800 truncate select-all">
+                    {{ formData.razorpay_key_id || '—' }}
+                  </div>
+                  <button
+                    type="button"
+                    @click="copyToClipboard(formData.razorpay_key_id, 'key')"
+                    class="flex-shrink-0 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
+                    title="Copy Key ID"
+                  >
+                    <svg v-if="copiedField !== 'key'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                </div>
+                <!-- Live / Test badge -->
+                <p class="mt-1.5 text-xs">
+                  <span
+                    :class="formData.razorpay_key_id?.startsWith('rzp_live_')
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-yellow-100 text-yellow-700'"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium"
+                  >
+                    <span class="w-1.5 h-1.5 rounded-full inline-block"
+                      :class="formData.razorpay_key_id?.startsWith('rzp_live_') ? 'bg-green-500' : 'bg-yellow-500'"
+                    ></span>
+                    {{ formData.razorpay_key_id?.startsWith('rzp_live_') ? 'Live Mode' : 'Test Mode' }}
+                  </span>
+                </p>
+              </div>
+
+              <!-- Razorpay Secret -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Razorpay Secret
+                </label>
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-mono text-sm text-gray-800 truncate select-all">
+                    {{ showSecret ? formData.razorpay_secret : maskedSecret }}
+                  </div>
+                  <!-- Toggle reveal -->
+                  <button
+                    type="button"
+                    @click="showSecret = !showSecret"
+                    class="flex-shrink-0 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
+                    :title="showSecret ? 'Hide secret' : 'Reveal secret'"
+                  >
+                    <svg v-if="!showSecret" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  </button>
+                  <!-- Copy -->
+                  <button
+                    type="button"
+                    @click="copyToClipboard(formData.razorpay_secret, 'secret')"
+                    class="flex-shrink-0 p-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-gray-500 hover:text-gray-700 transition-colors"
+                    title="Copy Secret"
+                  >
+                    <svg v-if="copiedField !== 'secret'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <svg v-else class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                </div>
+                <p class="mt-1.5 text-xs text-gray-400">Click the eye icon to reveal your secret key</p>
+              </div>
+
+            </div>
+
+            <!-- No credentials state -->
+            <div v-else class="text-center py-8 text-gray-400">
+              <svg class="w-10 h-10 mx-auto mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <p class="text-sm">No Razorpay credentials assigned yet. Please contact your administrator.</p>
+            </div>
+          </div>
+        </BaseCard>
+
         <!-- Action Buttons -->
         <BaseCard v-if="isEditing">
           <div class="flex gap-4 justify-end p-6">
@@ -463,53 +578,45 @@ import BaseButton from '@/components/common/BaseButton.vue'
 
 const { success, error: showError } = useToast()
 
-// Helper function to convert relative URLs to proper URLs
-// Since baseURL is '/api/v1', we need to handle media files differently
-//const BACKEND_URL = import.meta.env.VITE_BACKEND_URL
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL
 
 const getMediaUrl = (path) => {
   let test
   if (!path) return ''
-
-  // If already absolute
   if (path.startsWith('http')) {  
     test = convertToHttps(path)
-    console.log("test: ",test)
     return test
   }
-
-  // ✅ Backend already serves /uploads/*  
-  console.log("getMediaUrl BACKEND_URL: ",BACKEND_URL)
-  console.log("getMediaUrl path: ",path)
   test = convertToHttps(`${BACKEND_URL}${path}`)
-  console.log("test: ",test)
   return test
 }
 
 function convertToHttps(url) {
-    const parsedUrl = new URL(url);
-    //parsedUrl.protocol = 'https:';  // Set protocol to https
-    parsedUrl.protocol = window.location.protocol
-    return parsedUrl.href;  // Return the modified URL
+  const parsedUrl = new URL(url)
+  parsedUrl.protocol = window.location.protocol
+  return parsedUrl.href
 }
 
 // State
-const profile = ref(null)
-const isEditing = ref(false)
-const loading = ref(true)
-const saving = ref(false)
-const uploading = ref(false)
-const error = ref('')
+const profile        = ref(null)
+const isEditing      = ref(false)
+const loading        = ref(true)
+const saving         = ref(false)
+const uploading      = ref(false)
+const error          = ref('')
 const successMessage = ref('')
 
+// Razorpay UI state
+const showSecret  = ref(false)
+const copiedField = ref('')   // 'key' | 'secret' | ''
+
 // File upload states
-const logoFile = ref(null)
-const videoFile = ref(null)
+const logoFile    = ref(null)
+const videoFile   = ref(null)
 const logoPreview = ref('')
 const videoPreview = ref('')
-const logoInput = ref(null)
-const videoInput = ref(null)
+const logoInput   = ref(null)
+const videoInput  = ref(null)
 
 const formData = ref({
   full_name: '',
@@ -521,27 +628,40 @@ const formData = ref({
   temple_description: '',
   logo_url: '',
   intro_video_url: '',
-  // 🆕 Bank details
+  // Bank details
   account_holder_name: '',
   account_number: '',
   bank_name: '',
   branch_name: '',
   ifsc_code: '',
   account_type: '',
-  upi_id: ''
+  upi_id: '',
+  // Razorpay — read-only, never sent in PUT
+  razorpay_key_id: '',
+  razorpay_secret: ''
 })
 
-const currentLogoUrl = computed(() => {
-    console.log("getMediaUrl formData.value.logo_url: ",formData.value.logo_url)
-    return getMediaUrl(formData.value.logo_url)
-  }
-)
+const currentLogoUrl  = computed(() => getMediaUrl(formData.value.logo_url))
+const currentVideoUrl = computed(() => getMediaUrl(formData.value.intro_video_url))
 
-const currentVideoUrl = computed(() => {
-    console.log("getMediaUrl formData.value.video_url: ",formData.value.intro_video_url)
-    return getMediaUrl(formData.value.intro_video_url)
+// Mask secret: show first 6 chars then bullets
+const maskedSecret = computed(() => {
+  const s = formData.value.razorpay_secret
+  if (!s) return '—'
+  return s.slice(0, 6) + '•'.repeat(Math.max(0, s.length - 6))
+})
+
+// Copy to clipboard with brief tick feedback
+const copyToClipboard = async (text, field) => {
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedField.value = field
+    setTimeout(() => { copiedField.value = '' }, 2000)
+  } catch {
+    showError('Failed to copy to clipboard')
   }
-)
+}
 
 // Error handlers
 const handleImageError = (event) => {
@@ -558,46 +678,22 @@ const handleVideoError = (event) => {
 const handleLogoChange = (event) => {
   const file = event.target.files[0]
   if (!file) return
-
-  if (!file.type.startsWith('image/')) {
-    showError('Please select a valid image file')
-    return
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    showError('Logo file size must be less than 5MB')
-    return
-  }
-
+  if (!file.type.startsWith('image/')) { showError('Please select a valid image file'); return }
+  if (file.size > 5 * 1024 * 1024) { showError('Logo file size must be less than 5MB'); return }
   logoFile.value = file
-  
   const reader = new FileReader()
-  reader.onload = (e) => {
-    logoPreview.value = e.target.result
-  }
+  reader.onload = (e) => { logoPreview.value = e.target.result }
   reader.readAsDataURL(file)
 }
 
 const handleVideoChange = (event) => {
   const file = event.target.files[0]
   if (!file) return
-
-  if (!file.type.startsWith('video/')) {
-    showError('Please select a valid video file')
-    return
-  }
-
-  if (file.size > 50 * 1024 * 1024) {
-    showError('Video file size must be less than 50MB')
-    return
-  }
-
+  if (!file.type.startsWith('video/')) { showError('Please select a valid video file'); return }
+  if (file.size > 50 * 1024 * 1024) { showError('Video file size must be less than 50MB'); return }
   videoFile.value = file
-  
   const reader = new FileReader()
-  reader.onload = (e) => {
-    videoPreview.value = e.target.result
-  }
+  reader.onload = (e) => { videoPreview.value = e.target.result }
   reader.readAsDataURL(file)
 }
 
@@ -605,32 +701,24 @@ const removeLogo = () => {
   logoFile.value = null
   logoPreview.value = ''
   formData.value.logo_url = ''
-  if (logoInput.value) {
-    logoInput.value.value = ''
-  }
+  if (logoInput.value) logoInput.value.value = ''
 }
 
 const removeVideo = () => {
   videoFile.value = null
   videoPreview.value = ''
   formData.value.intro_video_url = ''
-  if (videoInput.value) {
-    videoInput.value.value = ''
-  }
+  if (videoInput.value) videoInput.value.value = ''
 }
 
 const uploadFile = async (file, type) => {
   const uploadFormData = new FormData()
   uploadFormData.append('file', file)
   uploadFormData.append('type', type)
-
   try {
     const response = await api.post('/tenant/upload', uploadFormData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      headers: { 'Content-Type': 'multipart/form-data' }
     })
-
     return response.data.url
   } catch (err) {
     console.error(`❌ Error uploading ${type}:`, err)
@@ -642,53 +730,36 @@ const uploadFile = async (file, type) => {
 const fetchProfile = async () => {
   try {
     loading.value = true
-    error.value = ''
-
-    console.log('📡 Fetching account details...')
-
-    // Change endpoint to auth endpoint
-    const response = await api.get('/auth/account/details')
-
-    console.log('✅ Profile data received:', response.data)
-    const accountData = response.data.data // Note the .data.data structure
+    error.value   = ''
+    const response  = await api.get('/auth/account/details')
+    const accountData = response.data.data
     profile.value = accountData
     
-    // Populate form data
     formData.value = {
-      full_name: accountData.user?.full_name || '',
-      phone: accountData.user?.phone || '',
-      temple_name: accountData.temple?.temple_name || '',
-      temple_place: accountData.temple?.temple_place || '',
-      temple_address: accountData.temple?.temple_address || '',
-      temple_phone_no: accountData.temple?.temple_phone_no || '',
-      temple_description: accountData.temple?.temple_description || '',
-      logo_url: accountData.temple?.logo_url || '',
-      intro_video_url: accountData.temple?.intro_video_url || '',
+      full_name:            accountData.user?.full_name || '',
+      phone:                accountData.user?.phone || '',
+      temple_name:          accountData.temple?.temple_name || '',
+      temple_place:         accountData.temple?.temple_place || '',
+      temple_address:       accountData.temple?.temple_address || '',
+      temple_phone_no:      accountData.temple?.temple_phone_no || '',
+      temple_description:   accountData.temple?.temple_description || '',
+      logo_url:             accountData.temple?.logo_url || '',
+      intro_video_url:      accountData.temple?.intro_video_url || '',
       // Bank details
-      account_holder_name: accountData.bank?.account_holder_name || '',
-      account_number: accountData.bank?.account_number || '',
-      bank_name: accountData.bank?.bank_name || '',
-      branch_name: accountData.bank?.branch_name || '',
-      ifsc_code: accountData.bank?.ifsc_code || '',
-      account_type: accountData.bank?.account_type || '',
-      upi_id: accountData.bank?.upi_id || ''
+      account_holder_name:  accountData.bank?.account_holder_name || '',
+      account_number:       accountData.bank?.account_number || '',
+      bank_name:            accountData.bank?.bank_name || '',
+      branch_name:          accountData.bank?.branch_name || '',
+      ifsc_code:            accountData.bank?.ifsc_code || '',
+      account_type:         accountData.bank?.account_type || '',
+      upi_id:               accountData.bank?.upi_id || '',
+      // Razorpay — read-only display only
+      razorpay_key_id:      accountData.bank?.razorpay_key_id || '',
+      razorpay_secret:      accountData.bank?.razorpay_secret || ''
     }
-
-    console.log('✅ Form data populated:', formData.value)
-    console.log('🖼️ 1Logo URL:', formData.value.logo_url)
-    console.log('🎥 1Video URL:', formData.value.intro_video_url)
-
-    console.log('🖼️ 2Logo URL:', currentLogoUrl.value)
-    console.log('🎥 2Video URL:', currentVideoUrl.value)
   } catch (err) {
     console.error('❌ Error fetching profile:', err)
-    console.error('❌ Error response:', err.response?.data)
-    
-    const errorMsg = err.response?.data?.error || 
-                     err.response?.data?.details || 
-                     err.message || 
-                     'Failed to fetch profile'
-    
+    const errorMsg = err.response?.data?.error || err.response?.data?.details || err.message || 'Failed to fetch profile'
     error.value = errorMsg
     showError(errorMsg)
   } finally {
@@ -698,115 +769,92 @@ const fetchProfile = async () => {
 
 const handleSubmit = async () => {
   saving.value = true
-  error.value = ''
+  error.value  = ''
   successMessage.value = ''
 
   try {
-    // Upload files if selected
-    if (logoFile.value || videoFile.value) {
-      uploading.value = true
-    }
+    if (logoFile.value || videoFile.value) uploading.value = true
 
     if (logoFile.value) {
-      console.log('📤 Uploading logo...')
       const logoUrl = await uploadFile(logoFile.value, 'logo')
       formData.value.logo_url = logoUrl
-      console.log('✅ Logo uploaded:', logoUrl)
     }
 
     if (videoFile.value) {
-      console.log('📤 Uploading video...')
       const videoUrl = await uploadFile(videoFile.value, 'video')
       formData.value.intro_video_url = videoUrl
-      console.log('✅ Video uploaded:', videoUrl)
     }
 
     uploading.value = false
 
-    console.log('📤 Updating account details with data:', formData.value)
+    // Strip read-only Razorpay fields before sending
+    const { razorpay_key_id, razorpay_secret, ...payload } = formData.value
 
-    // Change endpoint to auth endpoint
-    const response = await api.put('/auth/account/details', formData.value)
-
-    console.log('✅ Update response:', response.data)
+    const response = await api.put('/auth/account/details', payload)
     profile.value = response.data.data
     successMessage.value = response.data.message || 'Account details updated successfully!'
     success(successMessage.value)
     isEditing.value = false
     
-    // Reset file uploads
-    logoFile.value = null
+    logoFile.value  = null
     videoFile.value = null
-    logoPreview.value = ''
+    logoPreview.value  = ''
     videoPreview.value = ''
     
-    // Clear success message after 3 seconds
-    setTimeout(() => {
-      successMessage.value = ''
-    }, 3000)
+    setTimeout(() => { successMessage.value = '' }, 3000)
   } catch (err) {
     console.error('❌ Error updating account details:', err)
-    console.error('❌ Error response:', err.response?.data)
-    
-    const errorMsg = err.response?.data?.error || 
-                     err.response?.data?.details || 
-                     err.message || 
-                     'Failed to update account details'
-    
+    const errorMsg = err.response?.data?.error || err.response?.data?.details || err.message || 'Failed to update account details'
     error.value = errorMsg
     showError(errorMsg)
   } finally {
-    saving.value = false
+    saving.value    = false
     uploading.value = false
   }
 }
 
 const startEditing = () => {
   isEditing.value = true
-  error.value = ''
+  error.value     = ''
   successMessage.value = ''
 }
 
 const cancelEditing = () => {
   isEditing.value = false
-  error.value = ''
+  error.value     = ''
   successMessage.value = ''
   
-  logoFile.value = null
+  logoFile.value  = null
   videoFile.value = null
-  logoPreview.value = ''
+  logoPreview.value  = ''
   videoPreview.value = ''
   
   if (profile.value) {
     formData.value = {
-      full_name: profile.value.user?.full_name || '',
-      phone: profile.value.user?.phone || '',
-      temple_name: profile.value.temple_name || '',
-      temple_place: profile.value.temple_place || '',
-      temple_address: profile.value.temple_address || '',
-      temple_phone_no: profile.value.temple_phone_no || '',
-      temple_description: profile.value.temple_description || '',
-      logo_url: profile.value.logo_url || '',
-      intro_video_url: profile.value.intro_video_url || '',
-      // 🆕 Bank details
-      account_holder_name: profile.value.bank?.account_holder_name || '',
-      account_number: profile.value.bank?.account_number || '',
-      bank_name: profile.value.bank?.bank_name || '',
-      branch_name: profile.value.bank?.branch_name || '',
-      ifsc_code: profile.value.bank?.ifsc_code || '',
-      account_type: profile.value.bank?.account_type || '',
-      upi_id: profile.value.bank?.upi_id || ''
+      full_name:            profile.value.user?.full_name || '',
+      phone:                profile.value.user?.phone || '',
+      temple_name:          profile.value.temple?.temple_name || '',
+      temple_place:         profile.value.temple?.temple_place || '',
+      temple_address:       profile.value.temple?.temple_address || '',
+      temple_phone_no:      profile.value.temple?.temple_phone_no || '',
+      temple_description:   profile.value.temple?.temple_description || '',
+      logo_url:             profile.value.temple?.logo_url || '',
+      intro_video_url:      profile.value.temple?.intro_video_url || '',
+      account_holder_name:  profile.value.bank?.account_holder_name || '',
+      account_number:       profile.value.bank?.account_number || '',
+      bank_name:            profile.value.bank?.bank_name || '',
+      branch_name:          profile.value.bank?.branch_name || '',
+      ifsc_code:            profile.value.bank?.ifsc_code || '',
+      account_type:         profile.value.bank?.account_type || '',
+      upi_id:               profile.value.bank?.upi_id || '',
+      // Keep Razorpay fields after cancel too
+      razorpay_key_id:      profile.value.bank?.razorpay_key_id || '',
+      razorpay_secret:      profile.value.bank?.razorpay_secret || ''
     }
   }
 }
 
-// Lifecycle
 onMounted(() => {
-  console.log('🎬 TenantProfile component mounted')
   fetchProfile()
 })
 </script>
-
-<style scoped>
-/* Add any additional custom styles here if needed */
-</style>

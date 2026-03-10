@@ -1381,19 +1381,43 @@ const loadPendingEntities = async () => {
   notes: temple.Notes || temple.notes,
   registrationType: temple.TempleType || temple.templeType,
 
-  // ✅ ADD THIS (VERY IMPORTANT)
   media: (() => {
-    try {
-      // backend may send media as JSON string or object
-      if (typeof temple.media === 'string') {
-        return JSON.parse(temple.media)
+  try {
+    // backend sends JSON string
+    if (typeof temple.media === 'string') {
+      const value = temple.media.trim()
+      if (value) {
+        return JSON.parse(value)
       }
-      return temple.media || {}
-    } catch (e) {
-      console.warn('Failed to parse media field:', e)
-      return {}
     }
-  })(),
+
+    // backend sends object
+    if (typeof temple.media === 'object' && temple.media !== null) {
+      return temple.media
+    }
+
+    // fallback fields
+    return {
+      logo:
+        temple.logo ||
+        temple.logo_url ||
+        temple.temple_logo ||
+        temple.templeLogo ||
+        null,
+
+      video:
+        temple.video ||
+        temple.video_url ||
+        temple.temple_video ||
+        temple.templeVideo ||
+        null
+    }
+  } catch (e) {
+    console.warn('Media parsing failed:', temple.media, e)
+    return {}
+  }
+})(),
+
 
   // existing documents logic
   documents: normalizedDocs

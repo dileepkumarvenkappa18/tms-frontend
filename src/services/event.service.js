@@ -71,20 +71,14 @@ const eventService = {
     }
   },
 
-  async getEventStats() {
-    try {
-      const entityId = this.getCurrentEntityId()
-      console.log(`Fetching event stats for entity ID: ${entityId}`)
+ async getEventStats() {
+  try {
+    const entityId = this.getCurrentEntityId()
 
-      const params = {
-        ...(entityId ? { entity_id: entityId } : {})
-      }
+    console.log("Fetching event stats for entity ID:", entityId)
 
-      const response = await api.get('/events/stats', { params })
-      return response.data
-    } catch (error) {
-      console.error('Error fetching event stats:', error)
-      // Don't throw error for stats, return empty stats
+    if (!entityId) {
+      console.warn("No entity ID found for stats request")
       return {
         total_events: 0,
         upcoming_events: 0,
@@ -92,8 +86,33 @@ const eventService = {
         total_rsvps: 0
       }
     }
-  },
 
+    const response = await api.get('/events/stats', {
+      params: {
+        entity_id: entityId
+      }
+    })
+
+    console.log("Event stats API response:", response.data)
+
+    return response.data || {
+      total_events: 0,
+      upcoming_events: 0,
+      this_month_events: 0,
+      total_rsvps: 0
+    }
+
+  } catch (error) {
+    console.error("Error fetching event stats:", error)
+
+    return {
+      total_events: 0,
+      upcoming_events: 0,
+      this_month_events: 0,
+      total_rsvps: 0
+    }
+  }
+},
   async createEvent(eventData) {
     try {
       const entityId = this.getCurrentEntityId()

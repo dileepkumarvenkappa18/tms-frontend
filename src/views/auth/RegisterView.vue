@@ -513,7 +513,8 @@
               </div>
             </div>
 
-            <!-- UPI ID (Optional) -->
+            <!-- UPI ID (Optional) no use of upi id as we are using razorpay -->
+             <!--
             <div>
               <label for="upiId" class="block text-sm font-medium text-gray-700 mb-1">
                 UPI ID <span class="text-gray-400">(Optional)</span>
@@ -531,6 +532,7 @@
                 {{ errors.upiId }}
               </div>
             </div>
+             -->
 
             <!-- Razorpay Divider -->
             <div class="relative">

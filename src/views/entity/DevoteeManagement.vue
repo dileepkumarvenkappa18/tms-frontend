@@ -50,7 +50,7 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <!-- Stats Overview -->
       <div class="mb-4">
-        <DevoteeStats :stats="devoteeStore.devoteeStats" :loading="loading" />
+        <DevoteeStats :stats="devoteeStats" :loading="loading" />
       </div>
 
       <!-- Search and Filters -->
@@ -335,8 +335,7 @@ export default {
     const toast = useToast()
     const devoteeStore = useDevoteeStore()
     const templeStore = useTempleStore()
-    const { devotees } = storeToRefs(devoteeStore)
-
+    const { devotees, devoteeStats } = storeToRefs(devoteeStore)
     // Reactive data
     const temple = ref(null)
     const loading = ref(false)
@@ -382,10 +381,11 @@ export default {
     ])
 
     // Get entity ID from route
-    const templeId = computed(() => {
-      const id = route.params.id || route.params.templeId || route.query.templeId || localStorage.getItem('current_entity_id')
-      return id ? parseInt(id, 10) : null
-    })
+const templeId = computed(() => {
+  const routeId = route.params.id || route.params.templeId
+  if (routeId) return parseInt(routeId, 10)
+  return null
+})
 
     // Check if any spiritual filters are active
     const hasActiveFilters = computed(() => {
@@ -729,6 +729,7 @@ export default {
     return {
       temple,
       devoteeStore,
+      devoteeStats,
       loading,
       statusUpdateLoading,
       searchQuery,

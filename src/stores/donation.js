@@ -198,6 +198,7 @@ export const useDonationStore = defineStore('donation', () => {
     error.value = null
     try {
       const entityId = getEntityId()  // ✅ resolve here, not inside service
+      console.log('🔍 fetchDonations entityId:', entityId)  // ADD THIS LINE
 
       const apiFilters = {
         page: pagination.value.currentPage,

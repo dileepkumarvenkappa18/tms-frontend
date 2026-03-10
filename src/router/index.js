@@ -895,19 +895,16 @@ import { getRoleBasedRedirectPath } from '@/utils/redirectHelpers'
 // Prevent back navigation to auth pages after login
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
-  
-  // If user is authenticated and trying to go back to auth pages
+
   if (authStore.isAuthenticated) {
     const authPages = ['/login', '/register', '/forgot-password', '/']
-    
     if (authPages.includes(to.path)) {
-      // Redirect to appropriate dashboard instead
       const dashboardPath = authStore.getDashboardPath(authStore.userRole)
       next(dashboardPath)
       return
     }
   }
-  
+
   next()
 })
 

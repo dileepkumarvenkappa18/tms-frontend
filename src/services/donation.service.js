@@ -26,26 +26,29 @@ function getUserInfo() {
 }
 
 function getCurrentEntityId() {
+  // 1. URL first — what page are we actually on?
   const currentPath = window.location.pathname
   const entityMatch = currentPath.match(/\/entity\/(\d+)/)
   if (entityMatch) return entityMatch[1]
 
+  // 2. Token second
+  const userInfo = getUserInfo()
+  if (userInfo) {
+    if (userInfo.role === 'templeadmin' && userInfo.entityId) {
+      return userInfo.entityId.toString()
+    }
+    if (
+      (userInfo.role === 'standarduser' || userInfo.role === 'monitoringuser') &&
+      userInfo.assignedTenantId
+    ) {
+      return userInfo.assignedTenantId.toString()
+    }
+  }
+
+  // 3. localStorage last
   const storedEntityId = localStorage.getItem('current_entity_id')
   if (storedEntityId && storedEntityId !== 'null' && storedEntityId !== 'undefined') {
     return storedEntityId
-  }
-
-  const userInfo = getUserInfo()
-  if (userInfo) {
-    switch (userInfo.role) {
-      case 'templeadmin':
-        if (userInfo.entityId) return userInfo.entityId.toString()
-        break
-      case 'standarduser':
-      case 'monitoringuser':
-        if (userInfo.assignedTenantId) return userInfo.assignedTenantId.toString()
-        break
-    }
   }
 
   console.warn('Could not resolve entity ID')
@@ -316,25 +319,28 @@ export const donationService = {
 
   async getDonations(filters = {}) {
     try {
-      const entityId = getCurrentEntityId()
+      // ✅ Use entity_id from filters if provided, otherwise resolve from URL/token
+      const entityId = filters.entity_id || getCurrentEntityId()
       console.log(`Fetching donations for entity ID: ${entityId}`)
-      
-      const params = {
-        page: filters.page || 1,
-        limit: filters.limit || 20,
-        ...(entityId ? { entity_id: entityId } : {}),
-        ...(filters.status && filters.status !== 'all' ? { status: filters.status } : {}),
-        ...(filters.type && filters.type !== 'all' ? { type: filters.type } : {}),
-        ...(filters.method && filters.method !== 'all' ? { method: filters.method } : {}),
-        ...(filters.search ? { search: filters.search } : {}),
-        ...(filters.min !== undefined && filters.min !== null && filters.min !== '' ? { min: filters.min } : {}),
-        ...(filters.max !== undefined && filters.max !== null && filters.max !== '' ? { max: filters.max } : {}),
-        ...(filters.from ? { from: filters.from } : {}),
-        ...(filters.to ? { to: filters.to } : {}),
-        ...(filters.dateRange && filters.dateRange !== 'all' ? { dateRange: filters.dateRange } : {}),
-      }
 
-      const response = await api.get('/donations/', { params })
+      // ✅ Build URL with entity_id directly in the query string (not via params object)
+      // This avoids any axios params serialization issues
+      let url = `/donations?entity_id=${entityId}`
+      url += `&page=${filters.page || 1}`
+      url += `&limit=${filters.limit || 20}`
+
+      if (filters.status && filters.status !== 'all') url += `&status=${filters.status}`
+      if (filters.type && filters.type !== 'all') url += `&type=${filters.type}`
+      if (filters.method && filters.method !== 'all') url += `&method=${filters.method}`
+      if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`
+      if (filters.min !== undefined && filters.min !== null && filters.min !== '') url += `&min=${filters.min}`
+      if (filters.max !== undefined && filters.max !== null && filters.max !== '') url += `&max=${filters.max}`
+      if (filters.from) url += `&from=${filters.from}`
+      if (filters.to) url += `&to=${filters.to}`
+      if (filters.dateRange && filters.dateRange !== 'all') url += `&dateRange=${filters.dateRange}`
+
+      console.log(`📡 Calling: ${url}`)
+      const response = await api.get(url)
       console.log('Get donations response:', response.data)
       return response.data
     } catch (error) {
@@ -457,7 +463,6 @@ export const donationService = {
     }
   },
 
-  // Helper: get current entity ID
   getDonationTypes() {
     return [
       { value: 'general', label: 'General Donation' },

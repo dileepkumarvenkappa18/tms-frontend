@@ -13,7 +13,7 @@ class SevaService {
    */
   async getSevas(params = {}) {
     try {
-      const entityId = this.getCurrentEntityId()
+      const entityId = params.entity_id || this.getCurrentEntityId()
       console.log(`Fetching sevas for entity ID: ${entityId}`)
 
       if (entityId) {
@@ -64,7 +64,7 @@ class SevaService {
    */
   async getDevoteeSevas(params = {}) {
     try {
-      const entityId = this.getCurrentEntityId()
+      const entityId = params.entity_id || this.getCurrentEntityId()
       console.log(`Fetching devotee sevas for entity ID: ${entityId}`)
 
       const queryParams = {
@@ -161,18 +161,23 @@ class SevaService {
   }
 
   /**
-   * Create a new seva - matches POST / route
+   * Create a new seva - matches POST /sevas route
+   *
+   * FIX: entity_id MUST be explicitly provided by the caller (component sets this
+   * from route.params.id). We NEVER fall back to JWT/localStorage because the JWT
+   * entity_id may be 0 or belong to a different entity than the page being viewed.
    */
   async createSeva(sevaData) {
     try {
-      // FIX 1+2: Use getWriteEntityId() — JWT-first resolution for all write operations
-      const entityId = this.getWriteEntityId()
+      // ALWAYS use entity_id from sevaData — caller (component) is responsible for passing it
+      // from route.params.id. Never fall back to JWT which may have entity_id = 0.
+      const entityId = sevaData.entity_id ? parseInt(sevaData.entity_id) : null
 
-      if (!entityId) {
-        throw new Error('No entity ID available for seva creation')
+      if (!entityId || entityId === 0) {
+        throw new Error(`Invalid entity ID for seva creation: ${entityId}. Ensure entity_id is passed from the route.`)
       }
 
-      console.log(`Creating seva with resolved entity ID: ${entityId}`)
+      console.log(`Creating seva with entity ID from route: ${entityId}`)
 
       const payload = {
         name: sevaData.name,
@@ -189,7 +194,7 @@ class SevaService {
           sevaData.max_bookings_per_day ||
           sevaData.maxBookingsPerDay ||
           10,
-        entity_id: parseInt(entityId)
+        entity_id: entityId  // always from sevaData (route.params.id), never from JWT
       }
 
       console.log('Creating seva with payload:', payload)
@@ -215,7 +220,7 @@ class SevaService {
       }
       return {
         success: false,
-        error: error.response?.data?.error || 'Failed to create seva',
+        error: error.response?.data?.error || error.message || 'Failed to create seva',
         errors: error.response?.data?.errors || {}
       }
     }
@@ -223,123 +228,126 @@ class SevaService {
 
   /**
    * Update seva - matches PUT /:id route
+   *
+   * FIX: Trust entity_id from sevaData (set from the seva's own record in the component).
+   * This ensures we send the correct entity_id of the seva being updated,
+   * not the templeadmin's own user entity_id from JWT.
    */
- async updateSeva(sevaId, sevaData) {
-  try {
-    // Prefer entity_id from the seva's own data, fallback to session resolution
-    const entityId = sevaData.entity_id 
-      ? parseInt(sevaData.entity_id) 
-      : parseInt(this.getWriteEntityId())
+  async updateSeva(sevaId, sevaData) {
+    try {
+      // Trust entity_id from sevaData — component sets this from the seva's own record
+      const entityId = sevaData.entity_id
+        ? parseInt(sevaData.entity_id)
+        : parseInt(this.getWriteEntityId())
 
-    console.log(`Updating seva ID: ${sevaId} with resolved entity ID: ${entityId}`)
+      console.log(`Updating seva ID: ${sevaId} with resolved entity ID: ${entityId}`)
 
-    const payload = {
-      name: sevaData.name,
-      seva_type: sevaData.seva_type || sevaData.sevaType,
-      description: sevaData.description || '',
-      price: sevaData.price || 0,
-      date: sevaData.date || sevaData.seva_date,
-      start_time: sevaData.start_time || sevaData.startTime,
-      end_time: sevaData.end_time || sevaData.endTime,
-      duration: sevaData.duration || 30,
-      available_slots:
-        sevaData.available_slots ||
-        sevaData.availableSlots ||
-        sevaData.max_bookings_per_day ||
-        sevaData.maxBookingsPerDay,
-      status: sevaData.status,
-      entity_id: entityId  // ← from seva record, not session
-    }
+      const payload = {
+        name: sevaData.name,
+        seva_type: sevaData.seva_type || sevaData.sevaType,
+        description: sevaData.description || '',
+        price: sevaData.price || 0,
+        date: sevaData.date || sevaData.seva_date,
+        start_time: sevaData.start_time || sevaData.startTime,
+        end_time: sevaData.end_time || sevaData.endTime,
+        duration: sevaData.duration || 30,
+        available_slots:
+          sevaData.available_slots ||
+          sevaData.availableSlots ||
+          sevaData.max_bookings_per_day ||
+          sevaData.maxBookingsPerDay,
+        status: sevaData.status,
+        entity_id: entityId  // from seva's own record, not JWT
+      }
 
-    console.log('Updating seva with payload:', payload)
+      console.log('Updating seva with payload:', payload)
 
-    const response = await api.put(`/sevas/${sevaId}`, payload)
+      const response = await api.put(`/sevas/${sevaId}`, payload)
 
-    return {
-      success: true,
-      data: response.data,
-      message: 'Seva updated successfully',
-      wasUpdate: true,
-      id: sevaId
-    }
-  } catch (error) {
-    console.error('Error updating seva:', error)
-    if (error.response?.status === 401) {
-      showToast('Please login to update a seva', 'error')
-      logout()
-    } else if (error.response?.status === 403) {
-      showToast('You do not have permission to update this seva', 'error')
-    } else if (error.response?.status === 400) {
-      const errorMsg = error.response.data?.error || 'Invalid seva data'
-      showToast(errorMsg, 'error')
-    } else {
-      showToast('Failed to update seva', 'error')
-    }
-    return {
-      success: false,
-      error: error.response?.data?.error || 'Failed to update seva',
-      errors: error.response?.data?.errors || {}
+      return {
+        success: true,
+        data: response.data,
+        message: 'Seva updated successfully',
+        wasUpdate: true,
+        id: sevaId
+      }
+    } catch (error) {
+      console.error('Error updating seva:', error)
+      if (error.response?.status === 401) {
+        showToast('Please login to update a seva', 'error')
+        logout()
+      } else if (error.response?.status === 403) {
+        showToast('You do not have permission to update this seva', 'error')
+      } else if (error.response?.status === 400) {
+        const errorMsg = error.response.data?.error || 'Invalid seva data'
+        showToast(errorMsg, 'error')
+      } else {
+        showToast('Failed to update seva', 'error')
+      }
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Failed to update seva',
+        errors: error.response?.data?.errors || {}
+      }
     }
   }
-}
 
   /**
    * Delete seva - HARD DELETE - matches DELETE /:id route
    */
   async deleteSeva(sevaId, entityId = null) {
-  try {
-    console.log('Permanently deleting seva with ID:', sevaId, '| entity_id:', entityId)
+    try {
+      console.log('Permanently deleting seva with ID:', sevaId, '| entity_id:', entityId)
 
-    const params = { force: true, permanent: true }
-    if (entityId) {
-      params.entity_id = parseInt(entityId)
-    }
+      const params = { force: true, permanent: true }
+      if (entityId) {
+        params.entity_id = parseInt(entityId)
+      }
 
-    const response = await api.delete(`/sevas/${sevaId}`, { params })
+      const response = await api.delete(`/sevas/${sevaId}`, { params })
 
-    console.log('Delete response:', response.data)
+      console.log('Delete response:', response.data)
 
-    return {
-      success: true,
-      message: 'Seva permanently deleted successfully',
-      id: sevaId
-    }
-  } catch (error) {
-    console.error('Error deleting seva:', error)
+      return {
+        success: true,
+        message: 'Seva permanently deleted successfully',
+        id: sevaId
+      }
+    } catch (error) {
+      console.error('Error deleting seva:', error)
 
-    if (error.response?.status === 401) {
-      showToast('Please login to delete a seva', 'error')
-      logout()
-    } else if (error.response?.status === 404) {
+      if (error.response?.status === 401) {
+        showToast('Please login to delete a seva', 'error')
+        logout()
+      } else if (error.response?.status === 404) {
+        return {
+          success: false,
+          error: 'Seva not found or already deleted'
+        }
+      } else if (error.response?.status === 409) {
+        return {
+          success: false,
+          error: 'Cannot delete seva - it has existing bookings. Please contact administrator.'
+        }
+      } else {
+        showToast('Failed to delete seva', 'error')
+      }
+
       return {
         success: false,
-        error: 'Seva not found or already deleted'
+        error:
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          'Failed to permanently delete seva'
       }
-    } else if (error.response?.status === 409) {
-      return {
-        success: false,
-        error: 'Cannot delete seva - it has existing bookings. Please contact administrator.'
-      }
-    } else {
-      showToast('Failed to delete seva', 'error')
-    }
-
-    return {
-      success: false,
-      error:
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        'Failed to permanently delete seva'
     }
   }
-}
 
   /**
    * Book a seva - matches POST /bookings route (devotee only)
    */
   async bookSeva(sevaId) {
     try {
-      // FIX 1+2: Use getWriteEntityId() for write operations
       const entityId = this.getWriteEntityId()
 
       const payload = {
@@ -369,13 +377,52 @@ class SevaService {
       }
     }
   }
+  /**
+ * Create a free seva booking (no payment) — goes to admin approval queue
+ * matches POST /sevas/bookings route
+ */
+async createSevaBooking(bookingData) {
+  try {
+    const entityId = parseInt(bookingData.entity_id || bookingData.entityId || this.getWriteEntityId())
+
+    const payload = {
+      seva_id: parseInt(bookingData.seva_id),
+      entity_id: entityId,
+      temple_id: parseInt(bookingData.temple_id || bookingData.templeId || entityId),
+      seva_name: bookingData.seva_name,
+      seva_type: bookingData.seva_type
+    }
+
+    console.log('Creating free seva booking payload:', payload)
+
+    const response = await api.post('/sevas/bookings', payload)
+    console.log('Free seva booking response:', response.data)
+
+    return {
+      success: true,
+      data: response.data,
+      message: 'Seva booking request submitted for approval'
+    }
+  } catch (error) {
+    console.error('Error creating free seva booking:', error)
+    if (error.response?.status === 401) {
+      showToast('Please login to book a seva', 'error')
+      logout()
+    } else if (error.response?.status === 400) {
+      const errorMsg = error.response.data?.error || 'Invalid booking data'
+      showToast(errorMsg, 'error')
+    } else {
+      showToast('Failed to submit seva booking', 'error')
+    }
+    throw error
+  }
+}
 
   /**
    * Create a seva booking with Razorpay payment order
    */
   async createSevaBookingWithPayment(bookingData) {
     try {
-      // FIX 1+2: Use getWriteEntityId() for write operations
       const entityId = this.getWriteEntityId()
       console.log('Creating seva booking with payment:', bookingData)
 
@@ -454,7 +501,6 @@ class SevaService {
 
       let bookings = response.data?.bookings || []
 
-      // Filter client-side to ensure entity isolation
       if (resolvedEntityId) {
         bookings = bookings.filter(booking => {
           const bookingEntityId = booking.entity_id || booking.EntityID || booking.entityId
@@ -580,37 +626,37 @@ class SevaService {
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   /**
-   * FIX 2: Write-safe entity ID resolution.
-   * For CREATE / UPDATE / DELETE / BOOK operations, always trust the JWT first.
-   * This prevents URL path spoofing causing "no accessible entity" 500 errors.
-   *
-   * Priority: JWT token → localStorage → URL path (read-only fallback)
+   * Write-safe entity ID resolution.
+   * Used only as FALLBACK when entity_id is not explicitly provided by the caller.
+   * Components should always pass entity_id directly from route.params.id.
    */
   getWriteEntityId() {
-  // For standard_user, URL path is the correct entity
-  const currentPath = window.location.pathname
-  const entityMatch = currentPath.match(/\/entity\/(\d+)/)
-  if (entityMatch) {
-    return entityMatch[1]
-  }
-
-  const userInfo = this.getUserInfo()
-  if (userInfo) {
-    if (userInfo.role === 'templeadmin' && userInfo.entityId) {
-      return userInfo.entityId.toString()
+    // Priority 1: URL path (most reliable for entity-scoped pages)
+    const currentPath = window.location.pathname
+    const entityMatch = currentPath.match(/\/entity\/(\d+)/)
+    if (entityMatch) {
+      return entityMatch[1]
     }
-  }
 
-  const storedEntityId = localStorage.getItem('current_entity_id')
-  if (storedEntityId && storedEntityId !== 'null') {
-    return storedEntityId
-  }
+    // Priority 2: JWT token role-based
+    const userInfo = this.getUserInfo()
+    if (userInfo) {
+      if (userInfo.role === 'templeadmin' && userInfo.entityId) {
+        return userInfo.entityId.toString()
+      }
+    }
 
-  return null
-}
+    // Priority 3: localStorage fallback
+    const storedEntityId = localStorage.getItem('current_entity_id')
+    if (storedEntityId && storedEntityId !== 'null') {
+      return storedEntityId
+    }
+
+    return null
+  }
 
   /**
-   * Read entity ID resolution (unchanged — URL path is fine for reads/filters).
+   * Read entity ID resolution.
    * Priority: URL path → localStorage → JWT token role fallback
    */
   getCurrentEntityId() {

@@ -422,6 +422,89 @@
               </div>
             </div>
           </div>
+                  <!-- Bank Account Details Section -->
+        <div class="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-100 mt-6">
+          <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+            </svg>
+            Bank Account Details
+          </h4>
+
+          <!-- Loading -->
+          <div v-if="loadingBankDetails" class="flex items-center justify-center py-6">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+            <span class="ml-2 text-sm text-gray-500">Loading bank details...</span>
+          </div>
+
+          <!-- No details -->
+          <div v-else-if="!tenantBankDetails"
+            class="bg-white rounded-lg p-6 text-center text-gray-400 border border-dashed border-gray-200">
+            <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>
+            </svg>
+            <p class="text-sm">No bank details submitted yet</p>
+          </div>
+
+          <!-- Details grid -->
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-white rounded-lg p-4 border border-gray-100 space-y-3">
+              <div class="border-b border-gray-100 pb-2">
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">Account Holder</div>
+                <div class="text-sm font-semibold text-gray-900 mt-1">{{ tenantBankDetails.account_holder_name }}</div>
+              </div>
+              <div class="border-b border-gray-100 pb-2">
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">Bank Name</div>
+                <div class="text-sm text-gray-900 mt-1">{{ tenantBankDetails.bank_name }}</div>
+              </div>
+              <div class="border-b border-gray-100 pb-2">
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">Branch</div>
+                <div class="text-sm text-gray-900 mt-1">{{ tenantBankDetails.branch_name }}</div>
+              </div>
+              <div>
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">Account Type</div>
+                <div class="text-sm text-gray-900 mt-1 capitalize">{{ tenantBankDetails.account_type }}</div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-gray-100 space-y-3">
+              <div class="border-b border-gray-100 pb-2">
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">Account Number</div>
+                <div class="text-sm font-mono font-semibold text-gray-900 mt-1">{{ tenantBankDetails.account_number }}</div>
+              </div>
+              <div class="border-b border-gray-100 pb-2">
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">IFSC Code</div>
+                <div class="text-sm font-mono text-gray-900 mt-1">{{ tenantBankDetails.ifsc_code }}</div>
+              </div>
+              <div class="border-b border-gray-100 pb-2">
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">UPI ID</div>
+                <div class="text-sm text-gray-900 mt-1">{{ tenantBankDetails.upi_id || '—' }}</div>
+              </div>
+              <!-- Razorpay: only show configured status, never expose keys -->
+              <div>
+                <div class="text-xs font-medium text-gray-400 uppercase tracking-wide">Razorpay</div>
+                <div class="mt-1">
+                  <span v-if="tenantBankDetails.razorpay_configured"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    API Key Configured
+                  </span>
+                  <span v-else
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Not Configured
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         
         <!-- Actions -->
         <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
@@ -488,6 +571,26 @@ export default {
     // Pagination
     const currentPage = ref(1)
     const itemsPerPage = ref(5)
+    const tenantBankDetails = ref(null)
+const loadingBankDetails = ref(false)
+
+const loadBankDetails = async (tenantId) => {
+  tenantBankDetails.value = null
+  loadingBankDetails.value = true
+  try {
+    const response = await fetch(`${API_URL}/superadmin/tenants/${tenantId}/bank-details`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('auth_token')}` }
+    })
+    if (response.ok) {
+      const data = await response.json()
+      tenantBankDetails.value = data.data || null
+    }
+  } catch (e) {
+    console.error('Failed to load bank details:', e)
+  } finally {
+    loadingBankDetails.value = false
+  }
+}
     
     // ==================== MEDIA HELPER FUNCTIONS ====================
     
@@ -853,12 +956,11 @@ export default {
     // ==================== MODAL HANDLERS ====================
     
     const handleViewDetails = (tenant) => {
-      selectedTenant.value = tenant
-      console.log('Opening details for tenant:', tenant)
-      console.log('Logo URL:', getLogoUrl(tenant))
-      console.log('Video URL:', getVideoUrl(tenant))
-      showDetailsModal.value = true
-    }
+  selectedTenant.value = tenant
+  showDetailsModal.value = true
+  const tenantId = tenant.id || tenant.ID
+  loadBankDetails(tenantId)
+}
     
     const handleApproveFromDetails = () => {
       handleApprove(selectedTenant.value)
@@ -1159,6 +1261,8 @@ export default {
       handleImageError,
       handleVideoError,
       debugMode,
+      tenantBankDetails,
+      loadingBankDetails,
       normalizeStatus
     }
   }
