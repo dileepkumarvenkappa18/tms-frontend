@@ -166,16 +166,7 @@
         </div>
       </div>
 
-      <!-- Profile Completion -->
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-lg font-semibold text-gray-900">Profile Completion</span>
-          <span class="text-2xl font-bold text-green-600">{{ profile.profile_completion_percentage || 0 }}%</span>
-        </div>
-        <div class="w-full bg-gray-200 rounded-full h-3">
-          <div class="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all" :style="{ width: (profile.profile_completion_percentage || 0) + '%' }"></div>
-        </div>
-      </div>
+     
     </div>
 
     <!-- Error State -->

@@ -47,11 +47,6 @@
                 <p class="text-xs text-gray-600">
                   {{ seva.description }}
                 </p>
-                <div class="mt-2 flex items-center text-xs text-indigo-600">
-                  <span class="bg-indigo-100 px-2 py-1 rounded-full">
-                    ₹{{ seva.minAmount }}+
-                  </span>
-                </div>
               </div>
               <div class="ml-3 flex items-center">
                 <div class="w-5 h-5 border-2 border-gray-300 rounded peer-checked:border-indigo-600 peer-checked:bg-indigo-600 peer-checked:text-white flex items-center justify-center">
@@ -109,8 +104,6 @@
         </div>
       </div>
 
-      <!-- Preferred Frequency section is commented out in original code -->
-
       <!-- Special Interests -->
       <div>
         <label for="specialInterests" class="block text-sm font-semibold text-gray-900 mb-2">
@@ -125,7 +118,7 @@
         ></textarea>
       </div>
 
-      <!-- Action Buttons section is mostly commented out in original code -->
+      <!-- Action Buttons -->
       <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
         <div class="flex gap-4 flex-1">
           <!-- Buttons are commented out in original code -->
@@ -136,10 +129,8 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { watch, onMounted } from 'vue';
+import { reactive, ref, watch, onMounted } from 'vue'
 
-import { ChevronLeftIcon } from '@heroicons/vue/24/outline'
 import { 
   HandRaisedIcon, 
   SparklesIcon, 
@@ -150,9 +141,7 @@ import {
   AcademicCapIcon,
   BuildingLibraryIcon 
 } from '@heroicons/vue/24/outline'
-import BaseLoader from '../common/BaseLoader.vue'
 
-// Updated emit to include 'update' event
 const emit = defineEmits(['next', 'previous', 'skip', 'update'])
 const props = defineProps({
   data: {
@@ -175,43 +164,37 @@ const sevaTypes = [
     id: 'abhisheka',
     name: 'Abhisheka',
     description: 'Sacred bathing ritual of the deity',
-    icon: SparklesIcon,
-    minAmount: 51
+    icon: SparklesIcon
   },
   {
     id: 'arti',
     name: 'Arti',
     description: 'Divine light ceremony',
-    icon: SunIcon,
-    minAmount: 21
+    icon: SunIcon
   },
   {
     id: 'annadana',
     name: 'Annadana',
     description: 'Food donation service',
-    icon: HeartIcon,
-    minAmount: 101
+    icon: HeartIcon
   },
   {
     id: 'archana',
     name: 'Archana',
     description: 'Personal prayer offering',
-    icon: HandRaisedIcon,
-    minAmount: 11
+    icon: HandRaisedIcon
   },
   {
     id: 'kalyanam',
     name: 'Kalyanam',
     description: 'Divine marriage ceremony',
-    icon: GiftIcon,
-    minAmount: 501
+    icon: GiftIcon
   },
   {
     id: 'homam',
     name: 'Homam',
     description: 'Sacred fire ritual',
-    icon: SunIcon,
-    minAmount: 251
+    icon: SunIcon
   }
 ]
 
@@ -254,38 +237,10 @@ const donationCategories = [
   }
 ]
 
-const frequencies = [
-  {
-    value: 'daily',
-    label: 'Daily',
-    description: 'Every day'
-  },
-  {
-    value: 'weekly',
-    label: 'Weekly',
-    description: 'Once a week'
-  },
-  {
-    value: 'monthly',
-    label: 'Monthly',
-    description: 'Once a month'
-  },
-  {
-    value: 'festivals',
-    label: 'Festivals Only',
-    description: 'Special occasions'
-  }
-]
-
-// FIXED: Updated handleSubmit to emit original formData structure
 const handleSubmit = async () => {
   isSubmitting.value = true
-  
   try {
-    // Emit the frontend data structure directly without transforming
     emit('update', formData)
-    
-    // Move to next step
     emit('next')
   } catch (error) {
     console.error('Error saving seva preferences:', error)
@@ -298,13 +253,10 @@ const handleSkip = () => {
   emit('skip')
 }
 
-// Add watch handler
 watch(formData, () => {
-  // Update parent component with data changes
   emit('update', formData)
 }, { deep: true })
 
-// In onMounted, initialize with existing data
 onMounted(() => {
   if (props.data) {
     formData.favoriteSevas = props.data.favoriteSevas || []
